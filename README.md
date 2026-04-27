@@ -52,18 +52,22 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 
 ## Roadmap
 
-### Next Release (v0.4.x)
-1. Add global profile metadata in Baseline UI.
-2. Show profile item count.
-3. Show last-saved timestamp.
-4. Add optional helper action: Select Required + Active.
+### v0.4.x — UX and UI Improvements
+- Clearer status indicators in the baseline module list (e.g. missing deps flagged inline).
+- Better feedback during apply (progress, what was skipped, what failed).
+- Improve action button layout and labelling for clarity.
+- Add optional helper action: Select Required + Active.
+- Better CSS layout and styling.
 
-### Following Release (v0.5.x)
-1. Add first-run helper prompt for new worlds to apply global profile.
-2. Improve status messaging for global profile operations.
-3. Optional: add baseline export/import text utilities.
+### v0.5.x — Global Profile UX
+- Global profile metadata display: item count, last-saved timestamp.
+- First-run helper prompt for new worlds to apply global profile.
+- Improve status messaging for global profile operations.
 
-### Cleanup Release (Remove Temporary Migration)
+### v0.6.x — Baseline Utilities
+- Optional: add baseline export/import text utilities.
+
+### vX.x — Cleanup Release (Remove Temporary Migration)
 1. Remove legacy migration function and call path.
 2. Remove legacy migration flags:
    - legacyWorldSettingsMigrated
@@ -78,10 +82,20 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - styles/module.css
 
 ## Suggested Validation Pass (When Resuming)
-1. In World A, save a custom global baseline profile — confirm dependency prompt appears if deps are unselected.
-2. In World B, load and apply that global profile — confirm dependency prompt appears and world reloads.
-3. Confirm required modules remain selected and locked in all actions.
-4. Confirm uninstalled dependencies are skipped silently without error.
-5. On world load with a module missing a dependency, confirm warning notification and console log appear.
+
+**Note: SWADE system and modules were updated before this session ended. Verify compatibility before continuing work.**
+
+### Regression Check (run first)
+1. Load a world with the updated SWADE system and confirm the module initialises without console errors.
+2. Confirm curated pack visibility still filters correctly for players.
+3. Confirm Quick Insert restrictions still sync on ready.
+4. Confirm required modules are still locked in the baseline UI.
+
+### Baseline Dependency Flow
+5. In World A, save a custom global baseline profile — confirm dependency prompt appears if deps are unselected.
+6. In World B, load and apply that global profile — confirm dependency prompt appears and world reloads.
+7. Confirm required modules remain selected and locked in all actions.
+8. Confirm uninstalled dependencies are skipped silently without error.
+9. On world load with a module missing a dependency, confirm warning notification and console log appear.
 4. Confirm Quick Insert results respect curated visibility for players and GMs.
 5. Confirm startup migration notice appears only once on upgraded worlds.
