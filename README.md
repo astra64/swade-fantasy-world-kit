@@ -81,6 +81,13 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 ### v0.6.x — Baseline Utilities
 - Add baseline export/import utilities (JSON format) for sharing and backup.
 
+### vX.x — Named Presets
+- Replace the single baseline slot with a named preset system.
+- GMs can save multiple named module presets (e.g. "Full Campaign", "Lite Session", "Player Demo").
+- UI to create, rename, delete, and apply presets from a list.
+- Global profile slot replaced (or extended) to support multiple named global presets.
+- Presets stored as JSON; importable/exportable for sharing between GMs.
+
 ### vX.x — Cleanup Release (Remove Temporary Migration)
 1. Remove legacy migration function and call path.
 2. Remove legacy migration flags:
