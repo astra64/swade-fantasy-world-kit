@@ -449,7 +449,8 @@ async function syncQuickInsertPackRestrictions() {
   const next = foundry.utils.deepClone(current);
   next.packs ??= {};
 
-  const restrictedRoles = [CONST.USER_ROLES.PLAYER, CONST.USER_ROLES.TRUSTED];
+  const playerRestrictedRoles = [CONST.USER_ROLES.PLAYER, CONST.USER_ROLES.TRUSTED];
+  const gmRole = CONST.USER_ROLES.GAMEMASTER;
 
   for (const pack of game.packs.values()) {
     const packId = pack.collection;
@@ -457,14 +458,24 @@ async function syncQuickInsertPackRestrictions() {
       isGM: false,
       role: CONST.USER_ROLES.PLAYER
     });
+    const isAllowedForGMs = isPackAllowedForUser(packId, {
+      isGM: true,
+      role: gmRole
+    });
 
     const existingRoles = Array.isArray(next.packs[packId]) ? [...next.packs[packId]] : [];
     const roleSet = new Set(existingRoles);
 
     if (isAllowedForPlayers) {
-      for (const role of restrictedRoles) roleSet.delete(role);
+      for (const role of playerRestrictedRoles) roleSet.delete(role);
     } else {
-      for (const role of restrictedRoles) roleSet.add(role);
+      for (const role of playerRestrictedRoles) roleSet.add(role);
+    }
+
+    if (isAllowedForGMs) {
+      roleSet.delete(gmRole);
+    } else {
+      roleSet.add(gmRole);
     }
 
     const updatedRoles = [...roleSet];
