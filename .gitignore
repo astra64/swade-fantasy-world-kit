@@ -1,0 +1,5 @@
+# Foundry/LevelDB transient files in compendium packs
+packs/**/LOCK
+packs/**/LOG
+packs/**/LOG.old
+packs/**/*.log

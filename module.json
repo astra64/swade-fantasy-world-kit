@@ -1,0 +1,211 @@
+{
+  "id": "swade-consolidated-fantasy-compendiums",
+  "title": "SWADE consolidated fantasy compendiums",
+  "version": "0.1",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "description": "<p>Just some consolidated compendiums for fantasy SWADE games. Includes icons configured to use (mostly) unique https://game-icons.net/ icons for each compendium icon.</p>",
+  "flags": {
+    "canUpload": true
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/module.css"
+  ],
+  "packs": [
+    {
+      "name": "actions-fantasy",
+      "label": "Actions (Fantasy)",
+      "path": "packs/actions-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "ancestries-fantasy",
+      "label": "Ancestries (Fantasy)",
+      "path": "packs/ancestries-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "armor-and-shields-fantasy",
+      "label": "Armor and Shields (Fantasy)",
+      "path": "packs/armor-and-shields-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "armor-sets-fantasy",
+      "label": "Armor Sets (Fantasy)",
+      "path": "packs/armor-sets-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "edges-fantasy",
+      "label": "Edges (Fantasy)",
+      "path": "packs/edges-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "gear-fantasy",
+      "label": "Gear (Fantasy)",
+      "path": "packs/gear-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "hindrances-fantasy",
+      "label": "Hindrances (Fantasy)",
+      "path": "packs/hindrances-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "magic-items-fantasy",
+      "label": "Magic Items (Fantasy)",
+      "path": "packs/magic-items-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "powers-fantasy",
+      "label": "Powers (Fantasy)",
+      "path": "packs/powers-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "pregens-fantasy",
+      "label": "Pregens (Fantasy)",
+      "path": "packs/pregens-fantasy",
+      "type": "Actor",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "skills-fantasy",
+      "label": "Skills (Fantasy)",
+      "path": "packs/skills-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    },
+    {
+      "name": "weapons-fantasy",
+      "label": "Weapons (Fantasy)",
+      "path": "packs/weapons-fantasy",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "system": "swade"
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "SWADE Fantasy Core",
+      "sorting": "a",
+      "packs": [
+        "actions-fantasy",
+        "pregens-fantasy",
+        "powers-fantasy"
+      ]
+    },
+    {
+      "name": "SWADE Fantasy Equipment",
+      "sorting": "a",
+      "packs": [
+        "armor-and-shields-fantasy",
+        "armor-sets-fantasy",
+        "gear-fantasy",
+        "magic-items-fantasy",
+        "weapons-fantasy"
+      ]
+    },
+    {
+      "name": "SWADE Fantasy Characters",
+      "sorting": "a",
+      "packs": [
+        "ancestries-fantasy",
+        "edges-fantasy",
+        "hindrances-fantasy",
+        "skills-fantasy"
+      ]
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "swade",
+        "type": "system",
+        "compatibility": {}
+      }
+    ],
+    "requires": [
+      {
+        "id": "swade-core-rules",
+        "type": "module",
+        "compatibility": {}
+      },
+      {
+        "id": "swade-fantasy-companion",
+        "type": "module",
+        "compatibility": {}
+      },
+      {
+        "id": "game-icons-net",
+        "type": "module",
+        "compatibility": {}
+      }
+    ]
+  }
+}

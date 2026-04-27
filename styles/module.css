@@ -1,0 +1,8 @@
+/* Minimal style hook to confirm the stylesheet is loaded. */
+body {
+  --scfc-accent: #7a9928;
+}
+
+.scfc-hidden-pack {
+  display: none !important;
+}
