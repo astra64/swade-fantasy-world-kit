@@ -16,6 +16,16 @@ Hooks.once("init", () => {
     default: true,
     onChange: rerenderCompendiumDirectory
   });
+
+  game.settings.register(MODULE_ID, "gmSeesAllPacks", {
+    name: "GM Sees All Packs",
+    hint: "When enabled, GMs can still see non-curated packs while players are filtered.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: rerenderCompendiumDirectory
+  });
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
@@ -23,6 +33,7 @@ Hooks.on("renderCompendiumDirectory", (_app, html) => {
   if (!root?.querySelectorAll) return;
 
   const curatedMode = game.settings.get(MODULE_ID, "curatedMode");
+  const gmSeesAllPacks = game.settings.get(MODULE_ID, "gmSeesAllPacks");
   const isGM = game.user?.isGM === true;
   const modulePrefix = `${MODULE_ID}.`;
 
@@ -33,7 +44,7 @@ Hooks.on("renderCompendiumDirectory", (_app, html) => {
     element.classList.remove("scfc-hidden-pack");
 
     if (!curatedMode) continue;
-    if (isGM) continue;
+    if (isGM && gmSeesAllPacks) continue;
     if (isCuratedPack) continue;
 
     element.classList.add("scfc-hidden-pack");
