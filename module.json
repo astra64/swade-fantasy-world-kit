@@ -1,7 +1,7 @@
 {
   "id": "swade-consolidated-fantasy-compendiums",
   "title": "SWADE consolidated fantasy compendiums",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "compatibility": {
     "minimum": "13",
     "verified": "13"

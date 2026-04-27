@@ -4,6 +4,11 @@ function rerenderCompendiumDirectory() {
   ui.compendium?.render(true);
 }
 
+async function handleVisibilitySettingsChanged() {
+  rerenderCompendiumDirectory();
+  await syncQuickInsertPackRestrictions();
+}
+
 class ExtraVisiblePacksSelector extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -82,7 +87,7 @@ class ExtraVisiblePacksSelector extends FormApplication {
     const normalized = [...new Set(selected.map((entry) => String(entry).trim()).filter(Boolean))];
 
     await game.settings.set(MODULE_ID, "extraVisiblePacks", normalized.join("\n"));
-    rerenderCompendiumDirectory();
+    await handleVisibilitySettingsChanged();
   }
 }
 
@@ -94,6 +99,88 @@ function parseVisiblePackList(rawValue) {
       .split(/[\n,]/)
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0)
+  );
+}
+
+function isPackAllowedForUser(packId, user = game.user) {
+  const curatedMode = game.settings.get(MODULE_ID, "curatedMode");
+  if (!curatedMode) return true;
+
+  const isGM = user?.isGM === true;
+  const gmSeesAllPacks = game.settings.get(MODULE_ID, "gmSeesAllPacks");
+  if (isGM && gmSeesAllPacks) return true;
+
+  const modulePrefix = `${MODULE_ID}.`;
+  const extraVisiblePacks = parseVisiblePackList(
+    game.settings.get(MODULE_ID, "extraVisiblePacks")
+  );
+
+  return packId.startsWith(modulePrefix) || extraVisiblePacks.has(packId);
+}
+
+function applyPlayerPackAccessPatch() {
+  if (game.user?.isGM) return;
+
+  for (const pack of game.packs.values()) {
+    if (pack._scfcPatchedAccess === true) continue;
+    if (typeof pack.testUserPermission !== "function") continue;
+
+    const originalTestUserPermission = pack.testUserPermission.bind(pack);
+
+    pack.testUserPermission = function(user, permission, options) {
+      const basePermission = originalTestUserPermission(user, permission, options);
+      if (!basePermission) return false;
+
+      const effectiveUser = user ?? game.user;
+      return isPackAllowedForUser(this.collection, effectiveUser);
+    };
+
+    pack._scfcPatchedAccess = true;
+  }
+}
+
+async function syncQuickInsertPackRestrictions() {
+  if (!game.user?.isGM) return;
+
+  const quickInsertModule = game.modules.get("quick-insert");
+  if (!quickInsertModule?.active) return;
+
+  const current = game.settings.get("quick-insert", "indexingDisabled") ?? {};
+  const next = foundry.utils.deepClone(current);
+  next.packs ??= {};
+
+  const restrictedRoles = [CONST.USER_ROLES.PLAYER, CONST.USER_ROLES.TRUSTED];
+
+  for (const pack of game.packs.values()) {
+    const packId = pack.collection;
+    const isAllowedForPlayers = isPackAllowedForUser(packId, {
+      isGM: false,
+      role: CONST.USER_ROLES.PLAYER
+    });
+
+    const existingRoles = Array.isArray(next.packs[packId]) ? [...next.packs[packId]] : [];
+    const roleSet = new Set(existingRoles);
+
+    if (isAllowedForPlayers) {
+      for (const role of restrictedRoles) roleSet.delete(role);
+    } else {
+      for (const role of restrictedRoles) roleSet.add(role);
+    }
+
+    const updatedRoles = [...roleSet];
+    if (updatedRoles.length === 0) {
+      delete next.packs[packId];
+    } else {
+      next.packs[packId] = updatedRoles;
+    }
+  }
+
+  const changed = JSON.stringify(current) !== JSON.stringify(next);
+  if (!changed) return;
+
+  await game.settings.set("quick-insert", "indexingDisabled", next);
+  ui.notifications?.info(
+    "SWADE Fantasy: Quick Insert pack restrictions synced. Have players reload to refresh search results."
   );
 }
 
@@ -111,12 +198,12 @@ Hooks.once("init", () => {
 
   game.settings.register(MODULE_ID, "curatedMode", {
     name: "Curated Mode",
-    hint: "Show only curated module compendiums to players.",
+    hint: "Show only curated module compendiums to players, including search integrations that honor pack permissions.",
     scope: "world",
     config: true,
     type: Boolean,
     default: true,
-    onChange: rerenderCompendiumDirectory
+    onChange: handleVisibilitySettingsChanged
   });
 
   game.settings.register(MODULE_ID, "gmSeesAllPacks", {
@@ -126,7 +213,7 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: true,
-    onChange: rerenderCompendiumDirectory
+    onChange: handleVisibilitySettingsChanged
   });
 
   game.settings.register(MODULE_ID, "extraVisiblePacks", {
@@ -136,33 +223,26 @@ Hooks.once("init", () => {
     config: false,
     type: String,
     default: "",
-    onChange: rerenderCompendiumDirectory
+    onChange: handleVisibilitySettingsChanged
   });
+});
+
+Hooks.once("ready", () => {
+  applyPlayerPackAccessPatch();
+
+  syncQuickInsertPackRestrictions();
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
   const root = html?.[0] ?? html;
   if (!root?.querySelectorAll) return;
 
-  const curatedMode = game.settings.get(MODULE_ID, "curatedMode");
-  const gmSeesAllPacks = game.settings.get(MODULE_ID, "gmSeesAllPacks");
-  const extraVisiblePacks = parseVisiblePackList(
-    game.settings.get(MODULE_ID, "extraVisiblePacks")
-  );
-  const isGM = game.user?.isGM === true;
-  const modulePrefix = `${MODULE_ID}.`;
-
   for (const element of root.querySelectorAll("[data-pack]")) {
     const packId = element.dataset.pack ?? "";
-    const isCuratedPack = packId.startsWith(modulePrefix);
-    const isWhitelistedPack = extraVisiblePacks.has(packId);
 
     element.classList.remove("scfc-hidden-pack");
 
-    if (!curatedMode) continue;
-    if (isGM && gmSeesAllPacks) continue;
-    if (isCuratedPack) continue;
-    if (isWhitelistedPack) continue;
+    if (isPackAllowedForUser(packId, game.user)) continue;
 
     element.classList.add("scfc-hidden-pack");
   }
