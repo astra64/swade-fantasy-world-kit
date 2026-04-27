@@ -91,6 +91,238 @@ class ExtraVisiblePacksSelector extends FormApplication {
   }
 }
 
+class BaselineModulesManager extends FormApplication {
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: `${MODULE_ID}-baseline-modules`,
+      classes: ["scfc-baseline-modules"],
+      title: "SWADE Fantasy: Baseline Modules",
+      template: `modules/${MODULE_ID}/templates/baseline-modules.hbs`,
+      width: 720,
+      height: 760,
+      submitOnChange: false,
+      closeOnSubmit: false
+    });
+  }
+
+  getData() {
+    const rawList = game.settings.get(MODULE_ID, "baselineModules");
+    const requiredIds = new Set(getRequiredModuleIds());
+    const selectedIds = new Set(parseModuleIdList(rawList));
+    for (const id of requiredIds) selectedIds.add(id);
+    const installedModules = [...game.modules.values()]
+      .map((module) => {
+        const id = module.id;
+        const title = module.title ?? id;
+        const searchText = `${title} ${id}`.toLowerCase();
+
+        return {
+          id,
+          title,
+          active: Boolean(module.active),
+          required: requiredIds.has(id),
+          selected: selectedIds.has(id),
+          searchText
+        };
+      })
+      .sort((a, b) => a.title.localeCompare(b.title));
+
+    const configured = [...selectedIds].map((id) => {
+      const module = game.modules.get(id);
+      return {
+        id,
+        installed: Boolean(module),
+        active: Boolean(module?.active)
+      };
+    });
+
+    return {
+      installedModules,
+      hasInstalledModules: installedModules.length > 0,
+      configured,
+      hasConfigured: configured.length > 0
+    };
+  }
+
+  activateListeners(html) {
+    super.activateListeners(html);
+
+    const applyButton = html[0].querySelector("[data-apply-baseline]");
+    const searchInput = html[0].querySelector("[data-module-search]");
+    const moduleRows = [...html[0].querySelectorAll("[data-module-row]")];
+    const selectActiveButton = html[0].querySelector("[data-module-select-active]");
+    const clearSelectionButton = html[0].querySelector("[data-module-clear-selection]");
+    const loadGlobalButton = html[0].querySelector("[data-module-load-global]");
+    const saveGlobalButton = html[0].querySelector("[data-module-save-global]");
+    const applyGlobalButton = html[0].querySelector("[data-module-apply-global]");
+
+    searchInput?.addEventListener("input", (event) => {
+      const term = (event.currentTarget.value ?? "").toLowerCase().trim();
+
+      for (const row of moduleRows) {
+        const searchText = (row.dataset.search ?? "").toLowerCase();
+        const visible = !term || searchText.includes(term);
+        row.style.display = visible ? "" : "none";
+      }
+    });
+
+    selectActiveButton?.addEventListener("click", () => {
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        const isRequired = row.dataset.required === "true";
+        const isActive = row.dataset.active === "true";
+        if (checkbox) checkbox.checked = isRequired || isActive;
+      }
+    });
+
+    clearSelectionButton?.addEventListener("click", () => {
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        const isRequired = row.dataset.required === "true";
+        if (checkbox) checkbox.checked = isRequired;
+      }
+    });
+
+    loadGlobalButton?.addEventListener("click", () => {
+      const globalIds = new Set(getGlobalBaselineModuleIds());
+
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        if (!checkbox) continue;
+
+        const isRequired = row.dataset.required === "true";
+        checkbox.checked = isRequired || globalIds.has(checkbox.value);
+      }
+    });
+
+    saveGlobalButton?.addEventListener("click", async () => {
+      const selectedIds = [];
+
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        if (!checkbox?.checked) continue;
+        selectedIds.push(checkbox.value);
+      }
+
+      const normalized = mergeWithRequiredModuleIds(selectedIds).join("\n");
+      await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
+      ui.notifications?.info("SWADE Fantasy global baseline profile saved.");
+    });
+
+    applyGlobalButton?.addEventListener("click", async () => {
+      const apply = await Dialog.confirm({
+        title: "Apply Global Baseline to This World",
+        content: "<p>This replaces this world's baseline list with your saved global profile, then enables installed modules from that list.</p>",
+        yes: () => true,
+        no: () => false,
+        defaultYes: true
+      });
+      if (!apply) return;
+
+      const globalIds = getGlobalBaselineModuleIds();
+      await game.settings.set(MODULE_ID, "baselineModules", globalIds.join("\n"));
+      await this._onApplyBaseline();
+    });
+
+    applyButton?.addEventListener("click", async () => {
+      await this._onApplyBaseline();
+    });
+  }
+
+  async _onApplyBaseline() {
+    const apply = await Dialog.confirm({
+      title: "Apply Baseline Modules",
+      content: "<p>This will enable installed modules from your baseline list for this world. Missing modules are skipped.</p>",
+      yes: () => true,
+      no: () => false,
+      defaultYes: true
+    });
+    if (!apply) return;
+
+    const configuredIds = mergeWithRequiredModuleIds(
+      parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"))
+    );
+    const missing = [];
+    const alreadyEnabled = [];
+    const enabledNow = [];
+
+    const moduleConfiguration = foundry.utils.deepClone(
+      game.settings.get("core", "moduleConfiguration") ?? {}
+    );
+
+    for (const id of configuredIds) {
+      const module = game.modules.get(id);
+      if (!module) {
+        missing.push(id);
+        continue;
+      }
+
+      if (module.active) {
+        alreadyEnabled.push(id);
+        continue;
+      }
+
+      moduleConfiguration[id] = true;
+      enabledNow.push(id);
+    }
+
+    if (enabledNow.length > 0) {
+      await game.settings.set("core", "moduleConfiguration", moduleConfiguration);
+    }
+
+    const summary = [
+      `Enabled now: ${enabledNow.length}`,
+      `Already enabled: ${alreadyEnabled.length}`,
+      `Missing: ${missing.length}`
+    ].join(" | ");
+
+    ui.notifications?.info(`SWADE Fantasy baseline apply complete. ${summary}`);
+    if (missing.length > 0) {
+      console.warn("[SWADE Fantasy] Missing baseline modules:\n" + missing.join("\n"));
+    }
+
+    await this.render(true);
+  }
+
+  async _updateObject(_event, formData) {
+    const values = formData.baselineModulesSelected;
+    const selected = Array.isArray(values) ? values : (values ? [values] : []);
+    const normalizedIds = mergeWithRequiredModuleIds(
+      [...new Set(selected.map((entry) => String(entry).trim()).filter(Boolean))]
+    );
+    const normalized = normalizedIds.join("\n");
+
+    await game.settings.set(MODULE_ID, "baselineModules", normalized);
+    await this.render(true);
+  }
+}
+
+function getRequiredModuleIds() {
+  const thisModule = game.modules.get(MODULE_ID);
+  const requires =
+    thisModule?.relationships?.requires ??
+    thisModule?.metadata?.relationships?.requires ??
+    [];
+
+  return [...new Set(
+    requires
+      .map((entry) => entry?.id)
+      .filter((id) => typeof id === "string" && id.length > 0)
+  )];
+}
+
+function mergeWithRequiredModuleIds(moduleIds) {
+  const merged = new Set(moduleIds);
+  for (const id of getRequiredModuleIds()) merged.add(id);
+  return [...merged];
+}
+
+function getGlobalBaselineModuleIds() {
+  return mergeWithRequiredModuleIds(
+    parseModuleIdList(game.settings.get(MODULE_ID, "globalBaselineModules"))
+  );
+}
+
 function parseVisiblePackList(rawValue) {
   if (typeof rawValue !== "string") return new Set();
 
@@ -100,6 +332,17 @@ function parseVisiblePackList(rawValue) {
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0)
   );
+}
+
+function parseModuleIdList(rawValue) {
+  if (typeof rawValue !== "string") return [];
+
+  return [...new Set(
+    rawValue
+      .split(/[\n,]/)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+  )];
 }
 
 function isPackAllowedForUser(packId, user = game.user) {
@@ -196,6 +439,15 @@ Hooks.once("init", () => {
     restricted: true
   });
 
+  game.settings.registerMenu(MODULE_ID, "baselineModulesMenu", {
+    name: "Baseline Modules",
+    label: "Configure and Apply",
+    hint: "Configure baseline module IDs and enable installed ones for this world.",
+    icon: "fas fa-puzzle-piece",
+    type: BaselineModulesManager,
+    restricted: true
+  });
+
   game.settings.register(MODULE_ID, "curatedMode", {
     name: "Curated Mode",
     hint: "Show only curated module compendiums to players, including search integrations that honor pack permissions.",
@@ -224,6 +476,34 @@ Hooks.once("init", () => {
     type: String,
     default: "",
     onChange: handleVisibilitySettingsChanged
+  });
+
+  game.settings.register(MODULE_ID, "baselineModules", {
+    name: "Baseline Modules (Advanced)",
+    hint: "Advanced manual input. Prefer the 'Baseline Modules' menu button above.",
+    scope: "world",
+    config: false,
+    type: String,
+    default: [
+      "swade-core-rules",
+      "swade-fantasy-companion",
+      "game-icons-net",
+      "quick-insert"
+    ].join("\n")
+  });
+
+  game.settings.register(MODULE_ID, "globalBaselineModules", {
+    name: "Global Baseline Modules (Advanced)",
+    hint: "Client-scoped profile shared by this GM across worlds on this Foundry install.",
+    scope: "client",
+    config: false,
+    type: String,
+    default: [
+      "swade-core-rules",
+      "swade-fantasy-companion",
+      "game-icons-net",
+      "quick-insert"
+    ].join("\n")
   });
 });
 

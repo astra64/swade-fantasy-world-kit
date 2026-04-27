@@ -6,3 +6,95 @@ body {
 .scfc-hidden-pack {
   display: none !important;
 }
+
+.scfc-action-row,
+.scfc-footer-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.scfc-footer-row {
+  margin-top: 0.75rem;
+}
+
+.scfc-scroll-panel {
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--color-cool-3) 6%, transparent);
+}
+
+.scfc-scroll-panel-modules {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.scfc-scroll-panel-configured {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.scfc-scroll-panel-packs {
+  max-height: 500px;
+  overflow: auto;
+}
+
+.scfc-list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.25rem 0;
+  padding: 0.25rem 0.35rem;
+  border-radius: 4px;
+}
+
+.scfc-list-row:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 16%, transparent);
+}
+
+.scfc-list-row-stack {
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.scfc-row-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.scfc-row-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scfc-row-meta {
+  opacity: 0.72;
+  font-size: 12px;
+}
+
+.scfc-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.scfc-status-active {
+  color: var(--color-text-hyperlink);
+}
+
+.scfc-status-missing {
+  color: var(--color-level-error);
+}
+
+.scfc-configured-title {
+  margin: 0 0 0.5rem 0;
+}

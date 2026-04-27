@@ -1,0 +1,75 @@
+<form class="scfc-baseline-modules-form" autocomplete="off">
+  <div class="form-group">
+    <label>Search Installed Modules</label>
+    <input type="text" data-module-search placeholder="Search by title or ID..." />
+    <p class="notes">Select modules to include in your baseline profile for this world.</p>
+  </div>
+
+  <div class="form-group scfc-action-row">
+    <button type="button" data-module-select-active>Select Active Modules</button>
+    <button type="button" data-module-clear-selection>Clear Selection</button>
+    <button type="button" data-module-load-global>Load Global Profile</button>
+    <button type="button" data-module-save-global>Save Selection as Global</button>
+    <button type="button" data-module-apply-global>Apply Global to This World</button>
+  </div>
+  <p class="notes">Global profile is stored per GM client and can be loaded in other worlds on this Foundry install.</p>
+
+  {{#if hasInstalledModules}}
+    <div class="form-group scfc-scroll-panel scfc-scroll-panel-modules">
+      {{#each installedModules as |entry|}}
+        <label class="scfc-list-row" data-module-row data-search="{{entry.searchText}}" data-active="{{#if entry.active}}true{{else}}false{{/if}}" data-required="{{#if entry.required}}true{{else}}false{{/if}}">
+          <span class="scfc-row-main">
+            <input type="checkbox" name="baselineModulesSelected" value="{{entry.id}}" {{#if entry.selected}}checked{{/if}} {{#if entry.required}}checked disabled{{/if}} />
+            <strong class="scfc-row-title">{{entry.title}}</strong>
+            <span class="scfc-row-meta">{{entry.id}}</span>
+          </span>
+          <span>
+            {{#if entry.required}}
+              <strong class="scfc-status-badge">required</strong>
+            {{/if}}
+            {{#if entry.active}}
+              <strong class="scfc-status-badge scfc-status-active">active</strong>
+            {{/if}}
+          </span>
+        </label>
+      {{/each}}
+    </div>
+  {{else}}
+    <p>No installed modules were found.</p>
+  {{/if}}
+
+  {{#if hasConfigured}}
+    <div class="form-group scfc-scroll-panel scfc-scroll-panel-configured">
+      <p class="notes scfc-configured-title">Current baseline entries:</p>
+      {{#each configured as |entry|}}
+        <div class="scfc-list-row">
+          <code class="scfc-row-meta">{{entry.id}}</code>
+          <span>
+            {{#if entry.installed}}
+              {{#if entry.active}}
+                <strong class="scfc-status-badge scfc-status-active">installed + active</strong>
+              {{else}}
+                <strong class="scfc-status-badge">installed</strong>
+              {{/if}}
+            {{else}}
+              <strong class="scfc-status-badge scfc-status-missing">missing</strong>
+            {{/if}}
+          </span>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <p>No baseline module IDs configured.</p>
+  {{/if}}
+
+  <footer class="sheet-footer flexrow scfc-footer-row">
+    <button type="submit">
+      <i class="fas fa-save"></i>
+      Save Selection
+    </button>
+    <button type="button" data-apply-baseline>
+      <i class="fas fa-check"></i>
+      Apply Baseline to World
+    </button>
+  </footer>
+</form>
