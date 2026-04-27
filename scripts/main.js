@@ -145,11 +145,26 @@ class BaselineModulesManager extends FormApplication {
       };
     });
 
+    const installedCount = installedModules.length;
+    const activeCount = installedModules.filter((entry) => entry.active).length;
+    const selectedCount = installedModules.filter((entry) => entry.selected).length;
+    const requiredCount = installedModules.filter((entry) => entry.required).length;
+    const configuredCount = configured.length;
+    const configuredInstalledCount = configured.filter((entry) => entry.installed).length;
+    const configuredMissingCount = configuredCount - configuredInstalledCount;
+
     return {
       installedModules,
       hasInstalledModules: installedModules.length > 0,
       configured,
-      hasConfigured: configured.length > 0
+      hasConfigured: configured.length > 0,
+      installedCount,
+      activeCount,
+      selectedCount,
+      requiredCount,
+      configuredCount,
+      configuredInstalledCount,
+      configuredMissingCount
     };
   }
 

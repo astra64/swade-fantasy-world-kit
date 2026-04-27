@@ -58,6 +58,7 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Improve action button layout and labelling for clarity.
 - Add optional helper action: Select Required + Active.
 - Better CSS layout and styling.
+- Decide how to handle this module in baseline selection UI (hide it, or show as locked/always included).
 
 ### v0.5.x — Global Profile UX
 - Global profile metadata display: item count, last-saved timestamp.
@@ -65,7 +66,7 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Improve status messaging for global profile operations.
 
 ### v0.6.x — Baseline Utilities
-- Optional: add baseline export/import text utilities.
+- Add baseline export/import utilities (JSON format) for sharing and backup.
 
 ### vX.x — Cleanup Release (Remove Temporary Migration)
 1. Remove legacy migration function and call path.

@@ -1,21 +1,33 @@
 <form class="scfc-baseline-modules-form" autocomplete="off">
-  <div class="form-group">
+  <div class="form-group scfc-search-group">
     <label>Search Installed Modules</label>
     <input type="text" data-module-search placeholder="Search by title or ID..." />
-    <p class="notes">Select modules to include in your baseline profile for this world.</p>
+    <p class="notes scfc-search-notes">Select modules to include in your baseline profile for this world.</p>
   </div>
 
-  <div class="form-group scfc-action-row">
-    <button type="button" data-module-select-active>Select Active Modules</button>
+  <div class="form-group scfc-toolbar-row" aria-label="Baseline actions">
+    <button type="button" data-module-select-active>Select Active</button>
     <button type="button" data-module-clear-selection>Clear Selection</button>
-    <button type="button" data-module-load-global>Load Global Profile</button>
-    <button type="button" data-module-save-global>Save Selection as Global</button>
-    <button type="button" data-module-apply-global>Apply Global to This World</button>
+    <button type="button" data-module-load-global>Load Global</button>
+    <button type="button" data-module-save-global>Save as Global</button>
+    <button type="button" data-module-apply-global>Apply Global Here</button>
   </div>
-  <p class="notes">Global profile is stored per GM client and can be loaded in other worlds on this Foundry install.</p>
+  <p class="notes scfc-global-notes">Global profile is stored per GM client and can be loaded in other worlds on this Foundry install.</p>
+
+  <div class="scfc-summary-row" aria-label="Baseline summary">
+    <span class="scfc-summary-chip">Installed: {{installedCount}}</span>
+    <span class="scfc-summary-chip">Active: {{activeCount}}</span>
+    <span class="scfc-summary-chip">Selected: {{selectedCount}}</span>
+    <span class="scfc-summary-chip">Required: {{requiredCount}}</span>
+    <span class="scfc-summary-chip">Baseline entries: {{configuredCount}}</span>
+  </div>
 
   {{#if hasInstalledModules}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-modules">
+      <div class="scfc-panel-header">
+        <span>Installed modules</span>
+        <strong>{{installedCount}}</strong>
+      </div>
       {{#each installedModules as |entry|}}
         <label class="scfc-list-row" data-module-row data-search="{{entry.searchText}}" data-active="{{#if entry.active}}true{{else}}false{{/if}}" data-required="{{#if entry.required}}true{{else}}false{{/if}}">
           <span class="scfc-row-main">
@@ -40,7 +52,10 @@
 
   {{#if hasConfigured}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-configured">
-      <p class="notes scfc-configured-title">Current baseline entries:</p>
+      <div class="scfc-panel-header">
+        <span>Current baseline entries</span>
+        <strong>{{configuredCount}} total</strong>
+      </div>
       {{#each configured as |entry|}}
         <div class="scfc-list-row">
           <code class="scfc-row-meta">{{entry.id}}</code>
