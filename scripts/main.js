@@ -213,8 +213,31 @@ class BaselineModulesManager extends FormApplication {
         selectedIds.push(checkbox.value);
       }
 
-      const normalized = mergeWithRequiredModuleIds(selectedIds).join("\n");
-      await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
+      // Check if any selected modules have installed dependencies that are not also selected
+      const selectedSet = new Set(selectedIds);
+      const allDeps = collectAllDependencies(selectedIds);
+      const missingDeps = [...allDeps].filter((depId) => {
+        return game.modules.has(depId) && !selectedSet.has(depId);
+      });
+
+      if (missingDeps.length > 0) {
+        const resolution = await promptForDependencyResolution(selectedIds, missingDeps);
+        if (!resolution.resolved) return;
+
+        // Also check the dependency boxes in the UI
+        for (const depId of missingDeps) {
+          const depRow = moduleRows.find((r) => r.querySelector("input[type=checkbox]")?.value === depId);
+          const depCheckbox = depRow?.querySelector("input[type=checkbox]");
+          if (depCheckbox) depCheckbox.checked = true;
+        }
+
+        const normalized = mergeWithRequiredModuleIds(resolution.modulesToEnable).join("\n");
+        await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
+      } else {
+        const normalized = mergeWithRequiredModuleIds(selectedIds).join("\n");
+        await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
+      }
+
       ui.notifications?.info("SWADE Fantasy World Kit global baseline profile saved.");
     });
 
@@ -241,7 +264,7 @@ class BaselineModulesManager extends FormApplication {
   async _onApplyBaseline() {
     const apply = await Dialog.confirm({
       title: "Apply Baseline Modules",
-      content: "<p>This will enable installed modules from your baseline list for this world. Missing modules are skipped.</p>",
+      content: "<p>This will enable installed modules from your baseline list for this world. Uninstalled modules are skipped.</p>",
       yes: () => true,
       no: () => false,
       defaultYes: true
@@ -251,13 +274,31 @@ class BaselineModulesManager extends FormApplication {
     const configuredIds = mergeWithRequiredModuleIds(
       parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"))
     );
+
+    const currentModuleConfig = foundry.utils.deepClone(
+      game.settings.get("core", "moduleConfiguration") ?? {}
+    );
+
+    // Check for missing dependencies
+    const missingDeps = resolveMissingDependencies(configuredIds, currentModuleConfig);
+    
+    if (missingDeps.length > 0) {
+      const resolution = await promptForDependencyResolution(configuredIds, missingDeps);
+      if (!resolution.resolved) {
+        ui.notifications?.info("SWADE Fantasy World Kit baseline apply cancelled.");
+        return;
+      }
+      // Update the list of modules to enable with dependencies
+      const uniqueIds = [...new Set([...resolution.modulesToEnable])];
+      configuredIds.length = 0;
+      configuredIds.push(...uniqueIds);
+    }
+
     const missing = [];
     const alreadyEnabled = [];
     const enabledNow = [];
 
-    const moduleConfiguration = foundry.utils.deepClone(
-      game.settings.get("core", "moduleConfiguration") ?? {}
-    );
+    const moduleConfiguration = foundry.utils.deepClone(currentModuleConfig);
 
     for (const id of configuredIds) {
       const module = game.modules.get(id);
@@ -290,15 +331,37 @@ class BaselineModulesManager extends FormApplication {
       console.warn("[SWADE Fantasy World Kit] Missing baseline modules:\n" + missing.join("\n"));
     }
 
-    await this.render(true);
+    // Reload the world if any new modules were enabled
+    if (enabledNow.length > 0) {
+      ui.notifications?.info("Reloading world to activate modules...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      await this.render(true);
+    }
   }
 
   async _updateObject(_event, formData) {
     const values = formData.baselineModulesSelected;
     const selected = Array.isArray(values) ? values : (values ? [values] : []);
-    const normalizedIds = mergeWithRequiredModuleIds(
-      [...new Set(selected.map((entry) => String(entry).trim()).filter(Boolean))]
-    );
+    const deduped = [...new Set(selected.map((entry) => String(entry).trim()).filter(Boolean))];
+
+    // Check if any selected modules have installed dependencies not also selected
+    const selectedSet = new Set(deduped);
+    const allDeps = collectAllDependencies(deduped);
+    const missingDeps = [...allDeps].filter((depId) => {
+      return game.modules.has(depId) && !selectedSet.has(depId);
+    });
+
+    let finalIds = deduped;
+    if (missingDeps.length > 0) {
+      const resolution = await promptForDependencyResolution(deduped, missingDeps);
+      if (!resolution.resolved) return;
+      finalIds = resolution.modulesToEnable;
+    }
+
+    const normalizedIds = mergeWithRequiredModuleIds(finalIds);
     const normalized = normalizedIds.join("\n");
 
     await game.settings.set(MODULE_ID, "baselineModules", normalized);
@@ -318,6 +381,152 @@ function getRequiredModuleIds() {
       .map((entry) => entry?.id)
       .filter((id) => typeof id === "string" && id.length > 0)
   )];
+}
+
+function getModuleDependencies(moduleId) {
+  const module = game.modules.get(moduleId);
+  if (!module) return [];
+
+  const requires =
+    module.relationships?.requires ??
+    module.metadata?.relationships?.requires ??
+    [];
+
+  return [...new Set(
+    requires
+      .map((entry) => entry?.id)
+      .filter((id) => typeof id === "string" && id.length > 0)
+  )];
+}
+
+function collectAllDependencies(moduleIds, currentModuleConfig = {}) {
+  const visited = new Set(Object.keys(currentModuleConfig));
+  const toVisit = [...moduleIds];
+  const allDependencies = new Set();
+
+  while (toVisit.length > 0) {
+    const id = toVisit.shift();
+    if (visited.has(id)) continue;
+    
+    visited.add(id);
+    const deps = getModuleDependencies(id);
+    
+    for (const dep of deps) {
+      allDependencies.add(dep);
+      if (!visited.has(dep)) {
+        toVisit.push(dep);
+      }
+    }
+  }
+
+  return allDependencies;
+}
+
+function resolveMissingDependencies(moduleIds, currentModuleConfig = {}) {
+  const allNeededDeps = collectAllDependencies(moduleIds, currentModuleConfig);
+  const missingDeps = [];
+
+  for (const depId of allNeededDeps) {
+    const depModule = game.modules.get(depId);
+    
+    // Skip if not installed
+    if (!depModule) continue;
+    
+    const isActive = depModule.active ?? false;
+    const isInConfig = currentModuleConfig[depId] === true;
+    if (!isActive && !isInConfig) {
+      missingDeps.push(depId);
+    }
+  }
+
+  return missingDeps;
+}
+
+async function promptForDependencyResolution(modulesToEnable, missingDeps) {
+  if (missingDeps.length === 0) return { resolved: true, modulesToEnable };
+
+  const depsList = missingDeps
+    .map((id) => {
+      const module = game.modules.get(id);
+      return `<li>${module?.title ?? id}</li>`;
+    })
+    .join("");
+
+  const content = `
+    <p>The modules you selected require the following installed dependencies to function properly:</p>
+    <ul>${depsList}</ul>
+    <p>Would you like to enable these dependencies automatically?</p>
+  `;
+
+  const enable = await Dialog.confirm({
+    title: "Enable Module Dependencies?",
+    content,
+    yes: () => true,
+    no: () => false,
+    defaultYes: true
+  });
+
+  if (!enable) return { resolved: false };
+
+  return {
+    resolved: true,
+    modulesToEnable: [...modulesToEnable, ...missingDeps]
+  };
+}
+
+async function validateModuleDependencies() {
+  if (!game.user?.isGM) return;
+
+  const activeModules = [...game.modules.values()].filter((m) => m.active);
+  const issues = [];
+
+  for (const module of activeModules) {
+    const dependencies = getModuleDependencies(module.id);
+    const missingDeps = dependencies.filter((depId) => {
+      const depModule = game.modules.get(depId);
+      return !depModule?.active;
+    });
+
+    if (missingDeps.length > 0) {
+      issues.push({
+        moduleId: module.id,
+        moduleTitle: module.title ?? module.id,
+        missingDeps
+      });
+    }
+  }
+
+  if (issues.length === 0) return;
+
+  const issueDetails = issues
+    .map((issue) => {
+      const depsList = issue.missingDeps.map((id) => {
+        const dep = game.modules.get(id);
+        return `<li>${dep?.title ?? id}</li>`;
+      }).join("");
+      return `<strong>${issue.moduleTitle}</strong><ul>${depsList}</ul>`;
+    })
+    .join("");
+
+  const warningContent = `
+    <p><strong>Module Dependency Issues Detected:</strong></p>
+    <p>The following active modules are missing required dependencies:</p>
+    <div style="max-height: 300px; overflow-y: auto;">
+      ${issueDetails}
+    </div>
+    <p>You can use the Baseline Modules manager to safely enable modules with all dependencies.</p>
+  `;
+
+  ui.notifications?.warn("SWADE Fantasy World Kit: Module dependency issues detected. Check the console for details.");
+  console.warn(`[${MODULE_ID}] Module dependency issues:`, issues);
+
+  // Show as a dialog if multiple issues
+  if (issues.length > 2) {
+    Dialog.information({
+      title: "Module Dependency Issues",
+      content: warningContent
+    });
+  }
 }
 
 function mergeWithRequiredModuleIds(moduleIds) {
@@ -599,6 +808,7 @@ Hooks.once("ready", async () => {
   applyPlayerPackAccessPatch();
 
   await syncQuickInsertPackRestrictions();
+  await validateModuleDependencies();
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
