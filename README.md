@@ -1,6 +1,6 @@
 # SWADE Fantasy World Kit - Feature List and Roadmap
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 ## Product Direction
 SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled player-facing visibility, and fast world setup tools for consistent module activation.
@@ -30,6 +30,17 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
   - Covered paths: Save Selection (world baseline), Save Selection as Global, Apply Baseline to World, Apply Global to This World.
 - Startup validation warns GMs (notification + console) if any active modules are missing installed dependencies.
 
+### Baseline Module Manager UI (v0.4.x)
+- Compact single-row toolbar with all action buttons (24px height, 11px font).
+- Summary chip row shows live counts: Installed, Active, Selected, Required, and Configured.
+- Installed modules panel uses a two-column grid layout for density.
+- Module IDs are hidden by default and shown on row hover for a cleaner look.
+- Row heights in the installed grid are normalised for visual consistency.
+- Sticky panel headers show section title and module count; installed panel header includes quick-filter chips.
+- Quick filter chips in the installed panel: All, Active, Selected, Required — combined with the search input.
+- Configured entries (world baseline) are shown in a compact responsive card grid.
+- Sticky footer holds Save and Apply Baseline buttons, always visible regardless of scroll position.
+
 ### Cross-World Setup Workflow
 - Global baseline profile is stored as a client-scoped setting.
 - UI includes:
@@ -49,15 +60,17 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Legacy settings can migrate once on startup after rename.
 - All save/apply paths validate and prompt for missing dependencies before committing.
 - World reloads automatically after applying baseline when new modules are enabled.
+- Installed modules panel uses two-column grid with normalised row heights.
+- Quick filter chips (All / Active / Selected / Required) filter the installed modules list live.
+- Module IDs are hover-only in the installed panel.
+- Summary chips reflect live counts of installed, active, selected, required, and configured modules.
 
 ## Roadmap
 
-### v0.4.x — UX and UI Improvements
+### v0.4.x — UX and UI Improvements (in progress)
+- Add a dedicated **Active Only** toggle button to the installed modules panel header to quickly filter to currently active modules.
 - Clearer status indicators in the baseline module list (e.g. missing deps flagged inline).
 - Better feedback during apply (progress, what was skipped, what failed).
-- Improve action button layout and labelling for clarity.
-- Add optional helper action: Select Required + Active.
-- Better CSS layout and styling.
 - Decide how to handle this module in baseline selection UI (hide it, or show as locked/always included).
 
 ### v0.5.x — Global Profile UX
