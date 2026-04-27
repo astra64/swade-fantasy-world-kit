@@ -1,4 +1,13 @@
-const MODULE_ID = "swade-consolidated-fantasy-compendiums";
+const MODULE_ID = "swade-fantasy-world-kit";
+// TODO(next version): Remove legacy ID support after one release cycle.
+const LEGACY_MODULE_ID = "swade-consolidated-fantasy-compendiums";
+const MIGRATABLE_WORLD_SETTING_KEYS = [
+  "curatedMode",
+  "gmSeesAllPacks",
+  "extraVisiblePacks",
+  "baselineModules"
+];
+const MIGRATABLE_CLIENT_SETTING_KEYS = ["globalBaselineModules"];
 
 function rerenderCompendiumDirectory() {
   ui.compendium?.render(true);
@@ -14,7 +23,7 @@ class ExtraVisiblePacksSelector extends FormApplication {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: `${MODULE_ID}-pack-selector`,
       classes: ["scfc-pack-selector"],
-      title: "SWADE Fantasy: Choose Visible Packs",
+      title: "SWADE Fantasy World Kit: Choose Visible Packs",
       template: `modules/${MODULE_ID}/templates/pack-selector.hbs`,
       width: 640,
       height: 720,
@@ -96,7 +105,7 @@ class BaselineModulesManager extends FormApplication {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: `${MODULE_ID}-baseline-modules`,
       classes: ["scfc-baseline-modules"],
-      title: "SWADE Fantasy: Baseline Modules",
+      title: "SWADE Fantasy World Kit: Baseline Modules",
       template: `modules/${MODULE_ID}/templates/baseline-modules.hbs`,
       width: 720,
       height: 760,
@@ -206,7 +215,7 @@ class BaselineModulesManager extends FormApplication {
 
       const normalized = mergeWithRequiredModuleIds(selectedIds).join("\n");
       await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
-      ui.notifications?.info("SWADE Fantasy global baseline profile saved.");
+      ui.notifications?.info("SWADE Fantasy World Kit global baseline profile saved.");
     });
 
     applyGlobalButton?.addEventListener("click", async () => {
@@ -276,9 +285,9 @@ class BaselineModulesManager extends FormApplication {
       `Missing: ${missing.length}`
     ].join(" | ");
 
-    ui.notifications?.info(`SWADE Fantasy baseline apply complete. ${summary}`);
+    ui.notifications?.info(`SWADE Fantasy World Kit baseline apply complete. ${summary}`);
     if (missing.length > 0) {
-      console.warn("[SWADE Fantasy] Missing baseline modules:\n" + missing.join("\n"));
+      console.warn("[SWADE Fantasy World Kit] Missing baseline modules:\n" + missing.join("\n"));
     }
 
     await this.render(true);
@@ -321,6 +330,54 @@ function getGlobalBaselineModuleIds() {
   return mergeWithRequiredModuleIds(
     parseModuleIdList(game.settings.get(MODULE_ID, "globalBaselineModules"))
   );
+}
+
+function getStoredSettingValue(scope, moduleId, key) {
+  const setting = game.settings.storage.get(scope)?.get(`${moduleId}.${key}`);
+  return setting?.value;
+}
+
+async function migrateLegacyModuleSettings() {
+  // TODO(next version): Delete this migration function and its call site in Hooks.once("ready").
+  if (MODULE_ID === LEGACY_MODULE_ID) return;
+
+  let migratedWorldCount = 0;
+  let migratedClientCount = 0;
+
+  if (game.user?.isGM) {
+    const worldMigrated = game.settings.get(MODULE_ID, "legacyWorldSettingsMigrated");
+    if (!worldMigrated) {
+      for (const key of MIGRATABLE_WORLD_SETTING_KEYS) {
+        const legacyValue = getStoredSettingValue("world", LEGACY_MODULE_ID, key);
+        if (legacyValue === undefined) continue;
+        await game.settings.set(MODULE_ID, key, legacyValue);
+        migratedWorldCount += 1;
+      }
+
+      await game.settings.set(MODULE_ID, "legacyWorldSettingsMigrated", true);
+    }
+  }
+
+  const clientMigrated = game.settings.get(MODULE_ID, "legacyClientSettingsMigrated");
+  if (!clientMigrated) {
+    for (const key of MIGRATABLE_CLIENT_SETTING_KEYS) {
+      const legacyValue = getStoredSettingValue("client", LEGACY_MODULE_ID, key);
+      if (legacyValue === undefined) continue;
+      await game.settings.set(MODULE_ID, key, legacyValue);
+      migratedClientCount += 1;
+    }
+
+    await game.settings.set(MODULE_ID, "legacyClientSettingsMigrated", true);
+  }
+
+  if (migratedWorldCount + migratedClientCount > 0) {
+    ui.notifications?.info(
+      `SWADE Fantasy World Kit migrated legacy settings (${migratedWorldCount} world, ${migratedClientCount} client).`
+    );
+    console.info(
+      `[${MODULE_ID}] migrated legacy settings from ${LEGACY_MODULE_ID} (${migratedWorldCount} world, ${migratedClientCount} client).`
+    );
+  }
 }
 
 function parseVisiblePackList(rawValue) {
@@ -423,7 +480,7 @@ async function syncQuickInsertPackRestrictions() {
 
   await game.settings.set("quick-insert", "indexingDisabled", next);
   ui.notifications?.info(
-    "SWADE Fantasy: Quick Insert pack restrictions synced. Have players reload to refresh search results."
+    "SWADE Fantasy World Kit: Quick Insert pack restrictions synced. Have players reload to refresh search results."
   );
 }
 
@@ -505,12 +562,32 @@ Hooks.once("init", () => {
       "quick-insert"
     ].join("\n")
   });
+
+  game.settings.register(MODULE_ID, "legacyWorldSettingsMigrated", {
+    // TODO(next version): Remove this temporary migration flag setting.
+    name: "Legacy World Settings Migrated",
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE_ID, "legacyClientSettingsMigrated", {
+    // TODO(next version): Remove this temporary migration flag setting.
+    name: "Legacy Client Settings Migrated",
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false
+  });
 });
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
+  // TODO(next version): Remove migration call once legacy rename rollout is complete.
+  await migrateLegacyModuleSettings();
   applyPlayerPackAccessPatch();
 
-  syncQuickInsertPackRestrictions();
+  await syncQuickInsertPackRestrictions();
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
