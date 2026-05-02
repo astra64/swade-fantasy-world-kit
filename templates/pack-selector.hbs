@@ -12,10 +12,12 @@
   {{#if hasPacks}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-packs">
       {{#each packs as |pack|}}
-        <label class="scfc-list-row scfc-list-row-stack" data-pack-row data-search="{{pack.searchText}}">
-          <input type="checkbox" name="packs" value="{{pack.id}}" {{#if pack.selected}}checked{{/if}} />
-          <strong class="scfc-row-title">{{pack.label}}</strong>
-          <span class="scfc-row-meta">{{pack.id}}</span>
+        <label class="scfc-list-row scfc-pack-row" data-pack-row data-search="{{pack.searchText}}">
+          <span class="scfc-row-main">
+            <input type="checkbox" name="packs" value="{{pack.id}}" {{#if pack.selected}}checked{{/if}} />
+            <strong class="scfc-row-title">{{pack.label}}</strong>
+            <span class="scfc-row-meta">{{pack.id}}</span>
+          </span>
         </label>
       {{/each}}
     </div>

@@ -27,6 +27,11 @@ class ExtraVisiblePacksSelector extends FormApplication {
       template: `modules/${MODULE_ID}/templates/pack-selector.hbs`,
       width: 640,
       height: 720,
+      resizable: true,
+      minimizable: true,
+      popOut: true,
+      minWidth: 560,
+      minHeight: 480,
       submitOnChange: false,
       closeOnSubmit: true
     });

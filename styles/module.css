@@ -411,9 +411,93 @@ body {
   }
 }
 
+.scfc-pack-selector-form .scfc-action-row {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.08rem 0 0.2rem 0;
+}
+
+.scfc-pack-selector-form .scfc-action-row button {
+  flex: 1;
+  min-height: 24px;
+  height: 24px;
+  padding: 0.1rem 0.44rem;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
 .scfc-scroll-panel-packs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0.42rem;
+  row-gap: 0.08rem;
+  grid-auto-rows: minmax(32px, auto);
+  align-content: start;
   max-height: 500px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.scfc-pack-row {
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0.14rem 0.26rem;
+  min-width: 0;
+  min-height: 32px;
+  height: 100%;
+  gap: 0.35rem;
+}
+
+.scfc-pack-row .scfc-row-main {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.scfc-pack-row .scfc-row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scfc-pack-row .scfc-row-meta {
+  position: absolute;
+  left: 22px;
+  bottom: calc(100% + 2px);
+  max-width: calc(100% - 24px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  background: #dfdbd2;
+  box-shadow: 0 1px 4px color-mix(in srgb, black 18%, transparent);
+  z-index: 2;
+}
+
+.scfc-pack-row:hover .scfc-row-meta,
+.scfc-pack-row:focus-within .scfc-row-meta {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scfc-pack-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .scfc-list-row {
@@ -481,6 +565,10 @@ body {
 }
 
 @media (max-width: 720px) {
+  .scfc-scroll-panel-packs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .scfc-toolbar-row button {
     flex: 1 1 calc(50% - 0.45rem);
     min-width: 0;
