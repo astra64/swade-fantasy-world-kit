@@ -6,11 +6,11 @@
   </div>
 
   <div class="form-group scfc-toolbar-row" aria-label="Baseline actions">
-    <button type="button" data-module-select-active>Select Active</button>
-    <button type="button" data-module-clear-selection>Clear Selection</button>
-    <button type="button" data-module-load-global>Load Global</button>
-    <button type="button" data-module-save-global>Save Global</button>
-    <button type="button" data-module-apply-global>Apply Global</button>
+    <button type="button" data-module-select-active title="Check all modules that are currently active in this world">Select Active</button>
+    <button type="button" data-module-clear-selection title="Uncheck all modules in the list">Clear Selection</button>
+    <button type="button" data-module-load-global title="Replace the current selection with the saved Global Profile">Load Global</button>
+    <button type="button" data-module-save-global title="Save the current selection as the Global Profile (shared across worlds)">Save Global</button>
+    <button type="button" data-module-apply-global title="Enable all modules in the Global Profile in this world and reload">Apply Global</button>
   </div>
 
   <div class="scfc-summary-row" aria-label="Baseline summary">
@@ -24,7 +24,7 @@
       <div class="scfc-panel-header">
         <span>Installed modules</span>
         <span class="scfc-panel-header-actions">
-          <button type="button" class="scfc-filter-toggle" data-module-filter-active aria-pressed="false">Active Only</button>
+          <button type="button" class="scfc-filter-toggle" data-module-filter-active aria-pressed="false" title="Show only modules that are currently active in this world">Active Only</button>
           <strong data-module-visible-count>{{installedCount}}</strong>
         </span>
       </div>
@@ -64,9 +64,14 @@
       </summary>
       <div class="scfc-scroll-panel scfc-scroll-panel-configured">
         {{#each configured as |entry|}}
-          <div class="scfc-list-row">
-            <code class="scfc-row-meta">{{entry.id}}</code>
+          <div class="scfc-list-row" {{#unless entry.installed}}title="'{{entry.id}}' is saved in your baseline but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab, or remove it from your baseline by clicking the × button."{{/unless}}>
             <span>
+              {{#if entry.title}}
+                <strong class="scfc-row-title">{{entry.title}}</strong>
+              {{/if}}
+              <code class="scfc-row-meta">{{entry.id}}</code>
+            </span>
+            <span class="scfc-configured-entry-actions">
               {{#if entry.installed}}
                 {{#if entry.active}}
                   <strong class="scfc-status-badge scfc-status-active">installed + active</strong>
@@ -76,6 +81,7 @@
               {{else}}
                 <strong class="scfc-status-badge scfc-status-missing">missing</strong>
               {{/if}}
+              <button type="button" class="scfc-remove-configured" data-remove-configured="{{entry.id}}" title="Remove '{{#if entry.title}}{{entry.title}}{{else}}{{entry.id}}{{/if}}' from baseline">×</button>
             </span>
           </div>
         {{/each}}
@@ -86,11 +92,11 @@
   {{/if}}
 
   <footer class="sheet-footer flexrow scfc-footer-row">
-    <button type="submit">
+    <button type="submit" title="Save the checked modules as the baseline list for this world (does not enable them)">
       <i class="fas fa-save"></i>
       Save Selection
     </button>
-    <button type="button" data-apply-baseline>
+    <button type="button" data-apply-baseline title="Enable all saved baseline modules in this world and reload">
       <i class="fas fa-check"></i>
       Apply Baseline to World
     </button>

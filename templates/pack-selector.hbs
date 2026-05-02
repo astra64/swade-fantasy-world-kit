@@ -5,8 +5,8 @@
   </div>
 
   <div class="form-group scfc-action-row">
-    <button type="button" data-pack-select-all>Select Visible</button>
-    <button type="button" data-pack-clear-all>Clear Visible</button>
+    <button type="button" data-pack-select-all title="Check all packs currently visible in the list (respects search filter)">Select Visible</button>
+    <button type="button" data-pack-clear-all title="Uncheck all packs currently visible in the list (respects search filter)">Clear Visible</button>
   </div>
 
   {{#if hasPacks}}
@@ -26,7 +26,7 @@
   {{/if}}
 
   <footer class="sheet-footer flexrow scfc-footer-row">
-    <button type="submit">
+    <button type="submit" title="Save the selected packs as the visible compendium set for this world">
       <i class="fas fa-save"></i>
       Save Selection
     </button>

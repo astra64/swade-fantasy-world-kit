@@ -1,4 +1,4 @@
-# SWADE Fantasy World Kit - Feature List and Roadmap
+﻿# SWADE Fantasy World Kit - Feature List and Roadmap
 
 Last updated: 2026-05-03
 
@@ -22,16 +22,19 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Baseline Modules manager supports searchable module selection.
 - **Only enables/disables already-installed modules; does not install new modules.**
 - Apply Baseline enables installed modules from the configured baseline, then reloads the world.
+- Window automatically reopens after a module-triggered world reload.
 - Required dependencies (from this module's manifest) are enforced and non-deactivatable in the selector UI.
 - Dependency resolution runs on all save/apply operations:
   - Detects installed dependencies of selected modules that are not also selected.
   - Prompts the GM to include them automatically.
   - Uninstalled dependencies are silently skipped.
   - Covered paths: Save Selection (world baseline), Save Selection as Global, Apply Baseline to World, Apply Global to This World.
+- Apply result is shown as a single toast notification (enabled now / already enabled / missing / auto-included deps).
 - Startup validation warns GMs (notification + console) if any active modules are missing installed dependencies.
 
-### Baseline Module Manager UI (v0.4.x)
+### Baseline Module Manager UI
 - Compact single-row toolbar with all action buttons (24px height, 11px font).
+- All buttons have descriptive hover tooltips to guide new users.
 - Summary chip row shows live counts: Installed, Selected, and Baseline entries.
 - Installed modules panel uses a two-column grid layout for density.
 - Module IDs are hidden by default and shown on row hover for a cleaner look.
@@ -39,16 +42,22 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Sticky panel headers show section title and module count.
 - Active Only toggle in the installed panel combines with search.
 - Inline dependency indicators are shown on rows with dependency issues.
-- Configured entries (world baseline) are shown in a compact responsive card grid.
+- Configured entries (world baseline) are shown in a collapsible section.
+  - Each entry shows the module title (with ID below) for easy identification.
+  - Module titles are cached when saved, so uninstalled modules still show their name.
+  - Missing entries have a hover tooltip explaining the problem and how to fix it.
+  - Each entry has a × remove button (visible on hover) for direct removal without touching the installed list.
 - Sticky footer holds Save and Apply Baseline buttons, always visible regardless of scroll position.
 
-### Pack Selector UI (v0.4.x)
+### Pack Selector UI
 - Two-column pack grid with normalised row heights for better scanability.
 - Pack IDs are shown on hover (opaque tooltip card) instead of inline.
+- All buttons have descriptive hover tooltips.
 - Choose Visible Packs window is drag-resizable.
 
 ### Cross-World Setup Workflow
 - Global baseline profile is stored as a client-scoped setting.
+- Global profile title cache is also stored client-scoped so module names persist across worlds.
 - UI includes:
   - Load Global Profile
   - Save Selection as Global
@@ -66,12 +75,17 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Legacy settings can migrate once on startup after rename.
 - All save/apply paths validate and prompt for missing dependencies before committing.
 - World reloads automatically after applying baseline when new modules are enabled.
+- Baseline manager window auto-reopens after a module-triggered world reload.
 - Installed modules panel uses two-column grid with normalised row heights.
 - Active Only toggle button filters installed modules and combines with search.
 - Baseline Modules parent window is drag-resizable.
 - Baseline module rows show inline dependency indicators for dependency issues.
 - Module IDs are hover-only in the installed panel.
 - Summary chips reflect live counts of installed, selected, and baseline entry counts.
+- All buttons in both windows have descriptive hover tooltips.
+- Configured entry rows show cached module title so uninstalled modules are identifiable.
+- Configured entry rows have a hover-visible × remove button for direct removal.
+- Missing configured entries have an actionable tooltip explaining how to resolve the issue.
 - Choose Visible Packs list is presented as a two-column grid with hover-only pack IDs.
 - Choose Visible Packs window is drag-resizable.
 
@@ -100,21 +114,20 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 
 ## Roadmap
 
-### v0.4.x — Next Up (prioritized)
+### Near Term
 - Finalize pack selector module-owned compendium behavior:
   - Default selected on open
   - Required/locked
   - Dedicated helper action button
   - Recommended direction: default selected + helper button; avoid hard-locking unless compatibility requires it
-- Improve apply feedback with a clearer completion summary (enabled now, already enabled, missing/skipped, dependency auto-includes).
 - Decide and implement self-module behavior in baseline selection UI (hidden vs locked/always included).
 
-### v0.5.x — Global Profile UX
+### v0.5.x - Global Profile UX
 - Global profile metadata display: item count, last-saved timestamp.
 - First-run helper prompt for new worlds to apply global profile.
 - Improve status messaging for global profile operations.
 
-### v0.5.x — SWADE TOC Integration (optional, behind setting)
+### v0.5.x - SWADE TOC Integration (optional, behind setting)
 - Add optional setting: Mirror SWADE Compendium TOC Filters.
 - Keep this module's curated visibility settings as the primary source of truth.
 - When mirror mode is enabled, read SWADE Compendium TOC filter state and merge it into effective pack visibility.
@@ -124,17 +137,17 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
   - This module's extra-visible allowlist remains an override for curated mode.
 - Reuse existing refresh flow after TOC-driven changes (compendium rerender + Quick Insert restrictions sync).
 
-### v0.6.x — Baseline Utilities
+### v0.6.x - Baseline Utilities
 - Add baseline export/import utilities (JSON format) for sharing and backup.
 
-### v0.7+ — Named Presets
+### v0.7+ - Named Presets
 - Replace the single baseline slot with a named preset system.
 - GMs can save multiple named module presets (e.g. "Full Campaign", "Lite Session", "Player Demo").
 - UI to create, rename, delete, and apply presets from a list.
 - Global profile slot replaced (or extended) to support multiple named global presets.
 - Presets stored as JSON; importable/exportable for sharing between GMs.
 
-### vX.x — Cleanup Release (Remove Temporary Migration)
+### vX.x - Cleanup Release (Remove Temporary Migration)
 1. Remove legacy migration function and call path.
 2. Remove legacy migration flags:
    - legacyWorldSettingsMigrated
@@ -159,10 +172,17 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 4. Confirm required modules are still locked in the baseline UI.
 
 ### Baseline Dependency Flow
-5. In World A, save a custom global baseline profile — confirm dependency prompt appears if deps are unselected.
-6. In World B, load and apply that global profile — confirm dependency prompt appears and world reloads.
+5. In World A, save a custom global baseline profile - confirm dependency prompt appears if deps are unselected.
+6. In World B, load and apply that global profile - confirm dependency prompt appears and world reloads.
 7. Confirm required modules remain selected and locked in all actions.
 8. Confirm uninstalled dependencies are skipped silently without error.
 9. On world load with a module missing a dependency, confirm warning notification and console log appear.
-4. Confirm Quick Insert results respect curated visibility for players and GMs.
-5. Confirm startup migration notice appears only once on upgraded worlds.
+
+### Baseline Entry UX
+10. Open baseline manager, expand "Current baseline entries".
+11. Hover a missing entry - confirm tooltip with fix instructions appears.
+12. Confirm the module title is shown (not just the ID) for known entries.
+13. Hover a row and click × — confirm the entry is removed immediately and the window refreshes.
+14. Apply baseline, confirm world reloads and baseline manager reopens automatically.
+
+- Curated mode limits player-facing compendium visibility.

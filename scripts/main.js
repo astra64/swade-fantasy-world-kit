@@ -161,10 +161,12 @@ class BaselineModulesManager extends FormApplication {
       })
       .sort((a, b) => a.title.localeCompare(b.title));
 
+    const titlesMap = parseTitlesMap(game.settings.get(MODULE_ID, "baselineModuleTitles"));
     const configured = [...selectedIds].map((id) => {
       const module = game.modules.get(id);
       return {
         id,
+        title: module?.title ?? titlesMap[id] ?? null,
         installed: Boolean(module),
         active: Boolean(module?.active)
       };
@@ -177,7 +179,6 @@ class BaselineModulesManager extends FormApplication {
     const configuredCount = configured.length;
     const configuredInstalledCount = configured.filter((entry) => entry.installed).length;
     const configuredMissingCount = configuredCount - configuredInstalledCount;
-
     return {
       installedModules,
       hasInstalledModules: installedModules.length > 0,
@@ -264,6 +265,18 @@ class BaselineModulesManager extends FormApplication {
       }
     });
 
+    html[0].addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-remove-configured]");
+      if (!btn) return;
+      const idToRemove = btn.dataset.removeConfigured;
+      if (!idToRemove) return;
+      const currentIds = parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"));
+      const updated = currentIds.filter((id) => id !== idToRemove);
+      await game.settings.set(MODULE_ID, "baselineModules", updated.join("\n"));
+      await updateTitleCache("baselineModuleTitles", updated);
+      await this.render(true);
+    });
+
     loadGlobalButton?.addEventListener("click", () => {
       const globalIds = new Set(getGlobalBaselineModuleIds());
 
@@ -292,6 +305,7 @@ class BaselineModulesManager extends FormApplication {
         return game.modules.has(depId) && !selectedSet.has(depId);
       });
 
+      let finalGlobalIds = mergeWithRequiredModuleIds(selectedIds);
       if (missingDeps.length > 0) {
         const resolution = await promptForDependencyResolution(selectedIds, missingDeps);
         if (!resolution.resolved) return;
@@ -303,13 +317,11 @@ class BaselineModulesManager extends FormApplication {
           if (depCheckbox) depCheckbox.checked = true;
         }
 
-        const normalized = mergeWithRequiredModuleIds(resolution.modulesToEnable).join("\n");
-        await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
-      } else {
-        const normalized = mergeWithRequiredModuleIds(selectedIds).join("\n");
-        await game.settings.set(MODULE_ID, "globalBaselineModules", normalized);
+        finalGlobalIds = mergeWithRequiredModuleIds(resolution.modulesToEnable);
       }
 
+      await game.settings.set(MODULE_ID, "globalBaselineModules", finalGlobalIds.join("\n"));
+      await updateTitleCache("globalBaselineModuleTitles", finalGlobalIds);
       ui.notifications?.info("SWADE Fantasy World Kit global baseline profile saved.");
     });
 
@@ -325,6 +337,8 @@ class BaselineModulesManager extends FormApplication {
 
       const globalIds = getGlobalBaselineModuleIds();
       await game.settings.set(MODULE_ID, "baselineModules", globalIds.join("\n"));
+      // Carry the global title cache over to the world title cache
+      await game.settings.set(MODULE_ID, "baselineModuleTitles", game.settings.get(MODULE_ID, "globalBaselineModuleTitles"));
       await this._onApplyBaseline();
     });
 
@@ -349,6 +363,8 @@ class BaselineModulesManager extends FormApplication {
     const configuredIds = mergeWithRequiredModuleIds(
       parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"))
     );
+    const configuredBeforeDependencyResolution = new Set(configuredIds);
+    let autoIncludedDependencies = [];
 
     const currentModuleConfig = foundry.utils.deepClone(
       game.settings.get("core", "moduleConfiguration") ?? {}
@@ -365,6 +381,7 @@ class BaselineModulesManager extends FormApplication {
       }
       // Update the list of modules to enable with dependencies
       const uniqueIds = [...new Set([...resolution.modulesToEnable])];
+      autoIncludedDependencies = uniqueIds.filter((id) => !configuredBeforeDependencyResolution.has(id));
       configuredIds.length = 0;
       configuredIds.push(...uniqueIds);
     }
@@ -398,7 +415,8 @@ class BaselineModulesManager extends FormApplication {
     const summary = [
       `Enabled now: ${enabledNow.length}`,
       `Already enabled: ${alreadyEnabled.length}`,
-      `Missing: ${missing.length}`
+      `Missing: ${missing.length}`,
+      `Auto-included deps: ${autoIncludedDependencies.length}`
     ].join(" | ");
 
     ui.notifications?.info(`SWADE Fantasy World Kit baseline apply complete. ${summary}`);
@@ -409,6 +427,7 @@ class BaselineModulesManager extends FormApplication {
     // Reload the world if any new modules were enabled
     if (enabledNow.length > 0) {
       ui.notifications?.info("Reloading world to activate modules...");
+      localStorage.setItem("swade-fwk-reopen-baseline", "1");
       setTimeout(() => {
         window.location.reload();
       }, 1500);
@@ -440,6 +459,7 @@ class BaselineModulesManager extends FormApplication {
     const normalized = normalizedIds.join("\n");
 
     await game.settings.set(MODULE_ID, "baselineModules", normalized);
+    await updateTitleCache("baselineModuleTitles", normalizedIds);
     await this.render(true);
   }
 }
@@ -675,6 +695,23 @@ function parseVisiblePackList(rawValue) {
   );
 }
 
+function parseTitlesMap(raw) {
+  try { return JSON.parse(raw ?? "{}"); } catch { return {}; }
+}
+
+async function updateTitleCache(settingKey, ids) {
+  const map = parseTitlesMap(game.settings.get(MODULE_ID, settingKey));
+  const idSet = new Set(ids);
+  for (const id of ids) {
+    const title = game.modules.get(id)?.title;
+    if (title) map[id] = title;
+  }
+  for (const id of Object.keys(map)) {
+    if (!idSet.has(id)) delete map[id];
+  }
+  await game.settings.set(MODULE_ID, settingKey, JSON.stringify(map));
+}
+
 function parseModuleIdList(rawValue) {
   if (typeof rawValue !== "string") return [];
 
@@ -858,6 +895,22 @@ Hooks.once("init", () => {
     ].join("\n")
   });
 
+  game.settings.register(MODULE_ID, "baselineModuleTitles", {
+    name: "Baseline Module Titles Cache",
+    scope: "world",
+    config: false,
+    type: String,
+    default: "{}"
+  });
+
+  game.settings.register(MODULE_ID, "globalBaselineModuleTitles", {
+    name: "Global Baseline Module Titles Cache",
+    scope: "client",
+    config: false,
+    type: String,
+    default: "{}"
+  });
+
   game.settings.register(MODULE_ID, "legacyWorldSettingsMigrated", {
     // TODO(next version): Remove this temporary migration flag setting.
     name: "Legacy World Settings Migrated",
@@ -881,6 +934,11 @@ Hooks.once("ready", async () => {
   // TODO(next version): Remove migration call once legacy rename rollout is complete.
   await migrateLegacyModuleSettings();
   applyPlayerPackAccessPatch();
+
+  if (localStorage.getItem("swade-fwk-reopen-baseline") === "1") {
+    localStorage.removeItem("swade-fwk-reopen-baseline");
+    new BaselineModulesManager().render(true);
+  }
 
   await syncQuickInsertPackRestrictions();
   await validateModuleDependencies();
