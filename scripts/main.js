@@ -18,6 +18,62 @@ async function handleVisibilitySettingsChanged() {
   await syncQuickInsertPackRestrictions();
 }
 
+const COMPANION_BANNER_CACHE = { urls: null };
+
+function getCompanionBannerUrl() {
+  if (COMPANION_BANNER_CACHE.urls) return COMPANION_BANNER_CACHE.urls;
+
+  const row = document.querySelector("[data-pack='swade-fantasy-companion.swade-fc-deck']");
+  const src = row?.querySelector("img.compendium-banner")?.getAttribute("src") ?? null;
+
+  const urls = src ? [src] : [];
+  if (urls.length > 0) COMPANION_BANNER_CACHE.urls = urls;
+  return urls;
+}
+
+function styleAndFilterCompendiumRows(htmlRoot) {
+  const root = htmlRoot?.[0] ?? htmlRoot;
+  if (!root?.querySelectorAll) return;
+
+  const alternateBanners = getCompanionBannerUrl();
+  let ownedPackIndex = 0;
+
+  const rowNodes = root.querySelectorAll("[data-pack], [data-entry-id]");
+  for (const element of rowNodes) {
+    const packId = element.dataset.pack ?? element.dataset.entryId ?? "";
+    if (!packId.includes(".")) continue;
+
+    const packageId = packId.split(".")[0] ?? "";
+    const row = element.closest(".directory-item, li") ?? element;
+    const isSwadePack = packageId === MODULE_ID;
+
+    element.classList.remove("scfc-hidden-pack");
+    element.classList.toggle("scfc-swade-pack", isSwadePack);
+    row.classList.toggle("scfc-swade-pack", isSwadePack);
+
+
+
+    const bannerElement = row.querySelector("img.compendium-banner") ?? element.querySelector?.("img.compendium-banner");
+    if (bannerElement) {
+      if (!bannerElement.dataset.scfcOriginalSrc) {
+        bannerElement.dataset.scfcOriginalSrc = bannerElement.getAttribute("src") ?? "";
+      }
+
+      if (isSwadePack && alternateBanners.length > 0) {
+        bannerElement.setAttribute("src", alternateBanners[ownedPackIndex % alternateBanners.length]);
+        ownedPackIndex++;
+      } else if (!isSwadePack) {
+        const originalSrc = bannerElement.dataset.scfcOriginalSrc;
+        if (originalSrc) bannerElement.setAttribute("src", originalSrc);
+      }
+    }
+
+    if (isPackAllowedForUser(packId, game.user)) continue;
+
+    element.classList.add("scfc-hidden-pack");
+  }
+}
+
 class ExtraVisiblePacksSelector extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -963,19 +1019,16 @@ Hooks.once("ready", async () => {
 
   await syncQuickInsertPackRestrictions();
   await validateModuleDependencies();
+
+  // Re-apply styling/filtering in case compendium tab is already rendered.
+  styleAndFilterCompendiumRows(document.querySelector("#compendium"));
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
-  const root = html?.[0] ?? html;
-  if (!root?.querySelectorAll) return;
+  styleAndFilterCompendiumRows(html);
+});
 
-  for (const element of root.querySelectorAll("[data-pack]")) {
-    const packId = element.dataset.pack ?? "";
-
-    element.classList.remove("scfc-hidden-pack");
-
-    if (isPackAllowedForUser(packId, game.user)) continue;
-
-    element.classList.add("scfc-hidden-pack");
-  }
+Hooks.on("renderSidebarTab", (app, html) => {
+  if (app?.options?.id !== "compendium") return;
+  styleAndFilterCompendiumRows(html);
 });

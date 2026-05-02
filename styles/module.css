@@ -7,6 +7,26 @@ body {
   display: none !important;
 }
 
+#sidebar #compendium [data-pack].scfc-swade-pack,
+#sidebar #compendium .directory-item.scfc-swade-pack,
+#sidebar #compendium li.scfc-swade-pack {
+  border-left: 4px solid color-mix(in srgb, #e1b66a 86%, #5a3d21) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #e0bc81 18%, transparent);
+  border-radius: 4px;
+}
+
+#sidebar #compendium [data-pack].scfc-swade-pack:hover,
+#sidebar #compendium .directory-item.scfc-swade-pack:hover,
+#sidebar #compendium li.scfc-swade-pack:hover {
+  filter: brightness(1.08) saturate(1.03);
+}
+
+#sidebar #compendium .directory-item.scfc-swade-pack .entry-name,
+#sidebar #compendium li.scfc-swade-pack .entry-name {
+  color: color-mix(in srgb, #fdf3df 90%, #ffffff) !important;
+  text-shadow: 0 1px 0 color-mix(in srgb, #2a1b10 60%, transparent);
+}
+
 #swade-fantasy-world-kit-baseline-modules .window-content {
   padding-bottom: 0 !important;
 }
