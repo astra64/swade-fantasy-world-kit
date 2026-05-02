@@ -1,6 +1,6 @@
 # SWADE Fantasy World Kit - Feature List and Roadmap
 
-Last updated: 2026-04-28
+Last updated: 2026-05-03
 
 ## Product Direction
 SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled player-facing visibility, and fast world setup tools for consistent module activation.
@@ -64,6 +64,29 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Quick filter chips (All / Active / Selected / Required) filter the installed modules list live.
 - Module IDs are hover-only in the installed panel.
 - Summary chips reflect live counts of installed, active, selected, required, and configured modules.
+
+## Compendium Content Workflow
+
+### Edit Existing Included Compendiums
+1. Open Foundry as GM in a world with this module enabled.
+2. Open the target module compendium pack, unlock it, and make your content edits in the Foundry UI.
+3. Re-lock the pack when finished editing.
+4. Close Foundry cleanly so pack database files are fully written to disk.
+5. In VS Code, review changed files under `packs/<pack-name>/` and commit those changes.
+
+### Add a New Included Compendium
+1. Create the new compendium pack in Foundry as a module pack (set the correct document type and system).
+2. Populate or import entries in Foundry.
+3. Close Foundry cleanly.
+4. Add a new pack entry to `module.json` under `packs` with `name`, `label`, `path`, `type`, `ownership`, and `system`.
+5. Add the new pack `name` to the appropriate `packFolders` group in `module.json`.
+6. Restart Foundry and confirm the new pack appears in the sidebar and behaves correctly with curated visibility.
+7. Commit both the new `packs/<pack-name>/` database files and the `module.json` metadata updates.
+
+### Important Notes
+- Do not hand-edit `.ldb` files directly.
+- Do not commit while Foundry is running (avoids partial writes and lock-state issues).
+- If curated mode is enabled, packs from this module are visible by default; external packs must be allowlisted via the "Choose Visible Packs" setting.
 
 ## Roadmap
 
