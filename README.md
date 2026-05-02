@@ -62,6 +62,8 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - World reloads automatically after applying baseline when new modules are enabled.
 - Installed modules panel uses two-column grid with normalised row heights.
 - Quick filter chips (All / Active / Selected / Required) filter the installed modules list live.
+- Active Only toggle button filters installed modules and combines with search.
+- Baseline Modules parent window is drag-resizable.
 - Module IDs are hover-only in the installed panel.
 - Summary chips reflect live counts of installed, active, selected, required, and configured modules.
 
@@ -91,7 +93,10 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 ## Roadmap
 
 ### v0.4.x — UX and UI Improvements (in progress)
-- Add a dedicated **Active Only** toggle button to the installed modules panel header to quickly filter to currently active modules.
+- Run the same UX simplification pass for the Choose Visible Packs UI (`pack-selector`) before implementing additional UI polish:
+  - Capture a current-state screenshot first and review visual density/hierarchy.
+  - Identify low-value elements to remove, collapse, or demote.
+  - Propose and implement a cleaner action/filter/layout structure.
 - Clearer status indicators in the baseline module list (e.g. missing deps flagged inline).
 - Better feedback during apply (progress, what was skipped, what failed).
 - Decide how to handle this module in baseline selection UI (hide it, or show as locked/always included).
@@ -100,6 +105,16 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Global profile metadata display: item count, last-saved timestamp.
 - First-run helper prompt for new worlds to apply global profile.
 - Improve status messaging for global profile operations.
+
+### v0.5.x — SWADE TOC Integration (optional)
+- Add optional setting: Mirror SWADE Compendium TOC Filters.
+- Keep this module's curated visibility settings as the primary source of truth.
+- When mirror mode is enabled, read SWADE Compendium TOC filter state and merge it into effective pack visibility.
+- Define and document precedence rules:
+  - This module's required/curated packs remain visible.
+  - SWADE TOC filters can hide/show external packs.
+  - This module's extra-visible allowlist remains an override for curated mode.
+- Reuse existing refresh flow after TOC-driven changes (compendium rerender + Quick Insert restrictions sync).
 
 ### v0.6.x — Baseline Utilities
 - Add baseline export/import utilities (JSON format) for sharing and backup.

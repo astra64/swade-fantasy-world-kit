@@ -9,16 +9,13 @@
     <button type="button" data-module-select-active>Select Active</button>
     <button type="button" data-module-clear-selection>Clear Selection</button>
     <button type="button" data-module-load-global>Load Global</button>
-    <button type="button" data-module-save-global>Save as Global</button>
-    <button type="button" data-module-apply-global>Apply Global Here</button>
+    <button type="button" data-module-save-global>Save Global</button>
+    <button type="button" data-module-apply-global>Apply Global</button>
   </div>
-  <p class="notes scfc-global-notes">Global profile is stored per GM client and can be loaded in other worlds on this Foundry install.</p>
 
   <div class="scfc-summary-row" aria-label="Baseline summary">
     <span class="scfc-summary-chip">Installed: {{installedCount}}</span>
-    <span class="scfc-summary-chip">Active: {{activeCount}}</span>
     <span class="scfc-summary-chip">Selected: {{selectedCount}}</span>
-    <span class="scfc-summary-chip">Required: {{requiredCount}}</span>
     <span class="scfc-summary-chip">Baseline entries: {{configuredCount}}</span>
   </div>
 
@@ -26,7 +23,10 @@
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-modules">
       <div class="scfc-panel-header">
         <span>Installed modules</span>
-        <strong>{{installedCount}}</strong>
+        <span class="scfc-panel-header-actions">
+          <button type="button" class="scfc-filter-toggle" data-module-filter-active aria-pressed="false">Active Only</button>
+          <strong data-module-visible-count>{{installedCount}}</strong>
+        </span>
       </div>
       {{#each installedModules as |entry|}}
         <label class="scfc-list-row" data-module-row data-search="{{entry.searchText}}" data-active="{{#if entry.active}}true{{else}}false{{/if}}" data-required="{{#if entry.required}}true{{else}}false{{/if}}">
@@ -51,28 +51,30 @@
   {{/if}}
 
   {{#if hasConfigured}}
-    <div class="form-group scfc-scroll-panel scfc-scroll-panel-configured">
-      <div class="scfc-panel-header">
+    <details class="scfc-configured-collapsible">
+      <summary class="scfc-configured-summary">
         <span>Current baseline entries</span>
         <strong>{{configuredCount}} total</strong>
-      </div>
-      {{#each configured as |entry|}}
-        <div class="scfc-list-row">
-          <code class="scfc-row-meta">{{entry.id}}</code>
-          <span>
-            {{#if entry.installed}}
-              {{#if entry.active}}
-                <strong class="scfc-status-badge scfc-status-active">installed + active</strong>
+      </summary>
+      <div class="scfc-scroll-panel scfc-scroll-panel-configured">
+        {{#each configured as |entry|}}
+          <div class="scfc-list-row">
+            <code class="scfc-row-meta">{{entry.id}}</code>
+            <span>
+              {{#if entry.installed}}
+                {{#if entry.active}}
+                  <strong class="scfc-status-badge scfc-status-active">installed + active</strong>
+                {{else}}
+                  <strong class="scfc-status-badge">installed</strong>
+                {{/if}}
               {{else}}
-                <strong class="scfc-status-badge">installed</strong>
+                <strong class="scfc-status-badge scfc-status-missing">missing</strong>
               {{/if}}
-            {{else}}
-              <strong class="scfc-status-badge scfc-status-missing">missing</strong>
-            {{/if}}
-          </span>
-        </div>
-      {{/each}}
-    </div>
+            </span>
+          </div>
+        {{/each}}
+      </div>
+    </details>
   {{else}}
     <p>No baseline module IDs configured.</p>
   {{/if}}

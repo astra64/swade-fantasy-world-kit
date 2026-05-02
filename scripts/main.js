@@ -109,6 +109,11 @@ class BaselineModulesManager extends FormApplication {
       template: `modules/${MODULE_ID}/templates/baseline-modules.hbs`,
       width: 720,
       height: 760,
+      resizable: true,
+      minimizable: true,
+      popOut: true,
+      minWidth: 640,
+      minHeight: 560,
       submitOnChange: false,
       closeOnSubmit: false
     });
@@ -175,19 +180,51 @@ class BaselineModulesManager extends FormApplication {
     const searchInput = html[0].querySelector("[data-module-search]");
     const moduleRows = [...html[0].querySelectorAll("[data-module-row]")];
     const selectActiveButton = html[0].querySelector("[data-module-select-active]");
+    const filterActiveButton = html[0].querySelector("[data-module-filter-active]");
+    const visibleCountLabel = html[0].querySelector("[data-module-visible-count]");
     const clearSelectionButton = html[0].querySelector("[data-module-clear-selection]");
     const loadGlobalButton = html[0].querySelector("[data-module-load-global]");
     const saveGlobalButton = html[0].querySelector("[data-module-save-global]");
     const applyGlobalButton = html[0].querySelector("[data-module-apply-global]");
 
-    searchInput?.addEventListener("input", (event) => {
-      const term = (event.currentTarget.value ?? "").toLowerCase().trim();
+    let activeOnlyFilterEnabled = false;
+
+    const updateActiveFilterButtonState = () => {
+      if (!filterActiveButton) return;
+      filterActiveButton.setAttribute("aria-pressed", activeOnlyFilterEnabled ? "true" : "false");
+      filterActiveButton.classList.toggle("is-active", activeOnlyFilterEnabled);
+      html[0].classList.toggle("scfc-active-filter-on", activeOnlyFilterEnabled);
+    };
+
+    const applyModuleFilters = () => {
+      const term = (searchInput?.value ?? "").toLowerCase().trim();
+      let visibleCount = 0;
 
       for (const row of moduleRows) {
         const searchText = (row.dataset.search ?? "").toLowerCase();
-        const visible = !term || searchText.includes(term);
-        row.style.display = visible ? "" : "none";
+        const matchesSearch = !term || searchText.includes(term);
+        const matchesActiveOnly = !activeOnlyFilterEnabled || row.dataset.active === "true";
+        const isVisible = matchesSearch && matchesActiveOnly;
+        row.style.display = isVisible ? "" : "none";
+        if (isVisible) visibleCount += 1;
       }
+
+      if (visibleCountLabel) {
+        const totalCount = moduleRows.length;
+        visibleCountLabel.textContent = activeOnlyFilterEnabled
+          ? `${visibleCount}/${totalCount}`
+          : `${totalCount}`;
+      }
+    };
+
+    searchInput?.addEventListener("input", () => {
+      applyModuleFilters();
+    });
+
+    filterActiveButton?.addEventListener("click", () => {
+      activeOnlyFilterEnabled = !activeOnlyFilterEnabled;
+      updateActiveFilterButtonState();
+      applyModuleFilters();
     });
 
     selectActiveButton?.addEventListener("click", () => {
@@ -274,6 +311,9 @@ class BaselineModulesManager extends FormApplication {
     applyButton?.addEventListener("click", async () => {
       await this._onApplyBaseline();
     });
+
+    updateActiveFilterButtonState();
+    applyModuleFilters();
   }
 
   async _onApplyBaseline() {
