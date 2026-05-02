@@ -39,7 +39,16 @@ class ExtraVisiblePacksSelector extends FormApplication {
 
   getData() {
     const selected = parseVisiblePackList(game.settings.get(MODULE_ID, "extraVisiblePacks"));
+    const ownedPrefix = `${MODULE_ID}.`;
+    let ownedPackCount = 0;
+    const activeModuleIds = new Set(
+      [...game.modules.values()].filter((m) => m.active && m.id !== MODULE_ID).map((m) => m.id)
+    );
     const packs = [...game.packs.values()]
+      .filter((pack) => {
+        if (pack.collection.startsWith(ownedPrefix)) { ownedPackCount++; return false; }
+        return true;
+      })
       .map((pack) => {
         const id = pack.collection;
         const label = pack.metadata?.label ?? id;
@@ -48,6 +57,7 @@ class ExtraVisiblePacksSelector extends FormApplication {
           id,
           label,
           moduleId,
+          isActiveModule: activeModuleIds.has(moduleId),
           selected: selected.has(id),
           searchText: `${id} ${label} ${moduleId}`.toLowerCase()
         };
@@ -56,7 +66,8 @@ class ExtraVisiblePacksSelector extends FormApplication {
 
     return {
       packs,
-      hasPacks: packs.length > 0
+      hasPacks: packs.length > 0,
+      ownedPackCount
     };
   }
 
@@ -67,6 +78,7 @@ class ExtraVisiblePacksSelector extends FormApplication {
     const packRows = [...html[0].querySelectorAll("[data-pack-row]")];
     const selectAllButton = html[0].querySelector("[data-pack-select-all]");
     const clearAllButton = html[0].querySelector("[data-pack-clear-all]");
+    const selectActiveModuleButton = html[0].querySelector("[data-pack-select-active-modules]");
 
     searchInput?.addEventListener("input", (event) => {
       const term = (event.currentTarget.value ?? "").toLowerCase().trim();
@@ -91,6 +103,14 @@ class ExtraVisiblePacksSelector extends FormApplication {
         if (row.style.display === "none") continue;
         const checkbox = row.querySelector("input[type=checkbox]");
         if (checkbox) checkbox.checked = false;
+      }
+    });
+
+    selectActiveModuleButton?.addEventListener("click", () => {
+      for (const row of packRows) {
+        if (row.dataset.activeModule !== "true") continue;
+        const checkbox = row.querySelector("input[type=checkbox]");
+        if (checkbox) checkbox.checked = true;
       }
     });
   }
@@ -130,6 +150,7 @@ class BaselineModulesManager extends FormApplication {
     const selectedIds = new Set(parseModuleIdList(rawList));
     for (const id of requiredIds) selectedIds.add(id);
     const installedModules = [...game.modules.values()]
+      .filter((module) => module.id !== MODULE_ID)
       .map((module) => {
         const id = module.id;
         const title = module.title ?? id;

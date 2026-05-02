@@ -7,12 +7,17 @@
   <div class="form-group scfc-action-row">
     <button type="button" data-pack-select-all title="Check all packs currently visible in the list (respects search filter)">Select Visible</button>
     <button type="button" data-pack-clear-all title="Uncheck all packs currently visible in the list (respects search filter)">Clear Visible</button>
+    <button type="button" data-pack-select-active-modules title="Check all packs belonging to currently active modules">Select Active Modules</button>
   </div>
+
+  {{#if ownedPackCount}}
+    <p class="notes">{{ownedPackCount}} pack(s) from this module are always visible to players and do not appear here.</p>
+  {{/if}}
 
   {{#if hasPacks}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-packs">
       {{#each packs as |pack|}}
-        <label class="scfc-list-row scfc-pack-row" data-pack-row data-search="{{pack.searchText}}">
+        <label class="scfc-list-row scfc-pack-row" data-pack-row data-search="{{pack.searchText}}" data-active-module="{{#if pack.isActiveModule}}true{{else}}false{{/if}}">
           <span class="scfc-row-main">
             <input type="checkbox" name="packs" value="{{pack.id}}" {{#if pack.selected}}checked{{/if}} />
             <strong class="scfc-row-title">{{pack.label}}</strong>

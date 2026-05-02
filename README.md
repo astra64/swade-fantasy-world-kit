@@ -53,6 +53,8 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Two-column pack grid with normalised row heights for better scanability.
 - Pack IDs are shown on hover (opaque tooltip card) instead of inline.
 - All buttons have descriptive hover tooltips.
+- Module-owned packs (always visible) are filtered out of the list; a note shows how many are excluded.
+- "Select Active Modules" button checks all packs belonging to currently-active modules.
 - Choose Visible Packs window is drag-resizable.
 
 ### Cross-World Setup Workflow
@@ -86,7 +88,10 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - Configured entry rows show cached module title so uninstalled modules are identifiable.
 - Configured entry rows have a hover-visible × remove button for direct removal.
 - Missing configured entries have an actionable tooltip explaining how to resolve the issue.
+- Baseline module manager hides this module itself from the installed modules list.
 - Choose Visible Packs list is presented as a two-column grid with hover-only pack IDs.
+- Module-owned packs are excluded from the pack selector (always visible; no config needed).
+- "Select Active Modules" button in pack selector checks all packs from active modules.
 - Choose Visible Packs window is drag-resizable.
 
 ## Compendium Content Workflow
@@ -114,13 +119,6 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 
 ## Roadmap
 
-### Near Term
-- Finalize pack selector module-owned compendium behavior:
-  - Default selected on open
-  - Required/locked
-  - Dedicated helper action button
-  - Recommended direction: default selected + helper button; avoid hard-locking unless compatibility requires it
-- Decide and implement self-module behavior in baseline selection UI (hidden vs locked/always included).
 
 ### v0.5.x - Global Profile UX
 - Global profile metadata display: item count, last-saved timestamp.
@@ -184,5 +182,6 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 12. Confirm the module title is shown (not just the ID) for known entries.
 13. Hover a row and click × — confirm the entry is removed immediately and the window refreshes.
 14. Apply baseline, confirm world reloads and baseline manager reopens automatically.
+15. Open pack selector — confirm module-owned packs are absent and the note shows the correct count.
+16. Click "Select Active Modules" — confirm only packs from active modules are checked.
 
-- Curated mode limits player-facing compendium visibility.
