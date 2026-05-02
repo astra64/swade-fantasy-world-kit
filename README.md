@@ -152,6 +152,12 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
    - legacyClientSettingsMigrated
 3. Remove legacy module ID constant and migratable key lists.
 
+### Future - Standalone System-Agnostic Module
+The baseline module management and world setup features (baseline profiles, dependency resolution, apply/reload workflow) are largely system-agnostic and could be useful to other GMs beyond SWADE.
+- Investigate extracting these features into a standalone Foundry module with no system dependency.
+- This module would retain its SWADE-specific compendiums and curated visibility features.
+- The standalone module could be a separate package or a shared library dependency.
+
 ## Primary Files
 - module.json
 - scripts/main.js
