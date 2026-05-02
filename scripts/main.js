@@ -134,6 +134,16 @@ class BaselineModulesManager extends FormApplication {
         const id = module.id;
         const title = module.title ?? id;
         const searchText = `${title} ${id}`.toLowerCase();
+        const dependencies = getModuleDependencies(id);
+        const missingInstalledDependencies = dependencies.filter((depId) => {
+          const depModule = game.modules.get(depId);
+          return Boolean(depModule) && !depModule.active;
+        });
+        const missingUninstalledDependencies = dependencies.filter((depId) => !game.modules.has(depId));
+        const missingInstalledDependencyLabel = missingInstalledDependencies
+          .map((depId) => game.modules.get(depId)?.title ?? depId)
+          .join(", ");
+        const missingUninstalledDependencyLabel = missingUninstalledDependencies.join(", ");
 
         return {
           id,
@@ -141,7 +151,12 @@ class BaselineModulesManager extends FormApplication {
           active: Boolean(module.active),
           required: requiredIds.has(id),
           selected: selectedIds.has(id),
-          searchText
+          showDependencyIndicators: selectedIds.has(id) || Boolean(module.active),
+          searchText,
+          missingInstalledDependencyCount: missingInstalledDependencies.length,
+          missingUninstalledDependencyCount: missingUninstalledDependencies.length,
+          missingInstalledDependencyLabel,
+          missingUninstalledDependencyLabel
         };
       })
       .sort((a, b) => a.title.localeCompare(b.title));

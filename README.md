@@ -32,14 +32,20 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 
 ### Baseline Module Manager UI (v0.4.x)
 - Compact single-row toolbar with all action buttons (24px height, 11px font).
-- Summary chip row shows live counts: Installed, Active, Selected, Required, and Configured.
+- Summary chip row shows live counts: Installed, Selected, and Baseline entries.
 - Installed modules panel uses a two-column grid layout for density.
 - Module IDs are hidden by default and shown on row hover for a cleaner look.
 - Row heights in the installed grid are normalised for visual consistency.
-- Sticky panel headers show section title and module count; installed panel header includes quick-filter chips.
-- Quick filter chips in the installed panel: All, Active, Selected, Required — combined with the search input.
+- Sticky panel headers show section title and module count.
+- Active Only toggle in the installed panel combines with search.
+- Inline dependency indicators are shown on rows with dependency issues.
 - Configured entries (world baseline) are shown in a compact responsive card grid.
 - Sticky footer holds Save and Apply Baseline buttons, always visible regardless of scroll position.
+
+### Pack Selector UI (v0.4.x)
+- Two-column pack grid with normalised row heights for better scanability.
+- Pack IDs are shown on hover (opaque tooltip card) instead of inline.
+- Choose Visible Packs window is drag-resizable.
 
 ### Cross-World Setup Workflow
 - Global baseline profile is stored as a client-scoped setting.
@@ -61,11 +67,13 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 - All save/apply paths validate and prompt for missing dependencies before committing.
 - World reloads automatically after applying baseline when new modules are enabled.
 - Installed modules panel uses two-column grid with normalised row heights.
-- Quick filter chips (All / Active / Selected / Required) filter the installed modules list live.
 - Active Only toggle button filters installed modules and combines with search.
 - Baseline Modules parent window is drag-resizable.
+- Baseline module rows show inline dependency indicators for dependency issues.
 - Module IDs are hover-only in the installed panel.
-- Summary chips reflect live counts of installed, active, selected, required, and configured modules.
+- Summary chips reflect live counts of installed, selected, and baseline entry counts.
+- Choose Visible Packs list is presented as a two-column grid with hover-only pack IDs.
+- Choose Visible Packs window is drag-resizable.
 
 ## Compendium Content Workflow
 
@@ -92,21 +100,21 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 
 ## Roadmap
 
-### v0.4.x — UX and UI Improvements (in progress)
-- Run the same UX simplification pass for the Choose Visible Packs UI (`pack-selector`) before implementing additional UI polish:
-  - Capture a current-state screenshot first and review visual density/hierarchy.
-  - Identify low-value elements to remove, collapse, or demote.
-  - Propose and implement a cleaner action/filter/layout structure.
-- Clearer status indicators in the baseline module list (e.g. missing deps flagged inline).
-- Better feedback during apply (progress, what was skipped, what failed).
-- Decide how to handle this module in baseline selection UI (hide it, or show as locked/always included).
+### v0.4.x — Next Up (prioritized)
+- Finalize pack selector module-owned compendium behavior:
+  - Default selected on open
+  - Required/locked
+  - Dedicated helper action button
+  - Recommended direction: default selected + helper button; avoid hard-locking unless compatibility requires it
+- Improve apply feedback with a clearer completion summary (enabled now, already enabled, missing/skipped, dependency auto-includes).
+- Decide and implement self-module behavior in baseline selection UI (hidden vs locked/always included).
 
 ### v0.5.x — Global Profile UX
 - Global profile metadata display: item count, last-saved timestamp.
 - First-run helper prompt for new worlds to apply global profile.
 - Improve status messaging for global profile operations.
 
-### v0.5.x — SWADE TOC Integration (optional)
+### v0.5.x — SWADE TOC Integration (optional, behind setting)
 - Add optional setting: Mirror SWADE Compendium TOC Filters.
 - Keep this module's curated visibility settings as the primary source of truth.
 - When mirror mode is enabled, read SWADE Compendium TOC filter state and merge it into effective pack visibility.
@@ -119,7 +127,7 @@ SWADE Fantasy World Kit provides curated SWADE fantasy compendiums, controlled p
 ### v0.6.x — Baseline Utilities
 - Add baseline export/import utilities (JSON format) for sharing and backup.
 
-### vX.x — Named Presets
+### v0.7+ — Named Presets
 - Replace the single baseline slot with a named preset system.
 - GMs can save multiple named module presets (e.g. "Full Campaign", "Lite Session", "Player Demo").
 - UI to create, rename, delete, and apply presets from a list.

@@ -36,6 +36,12 @@
             <span class="scfc-row-meta">{{entry.id}}</span>
           </span>
           <span>
+            {{#if entry.missingInstalledDependencyCount}}
+              <strong class="scfc-status-badge scfc-status-warning scfc-dep-indicator" title="Requires installed but inactive dependencies: {{entry.missingInstalledDependencyLabel}}">deps {{entry.missingInstalledDependencyCount}}</strong>
+            {{/if}}
+            {{#if entry.missingUninstalledDependencyCount}}
+              <strong class="scfc-status-badge scfc-status-missing scfc-dep-indicator" title="Requires dependencies that are not installed: {{entry.missingUninstalledDependencyLabel}}">missing {{entry.missingUninstalledDependencyCount}}</strong>
+            {{/if}}
             {{#if entry.required}}
               <strong class="scfc-status-badge">required</strong>
             {{/if}}

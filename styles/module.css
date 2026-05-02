@@ -556,6 +556,13 @@ body {
   color: var(--color-level-error);
 }
 
+.scfc-scroll-panel-modules .scfc-status-warning {
+  border-color: color-mix(in srgb, var(--color-level-warning) 62%, var(--color-border-light-primary));
+  background: color-mix(in srgb, var(--color-level-warning) 24%, transparent);
+  color: color-mix(in srgb, var(--color-level-warning) 76%, black 24%);
+  font-weight: 600;
+}
+
 .scfc-configured-title {
   margin: 0 0 0.5rem 0;
 }
