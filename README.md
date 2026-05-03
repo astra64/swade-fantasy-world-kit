@@ -1,6 +1,6 @@
 ﻿# SWADE Fantasy World Kit
 
-> **Development note:** GitHub Copilot was used as a coding tool during development of this module. All design decisions, feature direction, and content were made by a human software developer.
+> **AI Usage Disclosure** Built for personal use with GitHub Copilot as a coding assistant. All design decisions, feature direction, and implementation were driven by the human developer — Copilot was a tool, not an author.
 
 A Foundry VTT module for fantasy SWADE games. It does three things:
 
