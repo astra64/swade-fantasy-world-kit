@@ -121,6 +121,11 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] Document precedence rules (this module's curated packs always win)
 - [ ] Reuse existing compendium rerender + Quick Insert sync flow
 
+### v0.6.x — Actor Integration
+- [ ] Add a world setting (default: on) that causes newly-created actors to pull core skills from this module's custom skills compendium instead of the SWADE system defaults
+- [ ] Add a practical user-facing migration entry point, either as an actor sheet action or a macro, to replace existing skills, edges, hindrances, items, powers, and similar records with this module's compendium versions
+- [ ] Define safe matching and replacement rules so the actor migration tool does not duplicate entries or overwrite intentionally-customized content without confirmation
+
 ### v0.6.x — Baseline Utilities
 - [ ] Baseline export/import (JSON format) for sharing and backup
 
