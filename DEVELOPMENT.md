@@ -128,6 +128,8 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 
 ### v0.6.x — Baseline Utilities
 - [ ] Baseline export/import (JSON format) for sharing and backup
+- [ ] Save and reapply selected settings from other modules so a GM can carry world configuration between worlds
+	- Later design questions: selected modules vs selected settings keys, where profiles should live (world/client/JSON), and how to handle missing modules or conflicting target-world values
 
 ### v0.7+ — Named Presets
 - [ ] Replace single baseline slot with named preset system
