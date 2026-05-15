@@ -116,6 +116,10 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] First-run helper prompt in new worlds to apply global profile
 - [ ] Improve status messaging for global profile operations
 
+### v0.5.x — GM Quick Access
+- [ ] Add a fast-access entry point for GMs to open this module's settings (left sidebar button and/or configurable hotkey)
+- [ ] Ensure quick access opens directly to the relevant configuration UI instead of requiring navigation through Configure Settings menus
+
 ### v0.5.x — SWADE TOC Integration (optional, behind setting)
 - [ ] Mirror SWADE Compendium TOC filter state into effective pack visibility
 - [ ] Document precedence rules (this module's curated packs always win)
