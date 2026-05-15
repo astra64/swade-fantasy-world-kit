@@ -126,6 +126,11 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] Add a practical user-facing migration entry point, either as an actor sheet action or a macro, to replace existing skills, edges, hindrances, items, powers, and similar records with this module's compendium versions
 - [ ] Define safe matching and replacement rules so the actor migration tool does not duplicate entries or overwrite intentionally-customized content without confirmation
 
+### v0.6.x — Import Compatibility Fallbacks
+- [ ] Add an optional image-path remapper for imported content that can map core item/skill/edge/hindrance/power image paths to this module's preferred art style
+- [ ] Treat remapping as a fallback/compatibility utility (more brittle than compendium replacement), intended for third-party imports
+- [ ] Provide type-specific generic fallback images (item, skill, edge, hindrance, power, etc.) when no direct remap match is found
+
 ### v0.6.x — Baseline Utilities
 - [ ] Baseline export/import (JSON format) for sharing and backup
 - [ ] Save and reapply selected settings from other modules so a GM can carry world configuration between worlds
