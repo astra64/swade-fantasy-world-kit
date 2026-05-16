@@ -88,14 +88,6 @@ body {
   line-height: 1.1;
 }
 
-.scfc-toolbar-row button[data-module-load-global],
-.scfc-toolbar-row button[data-module-save-global],
-.scfc-toolbar-row button[data-module-apply-global] {
-  background: color-mix(in srgb, var(--color-cool-2) 60%, transparent);
-  border-color: color-mix(in srgb, var(--color-border-light-primary) 75%, transparent);
-  color: color-mix(in srgb, var(--color-text-dark-primary) 78%, var(--color-text-dark-secondary));
-}
-
 .scfc-summary-row {
   display: flex;
   flex-wrap: wrap;
@@ -110,10 +102,62 @@ body {
   margin: -0.06rem 0 0.3rem 0;
 }
 
-.scfc-global-collapsible {
-  display: block;
-  width: 100%;
-  margin: -0.08rem 0 0.24rem 0;
+.scfc-flow-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: -0.06rem 0 0.34rem 0;
+}
+
+.scfc-flow-step {
+  display: grid;
+  gap: 0.08rem;
+  padding: 0.24rem 0.36rem;
+  border: 1px solid color-mix(in srgb, var(--color-border-light-primary) 72%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-cool-2) 45%, transparent);
+}
+
+.scfc-flow-step strong {
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.scfc-flow-step span {
+  font-size: 10px;
+  opacity: 0.84;
+}
+
+.scfc-active-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  margin: -0.06rem 0 0.3rem 0;
+  padding: 0.22rem 0.42rem;
+  border: 1px solid color-mix(in srgb, var(--scfc-accent) 55%, var(--color-border-light-primary));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--scfc-accent) 18%, var(--color-cool-2) 82%);
+  position: sticky;
+  top: -1px;
+  z-index: 3;
+}
+
+.scfc-active-preset-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.scfc-active-preset-name {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.scfc-active-preset-count {
+  font-size: 10px;
+  opacity: 0.86;
 }
 
 .scfc-summary-chip {
@@ -124,46 +168,6 @@ body {
   padding: 0.11rem 0.45rem;
   font-size: 10px;
   background: color-mix(in srgb, var(--color-cool-2) 48%, transparent);
-}
-
-.scfc-global-summary {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  list-style: none;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0.18rem 0.3rem;
-  border: 1px solid var(--color-border-light-primary);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--color-cool-2) 55%, transparent);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.scfc-global-summary::-webkit-details-marker {
-  display: none;
-}
-
-.scfc-global-summary::before {
-  content: ">";
-  font-size: 11px;
-  opacity: 0.75;
-  margin-right: 0.28rem;
-}
-
-.scfc-global-collapsible[open] .scfc-global-summary::before {
-  content: "v";
-}
-
-.scfc-global-collapsible .scfc-toolbar-row-global {
-  margin: 0.24rem 0 0.2rem 0;
-}
-
-.scfc-global-notes {
-  margin: 0.02rem 0 0 0;
-  font-size: 11px;
-  opacity: 0.76;
 }
 
 .scfc-help-chip {
@@ -182,16 +186,6 @@ body {
   border-color: color-mix(in srgb, #c48b2b 70%, var(--color-border-light-primary));
   background: color-mix(in srgb, #c48b2b 22%, var(--color-cool-2) 78%);
   font-weight: 600;
-}
-
-.scfc-global-state-chip.scfc-global-state-match {
-  border-color: color-mix(in srgb, var(--scfc-accent) 55%, var(--color-border-light-primary));
-  background: color-mix(in srgb, var(--scfc-accent) 22%, var(--color-cool-2) 78%);
-}
-
-.scfc-global-state-chip.scfc-global-state-diff {
-  border-color: color-mix(in srgb, #8b6f43 70%, var(--color-border-light-primary));
-  background: color-mix(in srgb, #8b6f43 18%, var(--color-cool-2) 82%);
 }
 
 .scfc-section-title {
@@ -230,6 +224,17 @@ body {
   align-items: center;
   gap: 0.35rem;
   margin-left: 0.5rem;
+}
+
+.scfc-selection-delta {
+  margin: 0.14rem 0 0.28rem 0;
+  font-size: 11px;
+  opacity: 0.82;
+}
+
+.scfc-selection-delta-dirty {
+  font-weight: 600;
+  opacity: 0.95;
 }
 
 .scfc-filter-toggle {
@@ -370,6 +375,12 @@ body {
 
 .scfc-configured-collapsible .scfc-scroll-panel-configured {
   margin-top: 0.26rem;
+}
+
+.scfc-saved-baseline-notes {
+  margin: 0.22rem 0 0.12rem 0;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 .scfc-configured-entry-actions {

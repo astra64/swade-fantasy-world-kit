@@ -1,44 +1,46 @@
-<form class="scfc-baseline-modules-form" autocomplete="off" data-baseline-selection-signature="{{baselineSelectionSignature}}" data-global-selection-signature="{{globalSelectionSignature}}">
+<form class="scfc-baseline-modules-form" autocomplete="off" data-baseline-selection-signature="{{baselineSelectionSignature}}">
   <div class="form-group scfc-search-group">
     <label>Search Installed Modules</label>
     <input type="text" data-module-search placeholder="Search by title or ID..." />
-    <p class="notes scfc-search-notes">Select modules to include in your baseline profile for this world.</p>
   </div>
-
-  <div class="form-group scfc-toolbar-row" aria-label="Baseline actions">
-    <button type="button" data-module-select-active title="Check all modules that are currently active in this world">Select Active</button>
-    <button type="button" data-module-clear-selection title="Uncheck all modules in the list">Clear Selection</button>
-  </div>
-
-  <details class="scfc-global-collapsible">
-    <summary class="scfc-global-summary" title="Optional tools for using a client-wide Global Profile across worlds.">Global Profile (Advanced)</summary>
-    <div class="form-group scfc-toolbar-row scfc-toolbar-row-global" aria-label="Global profile actions">
-      <button type="button" data-module-load-global title="Load your client-wide Global Profile into the current checkbox selection. This does not save to this world until you click Save Selection or Apply Global.">Load Global</button>
-      <button type="button" data-module-save-global title="Save the current checkbox selection as your client-wide Global Profile (shared across worlds on this Foundry install).">Save Global</button>
-      <button type="button" data-module-apply-global title="Replace this world's baseline with your Global Profile, then enable those installed modules and reload.">Apply Global</button>
-    </div>
-    <p class="notes scfc-global-notes">Use Global Profile when you want one shared module preset across worlds. Ignore this section if you only manage this world's baseline.</p>
-  </details>
 
   <div class="scfc-help-row" aria-label="Baseline help">
-    <span class="scfc-summary-chip scfc-help-chip" title="World Baseline: the saved module list for this specific world. Save Selection updates it. Apply Baseline enables it.">World Baseline ?</span>
-    <span class="scfc-summary-chip scfc-help-chip" title="Global Profile: your client-wide preset shared across worlds on this Foundry install. Load Global copies it into the current selection.">Global Profile ?</span>
+    <span class="scfc-summary-chip scfc-help-chip" title="The saved baseline for this world. Save Selection to update; Apply Baseline to enable.">Baseline ?</span>
+    <span class="scfc-summary-chip scfc-help-chip" title="The active preset for this world.">Preset ?</span>
+  </div>
+
+  <div class="scfc-flow-row" aria-label="Workflow overview">
+    <div class="scfc-flow-step">
+      <strong>Step 1: Edit</strong>
+      <span>Check/uncheck modules below.</span>
+    </div>
+    <div class="scfc-flow-step">
+      <strong>Step 2: Save</strong>
+      <span>Click Save Selection to snapshot.</span>
+    </div>
+  </div>
+
+  <div class="scfc-active-preset-row" aria-label="Active preset" title="Current preset for this world.">
+    <span class="scfc-active-preset-label">Preset</span>
+    <strong class="scfc-active-preset-name">{{activePresetName}}</strong>
+    <span class="scfc-active-preset-count">{{activePresetModuleCount}} modules</span>
   </div>
 
   <div class="scfc-summary-row" aria-label="Baseline summary">
-    <span class="scfc-summary-chip" title="Total installed modules found in this world.">Installed: {{installedCount}}</span>
-    <span class="scfc-summary-chip" title="How many installed modules are currently checked in this window.">Selected: {{selectedCount}}</span>
-    <span class="scfc-summary-chip" title="How many module IDs are currently saved in this world's baseline list (includes modules not currently installed).">Baseline entries: {{configuredCount}}</span>
-    <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Saved means the current checkbox selection matches this world's saved baseline. Unsaved changes means it differs.">World baseline selection: saved</span>
-    <span class="scfc-summary-chip scfc-global-state-chip" data-global-profile-state title="Shows whether the current checkbox selection matches your saved Global Profile.">Global profile: differs from current selection</span>
+    <span class="scfc-summary-chip" title="Total installed modules.">Installed: {{installedCount}}</span>
+    <span class="scfc-summary-chip" title="Currently selected in this editing session.">Selected: {{selectedCount}}</span>
+    <span class="scfc-summary-chip" title="Currently saved in baseline (may include uninstalled).">Saved: {{configuredCount}}</span>
+    <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Matches = selection matches saved baseline.">Status: saved</span>
   </div>
 
   {{#if hasInstalledModules}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-modules">
       <div class="scfc-panel-header">
-        <span>Installed modules</span>
+        <span>Step 1: Installed Modules</span>
         <span class="scfc-panel-header-actions">
-          <button type="button" class="scfc-filter-toggle" data-module-filter-active aria-pressed="false" title="Show only modules that are currently active in this world">Active Only</button>
+          <button type="button" class="scfc-filter-toggle" data-module-select-active title="Check all active modules">Select Active</button>
+          <button type="button" class="scfc-filter-toggle" data-module-clear-selection title="Uncheck all">Clear</button>
+          <button type="button" class="scfc-filter-toggle" data-module-filter-active aria-pressed="false" title="Show active only">Active Only</button>
           <strong data-module-visible-count>{{installedCount}}</strong>
         </span>
       </div>
@@ -73,9 +75,10 @@
   {{#if hasConfigured}}
     <details class="scfc-configured-collapsible">
       <summary class="scfc-configured-summary">
-        <span>Current baseline entries</span>
+        <span>Step 2: Saved Baseline</span>
         <strong>{{configuredCount}} total</strong>
       </summary>
+      <p class="notes scfc-saved-baseline-notes">Updates when you click Save Selection. May include uninstalled modules.</p>
       <div class="scfc-scroll-panel scfc-scroll-panel-configured">
         {{#each configured as |entry|}}
           <div class="scfc-list-row" {{#unless entry.installed}}title="'{{entry.id}}' is saved in your baseline but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab, or remove it from your baseline by clicking the × button."{{/unless}}>
@@ -105,14 +108,16 @@
     <p>No baseline module IDs configured.</p>
   {{/if}}
 
+  <p class="scfc-selection-delta" data-selection-delta title="Changes since last save.">No changes</p>
+
   <footer class="sheet-footer flexrow scfc-footer-row">
-    <button type="submit" title="Save the checked modules as the baseline list for this world (does not enable them)">
+    <button type="submit" title="Save checked modules (doesn't enable them).">
       <i class="fas fa-save"></i>
       Save Selection
     </button>
-    <button type="button" data-apply-baseline title="Enable all saved baseline modules in this world and reload">
+    <button type="button" data-apply-baseline title="Enable saved baseline and reload world.">
       <i class="fas fa-check"></i>
-      Apply Baseline to World
+      Apply Baseline
     </button>
   </footer>
 </form>

@@ -8,6 +8,7 @@ const MIGRATABLE_WORLD_SETTING_KEYS = [
   "baselineModules"
 ];
 const MIGRATABLE_CLIENT_SETTING_KEYS = ["globalBaselineModules"];
+const DEFAULT_PRESET_ID = "default";
 
 function rerenderCompendiumDirectory() {
   ui.compendium?.render(true);
@@ -245,15 +246,17 @@ class BaselineModulesManager extends FormApplication {
       .sort((a, b) => a.title.localeCompare(b.title));
 
     const titlesMap = parseTitlesMap(game.settings.get(MODULE_ID, "baselineModuleTitles"));
-    const configured = [...selectedIds].map((id) => {
-      const module = game.modules.get(id);
-      return {
-        id,
-        title: module?.title ?? titlesMap[id] ?? null,
-        installed: Boolean(module),
-        active: Boolean(module?.active)
-      };
-    });
+    const configured = [...selectedIds]
+      .filter((id) => id && String(id).trim().length > 0)
+      .map((id) => {
+        const module = game.modules.get(id);
+        return {
+          id,
+          title: module?.title ?? titlesMap[id] ?? null,
+          installed: Boolean(module),
+          active: Boolean(module?.active)
+        };
+      });
 
     const installedCount = installedModules.length;
     const activeCount = installedModules.filter((entry) => entry.active).length;
@@ -263,7 +266,7 @@ class BaselineModulesManager extends FormApplication {
     const configuredInstalledCount = configured.filter((entry) => entry.installed).length;
     const configuredMissingCount = configuredCount - configuredInstalledCount;
     const baselineSelectionSignature = buildSelectionSignature([...selectedIds]);
-    const globalSelectionSignature = buildSelectionSignature(getGlobalBaselineModuleIds());
+    const activePreset = getActivePresetMeta();
 
     return {
       installedModules,
@@ -278,7 +281,9 @@ class BaselineModulesManager extends FormApplication {
       configuredInstalledCount,
       configuredMissingCount,
       baselineSelectionSignature,
-      globalSelectionSignature
+      activePresetName: activePreset.name,
+      activePresetId: activePreset.id,
+      activePresetModuleCount: activePreset.moduleCount
     };
   }
 
@@ -292,14 +297,11 @@ class BaselineModulesManager extends FormApplication {
     const filterActiveButton = html[0].querySelector("[data-module-filter-active]");
     const visibleCountLabel = html[0].querySelector("[data-module-visible-count]");
     const clearSelectionButton = html[0].querySelector("[data-module-clear-selection]");
-    const loadGlobalButton = html[0].querySelector("[data-module-load-global]");
-    const saveGlobalButton = html[0].querySelector("[data-module-save-global]");
-    const applyGlobalButton = html[0].querySelector("[data-module-apply-global]");
     const baselineSaveStateLabel = html[0].querySelector("[data-baseline-save-state]");
-    const globalProfileStateLabel = html[0].querySelector("[data-global-profile-state]");
+    const selectionDeltaLabel = html[0].querySelector("[data-selection-delta]");
 
     const baselineSelectionSignature = html[0].dataset.baselineSelectionSignature ?? "";
-    let globalSelectionSignature = html[0].dataset.globalSelectionSignature ?? "";
+    const baselineSelectionSet = new Set(baselineSelectionSignature ? baselineSelectionSignature.split("\n") : []);
 
     const getCurrentSelectionSignature = () => {
       const selectedIds = [];
@@ -322,20 +324,33 @@ class BaselineModulesManager extends FormApplication {
       baselineSaveStateLabel.classList.toggle("scfc-save-state-saved", !hasUnsavedChanges);
     };
 
-    const updateGlobalProfileState = () => {
-      if (!globalProfileStateLabel) return;
+    const updateSelectionDelta = () => {
+      if (!selectionDeltaLabel) return;
 
-      const matchesGlobalProfile = getCurrentSelectionSignature() === globalSelectionSignature;
-      globalProfileStateLabel.textContent = matchesGlobalProfile
-        ? "Global profile: matches current selection"
-        : "Global profile: differs from current selection";
-      globalProfileStateLabel.classList.toggle("scfc-global-state-match", matchesGlobalProfile);
-      globalProfileStateLabel.classList.toggle("scfc-global-state-diff", !matchesGlobalProfile);
+      const currentIds = new Set(getCurrentSelectionSignature().split("\n").filter(Boolean));
+      let additions = 0;
+      let removals = 0;
+
+      for (const id of currentIds) {
+        if (!baselineSelectionSet.has(id)) additions += 1;
+      }
+      for (const id of baselineSelectionSet) {
+        if (!currentIds.has(id)) removals += 1;
+      }
+
+      if (additions === 0 && removals === 0) {
+        selectionDeltaLabel.textContent = "No changes";
+        selectionDeltaLabel.classList.remove("scfc-selection-delta-dirty");
+        return;
+      }
+
+      selectionDeltaLabel.textContent = `+${additions} / -${removals}`;
+      selectionDeltaLabel.classList.add("scfc-selection-delta-dirty");
     };
 
-    const updateSelectionStateIndicators = () => {
+    const updateSelectionState = () => {
       updateBaselineSaveState();
-      updateGlobalProfileState();
+      updateSelectionDelta();
     };
 
     let activeOnlyFilterEnabled = false;
@@ -385,7 +400,7 @@ class BaselineModulesManager extends FormApplication {
         const isActive = row.dataset.active === "true";
         if (checkbox) checkbox.checked = isRequired || isActive;
       }
-      updateSelectionStateIndicators();
+      updateSelectionState();
     });
 
     clearSelectionButton?.addEventListener("click", () => {
@@ -394,14 +409,14 @@ class BaselineModulesManager extends FormApplication {
         const isRequired = row.dataset.required === "true";
         if (checkbox) checkbox.checked = isRequired;
       }
-      updateSelectionStateIndicators();
+      updateSelectionState();
     });
 
     html[0].addEventListener("change", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLInputElement)) return;
       if (target.name !== "baselineModulesSelected") return;
-      updateSelectionStateIndicators();
+      updateSelectionState();
     });
 
     html[0].addEventListener("click", async (event) => {
@@ -410,79 +425,10 @@ class BaselineModulesManager extends FormApplication {
       const idToRemove = btn.dataset.removeConfigured;
       if (!idToRemove) return;
       const currentIds = parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"));
-      const updated = currentIds.filter((id) => id !== idToRemove);
+      const updated = currentIds.filter((id) => id && id !== idToRemove);
       await game.settings.set(MODULE_ID, "baselineModules", updated.join("\n"));
       await updateTitleCache("baselineModuleTitles", updated);
       await this.render(true);
-    });
-
-    loadGlobalButton?.addEventListener("click", () => {
-      const globalIds = new Set(getGlobalBaselineModuleIds());
-
-      for (const row of moduleRows) {
-        const checkbox = row.querySelector("input[type=checkbox]");
-        if (!checkbox) continue;
-
-        const isRequired = row.dataset.required === "true";
-        checkbox.checked = isRequired || globalIds.has(checkbox.value);
-      }
-
-      updateSelectionStateIndicators();
-    });
-
-    saveGlobalButton?.addEventListener("click", async () => {
-      const selectedIds = [];
-
-      for (const row of moduleRows) {
-        const checkbox = row.querySelector("input[type=checkbox]");
-        if (!checkbox?.checked) continue;
-        selectedIds.push(checkbox.value);
-      }
-
-      // Check if any selected modules have installed dependencies that are not also selected
-      const selectedSet = new Set(selectedIds);
-      const allDeps = collectAllDependencies(selectedIds);
-      const missingDeps = [...allDeps].filter((depId) => {
-        return game.modules.has(depId) && !selectedSet.has(depId);
-      });
-
-      let finalGlobalIds = mergeWithRequiredModuleIds(selectedIds);
-      if (missingDeps.length > 0) {
-        const resolution = await promptForDependencyResolution(selectedIds, missingDeps);
-        if (!resolution.resolved) return;
-
-        // Also check the dependency boxes in the UI
-        for (const depId of missingDeps) {
-          const depRow = moduleRows.find((r) => r.querySelector("input[type=checkbox]")?.value === depId);
-          const depCheckbox = depRow?.querySelector("input[type=checkbox]");
-          if (depCheckbox) depCheckbox.checked = true;
-        }
-
-        finalGlobalIds = mergeWithRequiredModuleIds(resolution.modulesToEnable);
-      }
-
-      await game.settings.set(MODULE_ID, "globalBaselineModules", finalGlobalIds.join("\n"));
-      await updateTitleCache("globalBaselineModuleTitles", finalGlobalIds);
-      ui.notifications?.info("SWADE Fantasy World Kit global baseline profile saved.");
-      globalSelectionSignature = buildSelectionSignature(finalGlobalIds);
-      updateSelectionStateIndicators();
-    });
-
-    applyGlobalButton?.addEventListener("click", async () => {
-      const apply = await Dialog.confirm({
-        title: "Apply Global Baseline to This World",
-        content: "<p>This replaces this world's baseline list with your saved global profile, then enables installed modules from that list.</p>",
-        yes: () => true,
-        no: () => false,
-        defaultYes: true
-      });
-      if (!apply) return;
-
-      const globalIds = getGlobalBaselineModuleIds();
-      await game.settings.set(MODULE_ID, "baselineModules", globalIds.join("\n"));
-      // Carry the global title cache over to the world title cache
-      await game.settings.set(MODULE_ID, "baselineModuleTitles", game.settings.get(MODULE_ID, "globalBaselineModuleTitles"));
-      await this._onApplyBaseline();
     });
 
     applyButton?.addEventListener("click", async () => {
@@ -491,7 +437,7 @@ class BaselineModulesManager extends FormApplication {
 
     updateActiveFilterButtonState();
     applyModuleFilters();
-    updateSelectionStateIndicators();
+    updateSelectionState();
   }
 
   async _onApplyBaseline() {
@@ -843,6 +789,41 @@ function parseTitlesMap(raw) {
   try { return JSON.parse(raw ?? "{}"); } catch { return {}; }
 }
 
+function parsePresetMap(raw) {
+  try {
+    const parsed = JSON.parse(raw ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getPresetMap() {
+  return parsePresetMap(game.settings.get(MODULE_ID, "namedBaselinePresets"));
+}
+
+function getActivePresetId() {
+  return String(game.settings.get(MODULE_ID, "activeBaselinePresetId") ?? DEFAULT_PRESET_ID);
+}
+
+function getActivePresetMeta() {
+  const presetMap = getPresetMap();
+  const activePresetId = getActivePresetId();
+  const preset = presetMap[activePresetId];
+  const presetName = typeof preset?.name === "string" && preset.name.trim().length > 0
+    ? preset.name.trim()
+    : (activePresetId === DEFAULT_PRESET_ID ? "Default" : activePresetId);
+  const moduleIds = Array.isArray(preset?.moduleIds)
+    ? [...new Set(preset.moduleIds.map((id) => String(id ?? "").trim()).filter(Boolean))]
+    : [];
+
+  return {
+    id: activePresetId,
+    name: presetName,
+    moduleCount: moduleIds.length
+  };
+}
+
 async function updateTitleCache(settingKey, ids) {
   const map = parseTitlesMap(game.settings.get(MODULE_ID, settingKey));
   const idSet = new Set(ids);
@@ -862,8 +843,8 @@ function parseModuleIdList(rawValue) {
   return [...new Set(
     rawValue
       .split(/[\n,]/)
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
+      .map((entry) => String(entry ?? "").trim())
+      .filter((entry) => entry.length > 0 && entry !== "null" && entry !== "undefined")
   )];
 }
 
@@ -1055,6 +1036,22 @@ Hooks.once("init", () => {
     default: "{}"
   });
 
+  game.settings.register(MODULE_ID, "namedBaselinePresets", {
+    name: "Named Baseline Presets",
+    scope: "client",
+    config: false,
+    type: String,
+    default: "{}"
+  });
+
+  game.settings.register(MODULE_ID, "activeBaselinePresetId", {
+    name: "Active Baseline Preset Id",
+    scope: "world",
+    config: false,
+    type: String,
+    default: DEFAULT_PRESET_ID
+  });
+
   game.settings.register(MODULE_ID, "legacyWorldSettingsMigrated", {
     // TODO(next version): Remove this temporary migration flag setting.
     name: "Legacy World Settings Migrated",
@@ -1074,9 +1071,29 @@ Hooks.once("init", () => {
   });
 });
 
+/**
+ * Sanitize baselineModules by removing any null/undefined/invalid entries.
+ * This fixes data integrity issues from previous versions.
+ */
+async function sanitizeBaselineModules() {
+  const raw = game.settings.get(MODULE_ID, "baselineModules");
+  const cleaned = parseModuleIdList(raw);
+  
+  if (cleaned.length !== parseModuleIdList(raw).length) {
+    // Only update if we actually removed something
+    const currentIds = new Set(cleaned);
+    const rawIds = new Set(parseModuleIdList(raw));
+    if (currentIds.size !== rawIds.size) {
+      await game.settings.set(MODULE_ID, "baselineModules", cleaned.join("\n"));
+      console.log(`[${MODULE_ID}] Sanitized baselineModules: removed ${rawIds.size - currentIds.size} invalid entries`);
+    }
+  }
+}
+
 Hooks.once("ready", async () => {
   // TODO(next version): Remove migration call once legacy rename rollout is complete.
   await migrateLegacyModuleSettings();
+  await sanitizeBaselineModules();
   applyPlayerPackAccessPatch();
 
   if (localStorage.getItem("swade-fwk-reopen-baseline") === "1") {

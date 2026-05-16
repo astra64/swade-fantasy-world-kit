@@ -151,6 +151,7 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] Preset/module export/import utilities for sharing and backup
 - [ ] Save and reapply selected settings from other modules so a GM can carry world configuration between worlds
 	- Later design questions: selected modules vs selected settings keys, preset schema versioning, and how to handle missing modules or conflicting target-world values
+- [ ] Add a utility to view and export a list of installed modules that are not used in any baseline, helping GMs identify which mods can be safely removed
 
 ### v0.5.x — Next Step Plan (Immediate)
 1. Define preset data model and settings keys (client presets + world activePresetId)
