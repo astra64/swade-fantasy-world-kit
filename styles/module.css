@@ -260,6 +260,7 @@ body {
   background: color-mix(in srgb, var(--scfc-accent) 22%, var(--color-cool-2) 78%);
 }
 
+
 .scfc-save-state-chip.scfc-save-state-unsaved {
   border-color: color-mix(in srgb, #c48b2b 70%, var(--color-border-light-primary));
   background: color-mix(in srgb, #c48b2b 22%, var(--color-cool-2) 78%);

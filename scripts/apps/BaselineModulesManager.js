@@ -293,9 +293,10 @@ export class BaselineModulesManager extends FormApplication {
     const resolveMissingDependencies = window.resolveMissingDependencies;
 
     const activePreset = presetApi.getActivePresetMeta();
+
     const apply = await Dialog.confirm({
       title: "Apply Preset to World",
-      content: `<p>This will apply <strong>${activePreset.name}</strong> to this world by enabling installed modules from the preset. Uninstalled modules are skipped.</p>`,
+      content: `<p>This will apply <strong>${activePreset.name}</strong> to this world.</p><p>Installed modules in the preset will be enabled. Any other currently active module (except this module) will be disabled. Uninstalled modules are skipped.</p>`,
       yes: () => true,
       no: () => false,
       defaultYes: true
@@ -329,8 +330,10 @@ export class BaselineModulesManager extends FormApplication {
     const missing = [];
     const alreadyEnabled = [];
     const enabledNow = [];
+    const disabledNow = [];
 
     const moduleConfiguration = foundry.utils.deepClone(currentModuleConfig);
+    const desiredIdSet = new Set(configuredIds);
 
     for (const id of configuredIds) {
       const module = game.modules.get(id);
@@ -348,7 +351,20 @@ export class BaselineModulesManager extends FormApplication {
       enabledNow.push(id);
     }
 
-    if (enabledNow.length > 0) {
+    // Authoritative apply: disable any currently enabled module not in desired preset.
+    for (const module of game.modules.values()) {
+      const id = module.id;
+      if (id === MODULE_ID) continue;
+      if (desiredIdSet.has(id)) continue;
+
+      const currentlyEnabled = module.active || moduleConfiguration[id] === true;
+      if (!currentlyEnabled) continue;
+
+      moduleConfiguration[id] = false;
+      disabledNow.push(id);
+    }
+
+    if (enabledNow.length > 0 || disabledNow.length > 0) {
       await game.settings.set("core", "moduleConfiguration", moduleConfiguration);
     }
 
@@ -356,6 +372,7 @@ export class BaselineModulesManager extends FormApplication {
 
     const summary = [
       `Enabled now: ${enabledNow.length}`,
+      `Disabled now: ${disabledNow.length}`,
       `Already enabled: ${alreadyEnabled.length}`,
       `Missing: ${missing.length}`,
       `Auto-included deps: ${autoIncludedDependencies.length}`
@@ -367,8 +384,8 @@ export class BaselineModulesManager extends FormApplication {
       console.warn("[SWADE Fantasy World Kit] Missing preset modules:\n" + missing.join("\n"));
     }
 
-    // Reload the world if any new modules were enabled
-    if (enabledNow.length > 0) {
+    // Reload the world if module activation state changed.
+    if (enabledNow.length > 0 || disabledNow.length > 0) {
       ui.notifications?.info("Reloading world to activate modules...");
       localStorage.setItem("swade-fwk-reopen-baseline", "1");
       setTimeout(() => {

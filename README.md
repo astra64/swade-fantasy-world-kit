@@ -1,12 +1,12 @@
 ﻿# SWADE Fantasy World Kit
 
-> **AI Usage Disclosure** Built for personal use with GitHub Copilot as a coding assistant. All design decisions, feature direction, and implementation were driven by the human developer — Copilot was a tool, not an author.
+> **AI note:** Built with help from GitHub Copilot for drafting and iteration. Final decisions, direction, and edits were made by the developer.
 
 A Foundry VTT module for fantasy SWADE games. It does three things:
 
 1. **Curated compendiums** — a set of fantasy SWADE content packs (ancestries, edges, equipment, powers, and more) organised into labelled folders in the compendium sidebar.
 2. **Controlled visibility** — limits which compendiums players can see, keeping the sidebar clean. You choose what's exposed; Quick Insert automatically respects the same rules.
-3. **World setup tools** — a Baseline Module Manager that lets you define a list of modules that should be active for a world and enable them all in one click. Supports a global profile so your setup travels across worlds.
+3. **World setup tools** — a Preset Modules manager that lets you define named module presets and apply them to the world in one click.
 
 **Requires:** Foundry VTT v13+, SWADE system, SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net
 
@@ -55,34 +55,30 @@ If you use **Quick Insert**, pack visibility restrictions are automatically sync
 
 ---
 
-### Baseline Module Manager
+### Preset Modules Manager
 
-The Baseline Module Manager lets you define a list of modules that should be active for a world, then enable them all in one click. Useful for quickly spinning up new worlds with a consistent setup.
+The Preset Modules manager lets you define named presets of modules, then apply a preset to the world in one click. Useful for quickly switching world configurations.
 
-**To open it:** Settings → Module Settings → SWADE Fantasy World Kit → **Baseline Modules → Configure and Apply**
+**To open it:** Settings → Module Settings → SWADE Fantasy World Kit → **Preset Modules → Configure and Apply**
 
-#### World Baseline
+**Quick open:** `Ctrl+Shift+B` (GM only)
+
+#### Preset Workflow
 
 1. Search or scroll through the installed modules list and check the ones you want.
-2. Click **Save Selection** to store the list for this world.
-3. Click **Apply Baseline** to enable all installed modules from the list. Foundry will reload the world automatically.
+2. Choose the preset you want to edit from **Editing Preset**.
+3. Click **Save to Preset** to store the current selection.
+4. Click **Apply Preset to World** to apply activation changes. Foundry will reload automatically when changes are made.
 
 The manager will warn you if any selected modules have dependencies that aren't also selected, and offer to include them automatically.
-
-#### Global Profile
-
-You can save a baseline profile that travels with you across worlds on the same Foundry install:
-
-- **Save Selection as Global** — saves the current selection as your global profile
-- **Load Global Profile** — loads your global profile into the current selection
-- **Apply Global to This World** — replaces this world's baseline with your global profile and applies it
 
 #### Notes
 
 - The manager only enables modules that are already installed. It does not download or install missing modules.
+- Applying a preset is authoritative: modules in the preset are enabled, and other currently active modules are disabled (except this module itself).
 - Required dependencies of this module (SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net) are always included and cannot be removed from the baseline.
 - Module titles are cached so previously-configured entries are still identifiable even after a module is uninstalled.
-- Each configured entry has a **×** button (visible on hover) to remove it directly without editing the full list.
+- Presets can be created, renamed, duplicated, and deleted from **Manage Presets**.
 
 ---
 
