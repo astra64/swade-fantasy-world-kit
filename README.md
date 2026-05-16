@@ -8,7 +8,7 @@ A Foundry VTT module for fantasy SWADE games. It does three things:
 2. **Controlled visibility** — limits which compendiums players can see, keeping the sidebar clean. You choose what's exposed; Quick Insert automatically respects the same rules.
 3. **World setup tools** — a Preset Modules manager that lets you define named module presets and apply them to the world in one click.
 
-> **Planned direction (parked):** after current roadmap work is finished, these capabilities may be split into separate system-agnostic dependency modules, with this package focused on SWADE fantasy content and composition.
+> **Planned direction (parked):** after current roadmap work is finished, only **World setup tools** are planned for extraction into a separate system-agnostic dependency module. Curated compendiums and controlled visibility remain SWADE-focused in this package.
 
 **Requires:** Foundry VTT v13+, SWADE system, SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net
 
