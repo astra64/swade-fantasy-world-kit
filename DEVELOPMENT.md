@@ -149,6 +149,20 @@ Run this after significant code changes and before release.
 - Actor/item migration helpers for replacing records with module compendium versions.
 - Optional import-compatibility image remapper fallback.
 
+### Post-Roadmap Modularization (Parked)
+
+- Status: Parked until current roadmap items are completed or explicitly removed.
+- Goal: split the current "three things" into system-agnostic dependency modules while keeping this package as the SWADE fantasy content/composer module.
+- Planned extraction order:
+  1. Preset/dependency engine.
+  2. Visibility/filter engine (including Quick Insert sync contract).
+  3. Curation/sidebar UI framework.
+- Guardrails before starting extraction:
+  - Complete and stabilize Near Term and Mid Term roadmap work.
+  - Keep preset apply behavior as an unchanged core contract during extraction.
+  - Preserve setting key compatibility with migrations during transition windows.
+- Workflow note: when extraction begins, use one VS Code multi-root workspace for all sibling modules to keep a single Copilot session while developing modules in parallel.
+
 ---
 
 ## Notes for Contributors
