@@ -1,50 +1,53 @@
 <form class="scfc-baseline-modules-form" autocomplete="off" data-baseline-selection-signature="{{baselineSelectionSignature}}">
-  <div class="form-group scfc-search-group">
-    <label>Search Installed Modules</label>
-    <input type="text" data-module-search placeholder="Search by title or ID..." />
-  </div>
-
-  <div class="scfc-help-row" aria-label="Baseline help">
-    <span class="scfc-summary-chip scfc-help-chip" title="The active preset snapshot for this world. Save to Preset updates it; Apply Preset enables it.">Preset Snapshot ?</span>
-    <span class="scfc-summary-chip scfc-help-chip" title="The active preset for this world.">Preset ?</span>
-  </div>
-
   <div class="scfc-flow-row" aria-label="Workflow overview">
     <div class="scfc-flow-step">
-      <strong>Step 1: Edit</strong>
-      <span>Check/uncheck modules below.</span>
+      <strong>Edit modules</strong>
+      <span>Check or uncheck modules below.</span>
     </div>
     <div class="scfc-flow-step">
-      <strong>Step 2: Save</strong>
-      <span>Click Save to Preset to snapshot.</span>
+      <strong>Save when ready</strong>
+      <span>Click Save to Preset to store the editing preset.</span>
+    </div>
+    <div class="scfc-flow-step">
+      <strong>Apply to world</strong>
+      <span>World modules do not change until you click Apply Preset.</span>
     </div>
   </div>
 
-  <div class="scfc-active-preset-row" aria-label="Active preset">
-    <span class="scfc-active-preset-label">Preset</span>
-    <select class="scfc-preset-selector" data-preset-selector>
-      {{#each presets as |preset|}}
-        <option value="{{preset.id}}" {{#if preset.isActive}}selected{{/if}}>
-          {{preset.name}} ({{preset.moduleCount}})
-        </option>
-      {{/each}}
-    </select>
-    <button type="button" class="scfc-preset-manage-btn" data-preset-manage title="Manage presets: create, rename, duplicate, delete">
-      <i class="fas fa-cog"></i>
-    </button>
+  <div class="scfc-active-preset-row" aria-label="Editing preset">
+    <label class="scfc-active-preset-label" for="scfc-preset-selector">Editing Preset</label>
+    <div class="scfc-active-preset-controls">
+      <select id="scfc-preset-selector" class="scfc-preset-selector" data-preset-selector>
+        {{#each presets as |preset|}}
+          <option value="{{preset.id}}" {{#if preset.isActive}}selected{{/if}}>
+            {{preset.name}} ({{preset.moduleCount}})
+          </option>
+        {{/each}}
+      </select>
+      <button type="button" class="scfc-preset-manage-btn" data-preset-manage title="Manage presets: create, rename, duplicate, delete">
+        <i class="fas fa-cog"></i>
+        <span>Manage Presets</span>
+      </button>
+    </div>
   </div>
 
-  <div class="scfc-summary-row" aria-label="Baseline summary">
+  <div class="scfc-summary-row" aria-label="Preset summary">
     <span class="scfc-summary-chip" title="Total installed modules.">Installed: {{installedCount}}</span>
     <span class="scfc-summary-chip" title="Currently selected in this editing session.">Selected: {{selectedCount}}</span>
-    <span class="scfc-summary-chip" title="Currently saved in active preset (may include uninstalled).">Saved: {{configuredCount}}</span>
-    <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Matches = selection matches active preset.">Status: matches preset</span>
+    <span class="scfc-summary-chip" title="Currently saved in the editing preset (may include uninstalled).">Saved: {{configuredCount}}</span>
+    <span class="scfc-summary-chip {{#if isEditingPresetApplied}}scfc-summary-chip-good{{else}}scfc-summary-chip-warn{{/if}}" title="Last preset applied to this world in this module workflow.">Applied: {{appliedPresetName}}</span>
+    <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Matches = selection matches the editing preset.">Status: matches preset</span>
   </div>
 
   {{#if hasInstalledModules}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-modules">
       <div class="scfc-panel-header">
-        <span>Step 1: Installed Modules</span>
+        <div class="scfc-panel-header-left">
+          <span class="scfc-panel-title">Installed Modules</span>
+          <label class="scfc-panel-search" for="scfc-module-search">
+            <input id="scfc-module-search" type="text" data-module-search aria-label="Search installed modules" placeholder="Search by title or ID..." />
+          </label>
+        </div>
         <span class="scfc-panel-header-actions">
           <button type="button" class="scfc-filter-toggle" data-module-select-active title="Check all active modules">Select Active</button>
           <button type="button" class="scfc-filter-toggle" data-module-clear-selection title="Uncheck all">Clear</button>
@@ -83,20 +86,20 @@
   {{#if hasConfigured}}
     <details class="scfc-configured-collapsible">
       <summary class="scfc-configured-summary">
-        <span>Step 2: Saved Preset Snapshot</span>
+        <span>Preset Contents</span>
         <strong>{{configuredCount}} total</strong>
       </summary>
-      <p class="notes scfc-saved-baseline-notes">Updates when you click Save to Preset. May include uninstalled modules.</p>
+      <p class="notes scfc-saved-baseline-notes">Shows what is stored in the editing preset. May include uninstalled modules.</p>
       <div class="scfc-scroll-panel scfc-scroll-panel-configured">
         {{#each configured as |entry|}}
-          <div class="scfc-list-row" {{#unless entry.installed}}title="'{{entry.id}}' is saved in your active preset but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab, or remove it from your preset by clicking the × button."{{/unless}}>
-            <span>
+          <div class="scfc-list-row" {{#unless entry.installed}}title="'{{entry.id}}' is saved in your editing preset but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab."{{/unless}}>
+            <span class="scfc-configured-entry-main">
               {{#if entry.title}}
                 <strong class="scfc-row-title">{{entry.title}}</strong>
               {{/if}}
               <code class="scfc-row-meta">{{entry.id}}</code>
             </span>
-            <span class="scfc-configured-entry-actions">
+            <span class="scfc-configured-entry-state">
               {{#if entry.installed}}
                 {{#if entry.active}}
                   <strong class="scfc-status-badge scfc-status-active">installed + active</strong>
@@ -106,7 +109,6 @@
               {{else}}
                 <strong class="scfc-status-badge scfc-status-missing">missing</strong>
               {{/if}}
-              <button type="button" class="scfc-remove-configured" data-remove-configured="{{entry.id}}" title="Remove '{{#if entry.title}}{{entry.title}}{{else}}{{entry.id}}{{/if}}' from preset">×</button>
             </span>
           </div>
         {{/each}}
@@ -119,17 +121,17 @@
   <p class="scfc-selection-delta" data-selection-delta title="Changes since last save.">No changes</p>
 
   <footer class="sheet-footer flexrow scfc-footer-row">
-    <button type="submit" title="Save checked modules to the active preset (doesn't enable them).">
+    <button type="submit" title="Save checked modules to the editing preset (does not enable them).">
       <i class="fas fa-save"></i>
       Save to Preset
     </button>
-    <button type="button" data-revert-preset title="Reset checkboxes to the active preset snapshot.">
+    <button type="button" data-revert-preset title="Reset checkboxes to the editing preset snapshot.">
       <i class="fas fa-undo"></i>
       Revert to Preset
     </button>
-    <button type="button" data-apply-baseline title="Enable modules from the active preset and reload world.">
+    <button type="button" data-apply-baseline title="Enable modules from the editing preset and reload world.">
       <i class="fas fa-check"></i>
-      Apply Preset
+      Apply Preset to World
     </button>
   </footer>
 </form>

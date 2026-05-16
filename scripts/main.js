@@ -130,7 +130,7 @@ function injectSettingsQuickAccessButton(htmlRoot) {
   button.type = "button";
   button.dataset.scfcOpenBaselineManager = "1";
   button.className = "scfc-gm-quick-access";
-  button.innerHTML = '<i class="fas fa-puzzle-piece"></i> Baseline Modules';
+  button.innerHTML = '<i class="fas fa-puzzle-piece"></i> Preset Modules';
   button.addEventListener("click", () => openBaselineManager());
 
   section.appendChild(title);
@@ -254,7 +254,7 @@ class BaselineModulesManager extends FormApplication {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: `${MODULE_ID}-baseline-modules`,
       classes: ["scfc-baseline-modules"],
-      title: "SWADE Fantasy World Kit: Baseline Modules",
+      title: "SWADE Fantasy World Kit: Preset Modules",
       template: `modules/${MODULE_ID}/templates/baseline-modules.hbs`,
       width: 720,
       height: 760,
@@ -327,6 +327,7 @@ class BaselineModulesManager extends FormApplication {
     const configuredMissingCount = configuredCount - configuredInstalledCount;
     const baselineSelectionSignature = buildSelectionSignature([...selectedIds]);
     const activePreset = getActivePresetMeta();
+    const appliedPreset = getAppliedPresetMeta();
     const presetMap = getPresetMap();
     const presetsArray = Object.entries(presetMap).map(([id, preset]) => ({
       id,
@@ -351,7 +352,10 @@ class BaselineModulesManager extends FormApplication {
       presets: presetsArray,
       activePresetName: activePreset.name,
       activePresetId: activePreset.id,
-      activePresetModuleCount: activePreset.moduleCount
+      activePresetModuleCount: activePreset.moduleCount,
+      appliedPresetName: appliedPreset.name,
+      appliedPresetId: appliedPreset.id,
+      isEditingPresetApplied: activePreset.id === appliedPreset.id
     };
   }
 
@@ -501,18 +505,6 @@ class BaselineModulesManager extends FormApplication {
       updateSelectionState();
     });
 
-    html[0].addEventListener("click", async (event) => {
-      const btn = event.target.closest("[data-remove-configured]");
-      if (!btn) return;
-      const idToRemove = btn.dataset.removeConfigured;
-      if (!idToRemove) return;
-      const currentIds = getActivePresetModuleIds();
-      const updated = currentIds.filter((id) => id && id !== idToRemove);
-      await setActivePresetModuleIds(updated);
-      await updateTitleCache("baselineModuleTitles", updated);
-      await this.render(true);
-    });
-
     applyButton?.addEventListener("click", async () => {
       await this._onApplyBaseline();
     });
@@ -533,9 +525,10 @@ class BaselineModulesManager extends FormApplication {
   }
 
   async _onApplyBaseline() {
+    const activePreset = getActivePresetMeta();
     const apply = await Dialog.confirm({
-      title: "Apply Preset Modules",
-      content: "<p>This will enable installed modules from the active preset for this world. Uninstalled modules are skipped.</p>",
+      title: "Apply Preset to World",
+      content: `<p>This will apply <strong>${activePreset.name}</strong> to this world by enabling installed modules from the preset. Uninstalled modules are skipped.</p>`,
       yes: () => true,
       no: () => false,
       defaultYes: true
@@ -556,7 +549,7 @@ class BaselineModulesManager extends FormApplication {
     if (missingDeps.length > 0) {
       const resolution = await promptForDependencyResolution(configuredIds, missingDeps);
       if (!resolution.resolved) {
-        ui.notifications?.info("SWADE Fantasy World Kit preset apply cancelled.");
+        ui.notifications?.info("SWADE Fantasy World Kit: apply cancelled.");
         return;
       }
       // Update the list of modules to enable with dependencies
@@ -592,6 +585,8 @@ class BaselineModulesManager extends FormApplication {
       await game.settings.set("core", "moduleConfiguration", moduleConfiguration);
     }
 
+    await game.settings.set(MODULE_ID, "appliedBaselinePresetId", activePreset.id);
+
     const summary = [
       `Enabled now: ${enabledNow.length}`,
       `Already enabled: ${alreadyEnabled.length}`,
@@ -599,8 +594,9 @@ class BaselineModulesManager extends FormApplication {
       `Auto-included deps: ${autoIncludedDependencies.length}`
     ].join(" | ");
 
-    ui.notifications?.info(`SWADE Fantasy World Kit preset apply complete. ${summary}`);
+    ui.notifications?.info(`SWADE Fantasy World Kit: applied preset "${activePreset.name}". ${summary}`);
     if (missing.length > 0) {
+      ui.notifications?.warn(`SWADE Fantasy World Kit: ${missing.length} preset module(s) are not installed and were skipped.`);
       console.warn("[SWADE Fantasy World Kit] Missing preset modules:\n" + missing.join("\n"));
     }
 
@@ -650,6 +646,31 @@ async function rerenderBaselineManagers() {
   }
 }
 
+function presetNameExists(name, presets, excludeId = null) {
+  const normalized = String(name ?? "").trim().toLowerCase();
+  if (!normalized) return false;
+
+  for (const [id, preset] of Object.entries(presets)) {
+    if (excludeId && id === excludeId) continue;
+    const presetName = String(preset?.name ?? id).trim().toLowerCase();
+    if (presetName === normalized) return true;
+  }
+
+  return false;
+}
+
+function suggestUniquePresetName(baseName, presets, excludeId = null) {
+  const base = String(baseName ?? "").trim() || "Preset";
+  if (!presetNameExists(base, presets, excludeId)) return base;
+
+  let i = 2;
+  while (presetNameExists(`${base} ${i}`, presets, excludeId)) {
+    i += 1;
+  }
+
+  return `${base} ${i}`;
+}
+
 // Preset CRUD Helpers
 async function createNewPreset() {
   const dialog = new Dialog({
@@ -663,15 +684,20 @@ async function createNewPreset() {
           if (!name) return;
           
           const presets = getPresetMap();
+          const finalName = suggestUniquePresetName(name, presets);
           const newId = `preset-${Date.now()}`;
           presets[newId] = {
-            name,
+            name: finalName,
             moduleIds: []
           };
           
           await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
           await rerenderBaselineManagers();
-          ui.notifications?.info(`Preset "${name}" created.`);
+          if (finalName !== name) {
+            ui.notifications?.info(`Preset name already existed; created "${finalName}".`);
+          } else {
+            ui.notifications?.info(`Preset "${finalName}" created.`);
+          }
         }
       },
       cancel: {
@@ -697,10 +723,15 @@ async function renamePreset(presetId) {
           const name = String(html.find("#presetName").val() ?? "").trim();
           if (!name) return;
           
-          preset.name = name;
+          const finalName = suggestUniquePresetName(name, presets, presetId);
+          preset.name = finalName;
           await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
           await rerenderBaselineManagers();
-          ui.notifications?.info(`Preset renamed to "${name}".`);
+          if (finalName !== name) {
+            ui.notifications?.info(`Preset name already existed; renamed to "${finalName}".`);
+          } else {
+            ui.notifications?.info(`Preset renamed to "${finalName}".`);
+          }
         }
       },
       cancel: {
@@ -717,7 +748,8 @@ async function duplicatePreset(presetId) {
   if (!preset) return;
 
   const newId = `preset-${Date.now()}`;
-  const newName = `${preset.name ?? presetId} (copy)`;
+  const requestedName = `${preset.name ?? presetId} (copy)`;
+  const newName = suggestUniquePresetName(requestedName, presets);
   
   presets[newId] = {
     name: newName,
@@ -731,6 +763,9 @@ async function duplicatePreset(presetId) {
 
 async function deletePreset(presetId) {
   const presets = getPresetMap();
+  const activePresetId = getActivePresetId();
+  const appliedPresetId = getAppliedPresetId();
+  const isActivePreset = activePresetId === presetId;
   
   // Don't delete the default preset
   if (presetId === DEFAULT_PRESET_ID) {
@@ -740,7 +775,9 @@ async function deletePreset(presetId) {
   
   const confirmed = await Dialog.confirm({
     title: "Delete Preset",
-    content: `<p>Delete preset "${presets[presetId]?.name ?? presetId}"? This cannot be undone.</p>`,
+    content: isActivePreset
+      ? `<p>Delete preset "${presets[presetId]?.name ?? presetId}"? This cannot be undone.</p><p><strong>This preset is currently active.</strong> Active preset will switch to "Default" after deletion.</p>`
+      : `<p>Delete preset "${presets[presetId]?.name ?? presetId}"? This cannot be undone.</p>`,
     yes: () => true,
     no: () => false
   });
@@ -751,9 +788,12 @@ async function deletePreset(presetId) {
   await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
   
   // If we just deleted the active preset, switch to default
-  const activePresetId = getActivePresetId();
   if (activePresetId === presetId) {
     await game.settings.set(MODULE_ID, "activeBaselinePresetId", DEFAULT_PRESET_ID);
+  }
+
+  if (appliedPresetId === presetId) {
+    await game.settings.set(MODULE_ID, "appliedBaselinePresetId", DEFAULT_PRESET_ID);
   }
   
   await rerenderBaselineManagers();
@@ -762,8 +802,9 @@ async function deletePreset(presetId) {
 
 async function openPresetManagementDialog() {
   const presets = getPresetMap();
+  const activePresetId = getActivePresetId();
   const presetList = Object.entries(presets)
-    .map(([id, preset]) => `<option value="${id}">${preset.name ?? id}</option>`)
+    .map(([id, preset]) => `<option value="${id}" ${id === activePresetId ? "selected" : ""}>${preset.name ?? id}</option>`)
     .join("");
 
   const content = `
@@ -775,10 +816,10 @@ async function openPresetManagementDialog() {
         </select>
       </div>
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
-        <button id="presetRenameBtn" style="cursor: pointer;">Rename</button>
-        <button id="presetDuplicateBtn" style="cursor: pointer;">Duplicate</button>
-        <button id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
-        <button id="presetCreateBtn" style="cursor: pointer;">Create New</button>
+        <button type="button" id="presetRenameBtn" style="cursor: pointer;">Rename</button>
+        <button type="button" id="presetDuplicateBtn" style="cursor: pointer;">Duplicate</button>
+        <button type="button" id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
+        <button type="button" id="presetCreateBtn" style="cursor: pointer;">Create New</button>
       </div>
     </div>
   `;
@@ -787,8 +828,11 @@ async function openPresetManagementDialog() {
     title: "Manage Presets",
     content,
     buttons: {
-      close: { label: "Close" }
+      close: {
+        label: "Close"
+      }
     },
+    default: "close",
     render: (html) => {
       const root = html[0];
       const presetSelect = root?.querySelector("#presetSelect");
@@ -797,20 +841,33 @@ async function openPresetManagementDialog() {
       const deleteBtn = root?.querySelector("#presetDeleteBtn");
       const createBtn = root?.querySelector("#presetCreateBtn");
 
+      const updateDeleteButtonState = () => {
+        if (!presetSelect || !deleteBtn) return;
+        const isDefaultSelected = presetSelect.value === DEFAULT_PRESET_ID;
+        deleteBtn.disabled = isDefaultSelected;
+        deleteBtn.title = isDefaultSelected
+          ? "Default preset cannot be deleted."
+          : "Delete selected preset";
+      };
+
+      updateDeleteButtonState();
+      presetSelect?.addEventListener("change", updateDeleteButtonState);
+
       renameBtn?.addEventListener("click", async () => {
-        const presetId = presetSelect.value;
+        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
         dialog.close();
         await renamePreset(presetId);
       });
 
       duplicateBtn?.addEventListener("click", async () => {
-        const presetId = presetSelect.value;
+        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
         dialog.close();
         await duplicatePreset(presetId);
       });
 
       deleteBtn?.addEventListener("click", async () => {
-        const presetId = presetSelect.value;
+        if (deleteBtn.disabled) return;
+        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
         dialog.close();
         await deletePreset(presetId);
       });
@@ -970,7 +1027,7 @@ async function validateModuleDependencies() {
     <div style="max-height: 300px; overflow-y: auto;">
       ${issueDetails}
     </div>
-    <p>You can use the Baseline Modules manager to safely enable modules with all dependencies.</p>
+    <p>You can use the Preset Modules manager to safely enable modules with all dependencies.</p>
   `;
 
   ui.notifications?.warn("SWADE Fantasy World Kit: Module dependency issues detected. Check the console for details.");
@@ -1114,6 +1171,10 @@ function getActivePresetId() {
   return String(game.settings.get(MODULE_ID, "activeBaselinePresetId") ?? DEFAULT_PRESET_ID);
 }
 
+function getAppliedPresetId() {
+  return String(game.settings.get(MODULE_ID, "appliedBaselinePresetId") ?? DEFAULT_PRESET_ID);
+}
+
 function getActivePresetMeta() {
   const presetMap = getPresetMap();
   const activePresetId = getActivePresetId();
@@ -1128,6 +1189,27 @@ function getActivePresetMeta() {
     name: presetName,
     moduleCount: moduleIds.length
   };
+}
+
+function getAppliedPresetMeta() {
+  const presetMap = getPresetMap();
+  const appliedPresetId = getAppliedPresetId();
+  const resolvedId = presetMap[appliedPresetId] ? appliedPresetId : DEFAULT_PRESET_ID;
+  const preset = presetMap[resolvedId];
+  const fallbackName = resolvedId === DEFAULT_PRESET_ID ? "Default" : resolvedId;
+
+  return {
+    id: resolvedId,
+    name: preset?.name ?? fallbackName
+  };
+}
+
+async function sanitizeAppliedPresetId() {
+  const presetMap = getPresetMap();
+  const appliedPresetId = getAppliedPresetId();
+  if (presetMap[appliedPresetId]) return;
+
+  await game.settings.set(MODULE_ID, "appliedBaselinePresetId", DEFAULT_PRESET_ID);
 }
 
 function getActivePresetModuleIds() {
@@ -1277,8 +1359,8 @@ Hooks.once("init", () => {
   console.log(`[${MODULE_ID}] init`);
 
   game.keybindings.register(MODULE_ID, "openBaselineManager", {
-    name: "Open Baseline Modules",
-    hint: "Open the Baseline Modules manager quickly.",
+    name: "Open Preset Modules",
+    hint: "Open the Preset Modules manager quickly.",
     editable: [{ key: "KeyB", modifiers: ["Control", "Shift"] }],
     onDown: () => {
       if (!game.user?.isGM) return false;
@@ -1299,9 +1381,9 @@ Hooks.once("init", () => {
   });
 
   game.settings.registerMenu(MODULE_ID, "baselineModulesMenu", {
-    name: "Baseline Modules",
+    name: "Preset Modules",
     label: "Configure and Apply",
-    hint: "Configure baseline module IDs and enable installed ones for this world.",
+    hint: "Edit preset module selections and apply installed modules to this world.",
     icon: "fas fa-puzzle-piece",
     type: BaselineModulesManager,
     restricted: true
@@ -1338,8 +1420,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "baselineModules", {
-    name: "Baseline Modules (Advanced)",
-    hint: "Advanced manual input. Prefer the 'Baseline Modules' menu button above.",
+    name: "Preset Modules (Advanced)",
+    hint: "Advanced manual input. Prefer the 'Preset Modules' menu button above.",
     scope: "world",
     config: false,
     type: String,
@@ -1352,7 +1434,7 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "globalBaselineModules", {
-    name: "Global Baseline Modules (Advanced)",
+    name: "Global Preset Modules (Advanced)",
     hint: "Client-scoped profile shared by this GM across worlds on this Foundry install.",
     scope: "client",
     config: false,
@@ -1397,6 +1479,14 @@ Hooks.once("init", () => {
     default: DEFAULT_PRESET_ID
   });
 
+  game.settings.register(MODULE_ID, "appliedBaselinePresetId", {
+    name: "Applied Baseline Preset Id",
+    scope: "world",
+    config: false,
+    type: String,
+    default: DEFAULT_PRESET_ID
+  });
+
   game.settings.register(MODULE_ID, "legacyWorldSettingsMigrated", {
     // TODO(next version): Remove this temporary migration flag setting.
     name: "Legacy World Settings Migrated",
@@ -1417,7 +1507,7 @@ Hooks.once("init", () => {
 
   game.settings.register(MODULE_ID, "gmQuickAccessSidebarButton", {
     name: "GM Quick Access Button",
-    hint: "Show a quick-open button in the Settings sidebar for Baseline Modules.",
+    hint: "Show a quick-open button in the Settings sidebar for Preset Modules.",
     scope: "client",
     config: true,
     type: Boolean,
@@ -1494,6 +1584,7 @@ Hooks.once("ready", async () => {
   await migrateLegacyModuleSettings();
   await sanitizeBaselineModules();
   await sanitizeNamedPresets();
+  await sanitizeAppliedPresetId();
 
   const offenders = findModulesWithInvalidDependencyMetadata();
   if (offenders.length > 0) {
