@@ -31,6 +31,12 @@ function getCompanionBannerUrl() {
   return urls;
 }
 
+function buildSelectionSignature(ids) {
+  return [...new Set(ids.map((id) => String(id ?? "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b))
+    .join("\n");
+}
+
 function styleAndFilterCompendiumRows(htmlRoot) {
   const root = htmlRoot?.[0] ?? htmlRoot;
   if (!root?.querySelectorAll) return;
@@ -256,6 +262,9 @@ class BaselineModulesManager extends FormApplication {
     const configuredCount = configured.length;
     const configuredInstalledCount = configured.filter((entry) => entry.installed).length;
     const configuredMissingCount = configuredCount - configuredInstalledCount;
+    const baselineSelectionSignature = buildSelectionSignature([...selectedIds]);
+    const globalSelectionSignature = buildSelectionSignature(getGlobalBaselineModuleIds());
+
     return {
       installedModules,
       hasInstalledModules: installedModules.length > 0,
@@ -267,7 +276,9 @@ class BaselineModulesManager extends FormApplication {
       requiredCount,
       configuredCount,
       configuredInstalledCount,
-      configuredMissingCount
+      configuredMissingCount,
+      baselineSelectionSignature,
+      globalSelectionSignature
     };
   }
 
@@ -284,6 +295,48 @@ class BaselineModulesManager extends FormApplication {
     const loadGlobalButton = html[0].querySelector("[data-module-load-global]");
     const saveGlobalButton = html[0].querySelector("[data-module-save-global]");
     const applyGlobalButton = html[0].querySelector("[data-module-apply-global]");
+    const baselineSaveStateLabel = html[0].querySelector("[data-baseline-save-state]");
+    const globalProfileStateLabel = html[0].querySelector("[data-global-profile-state]");
+
+    const baselineSelectionSignature = html[0].dataset.baselineSelectionSignature ?? "";
+    let globalSelectionSignature = html[0].dataset.globalSelectionSignature ?? "";
+
+    const getCurrentSelectionSignature = () => {
+      const selectedIds = [];
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        if (!checkbox?.checked) continue;
+        selectedIds.push(checkbox.value);
+      }
+      return buildSelectionSignature(selectedIds);
+    };
+
+    const updateBaselineSaveState = () => {
+      if (!baselineSaveStateLabel) return;
+
+      const hasUnsavedChanges = getCurrentSelectionSignature() !== baselineSelectionSignature;
+      baselineSaveStateLabel.textContent = hasUnsavedChanges
+        ? "World baseline selection: unsaved changes"
+        : "World baseline selection: saved";
+      baselineSaveStateLabel.classList.toggle("scfc-save-state-unsaved", hasUnsavedChanges);
+      baselineSaveStateLabel.classList.toggle("scfc-save-state-saved", !hasUnsavedChanges);
+    };
+
+    const updateGlobalProfileState = () => {
+      if (!globalProfileStateLabel) return;
+
+      const matchesGlobalProfile = getCurrentSelectionSignature() === globalSelectionSignature;
+      globalProfileStateLabel.textContent = matchesGlobalProfile
+        ? "Global profile: matches current selection"
+        : "Global profile: differs from current selection";
+      globalProfileStateLabel.classList.toggle("scfc-global-state-match", matchesGlobalProfile);
+      globalProfileStateLabel.classList.toggle("scfc-global-state-diff", !matchesGlobalProfile);
+    };
+
+    const updateSelectionStateIndicators = () => {
+      updateBaselineSaveState();
+      updateGlobalProfileState();
+    };
 
     let activeOnlyFilterEnabled = false;
 
@@ -332,6 +385,7 @@ class BaselineModulesManager extends FormApplication {
         const isActive = row.dataset.active === "true";
         if (checkbox) checkbox.checked = isRequired || isActive;
       }
+      updateSelectionStateIndicators();
     });
 
     clearSelectionButton?.addEventListener("click", () => {
@@ -340,6 +394,14 @@ class BaselineModulesManager extends FormApplication {
         const isRequired = row.dataset.required === "true";
         if (checkbox) checkbox.checked = isRequired;
       }
+      updateSelectionStateIndicators();
+    });
+
+    html[0].addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (target.name !== "baselineModulesSelected") return;
+      updateSelectionStateIndicators();
     });
 
     html[0].addEventListener("click", async (event) => {
@@ -364,6 +426,8 @@ class BaselineModulesManager extends FormApplication {
         const isRequired = row.dataset.required === "true";
         checkbox.checked = isRequired || globalIds.has(checkbox.value);
       }
+
+      updateSelectionStateIndicators();
     });
 
     saveGlobalButton?.addEventListener("click", async () => {
@@ -400,6 +464,8 @@ class BaselineModulesManager extends FormApplication {
       await game.settings.set(MODULE_ID, "globalBaselineModules", finalGlobalIds.join("\n"));
       await updateTitleCache("globalBaselineModuleTitles", finalGlobalIds);
       ui.notifications?.info("SWADE Fantasy World Kit global baseline profile saved.");
+      globalSelectionSignature = buildSelectionSignature(finalGlobalIds);
+      updateSelectionStateIndicators();
     });
 
     applyGlobalButton?.addEventListener("click", async () => {
@@ -425,6 +491,7 @@ class BaselineModulesManager extends FormApplication {
 
     updateActiveFilterButtonState();
     applyModuleFilters();
+    updateSelectionStateIndicators();
   }
 
   async _onApplyBaseline() {

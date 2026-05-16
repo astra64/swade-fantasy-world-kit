@@ -111,10 +111,22 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 
 ## Roadmap
 
-### v0.5.x — Global Profile UX
-- [ ] Global profile metadata: item count, last-saved timestamp
-- [ ] First-run helper prompt in new worlds to apply global profile
-- [ ] Improve status messaging for global profile operations
+### v0.5.x — Global Presets (Primary Model)
+- [ ] Replace "world baseline vs global profile" split with global presets as the primary model
+- [ ] Keep one active preset per world (world stores only a reference to preset id)
+- [ ] Add migration shortcut for solo use: allow resetting/replacing old baseline data without compatibility scaffolding
+- [ ] Clarify apply behavior: conservative default is "enable listed modules" (no forced disable unless explicitly chosen)
+
+### v0.5.x — Named Presets (Moved Forward)
+- [ ] Add named presets stored client-side (JSON map of preset id -> {name, moduleIds, metadata})
+- [ ] UI to create, rename, duplicate, delete, and apply presets
+- [ ] Add preset picker with quick actions in Baseline Manager
+- [ ] Support practical preset stacks like "generic", "savage worlds", "savage worlds fantasy"
+- [ ] Add import/export for presets (JSON)
+
+### v0.5.x — Preset Status UX
+- [ ] Show clear status: current selection matches active preset vs has unsaved changes
+- [ ] Improve status messaging around load/save/apply actions for presets
 
 ### v0.5.x — GM Quick Access
 - [ ] Add a fast-access entry point for GMs to open this module's settings (left sidebar button and/or configurable hotkey)
@@ -136,15 +148,16 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] Provide type-specific generic fallback images (item, skill, edge, hindrance, power, etc.) when no direct remap match is found
 
 ### v0.6.x — Baseline Utilities
-- [ ] Baseline export/import (JSON format) for sharing and backup
+- [ ] Preset/module export/import utilities for sharing and backup
 - [ ] Save and reapply selected settings from other modules so a GM can carry world configuration between worlds
-	- Later design questions: selected modules vs selected settings keys, where profiles should live (world/client/JSON), and how to handle missing modules or conflicting target-world values
+	- Later design questions: selected modules vs selected settings keys, preset schema versioning, and how to handle missing modules or conflicting target-world values
 
-### v0.7+ — Named Presets
-- [ ] Replace single baseline slot with named preset system
-- [ ] UI to create, rename, delete, and apply presets
-- [ ] Global profile extended to support multiple named global presets
-- [ ] Presets importable/exportable as JSON
+### v0.5.x — Next Step Plan (Immediate)
+1. Define preset data model and settings keys (client presets + world activePresetId)
+2. Implement data-layer helpers in `scripts/main.js` for CRUD + apply
+3. Replace current global action UI with preset picker + create/save/apply buttons
+4. Keep current dependency resolution flow, wired to preset apply
+5. Run focused validation pass for preset CRUD and apply behavior
 
 ### Cleanup Release (next version after migration window)
 - [ ] Remove `migrateLegacyModuleSettings()` and its call

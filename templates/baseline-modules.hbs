@@ -1,4 +1,4 @@
-<form class="scfc-baseline-modules-form" autocomplete="off">
+<form class="scfc-baseline-modules-form" autocomplete="off" data-baseline-selection-signature="{{baselineSelectionSignature}}" data-global-selection-signature="{{globalSelectionSignature}}">
   <div class="form-group scfc-search-group">
     <label>Search Installed Modules</label>
     <input type="text" data-module-search placeholder="Search by title or ID..." />
@@ -8,15 +8,29 @@
   <div class="form-group scfc-toolbar-row" aria-label="Baseline actions">
     <button type="button" data-module-select-active title="Check all modules that are currently active in this world">Select Active</button>
     <button type="button" data-module-clear-selection title="Uncheck all modules in the list">Clear Selection</button>
-    <button type="button" data-module-load-global title="Replace the current selection with the saved Global Profile">Load Global</button>
-    <button type="button" data-module-save-global title="Save the current selection as the Global Profile (shared across worlds)">Save Global</button>
-    <button type="button" data-module-apply-global title="Enable all modules in the Global Profile in this world and reload">Apply Global</button>
+  </div>
+
+  <details class="scfc-global-collapsible">
+    <summary class="scfc-global-summary" title="Optional tools for using a client-wide Global Profile across worlds.">Global Profile (Advanced)</summary>
+    <div class="form-group scfc-toolbar-row scfc-toolbar-row-global" aria-label="Global profile actions">
+      <button type="button" data-module-load-global title="Load your client-wide Global Profile into the current checkbox selection. This does not save to this world until you click Save Selection or Apply Global.">Load Global</button>
+      <button type="button" data-module-save-global title="Save the current checkbox selection as your client-wide Global Profile (shared across worlds on this Foundry install).">Save Global</button>
+      <button type="button" data-module-apply-global title="Replace this world's baseline with your Global Profile, then enable those installed modules and reload.">Apply Global</button>
+    </div>
+    <p class="notes scfc-global-notes">Use Global Profile when you want one shared module preset across worlds. Ignore this section if you only manage this world's baseline.</p>
+  </details>
+
+  <div class="scfc-help-row" aria-label="Baseline help">
+    <span class="scfc-summary-chip scfc-help-chip" title="World Baseline: the saved module list for this specific world. Save Selection updates it. Apply Baseline enables it.">World Baseline ?</span>
+    <span class="scfc-summary-chip scfc-help-chip" title="Global Profile: your client-wide preset shared across worlds on this Foundry install. Load Global copies it into the current selection.">Global Profile ?</span>
   </div>
 
   <div class="scfc-summary-row" aria-label="Baseline summary">
-    <span class="scfc-summary-chip">Installed: {{installedCount}}</span>
-    <span class="scfc-summary-chip">Selected: {{selectedCount}}</span>
-    <span class="scfc-summary-chip">Baseline entries: {{configuredCount}}</span>
+    <span class="scfc-summary-chip" title="Total installed modules found in this world.">Installed: {{installedCount}}</span>
+    <span class="scfc-summary-chip" title="How many installed modules are currently checked in this window.">Selected: {{selectedCount}}</span>
+    <span class="scfc-summary-chip" title="How many module IDs are currently saved in this world's baseline list (includes modules not currently installed).">Baseline entries: {{configuredCount}}</span>
+    <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Saved means the current checkbox selection matches this world's saved baseline. Unsaved changes means it differs.">World baseline selection: saved</span>
+    <span class="scfc-summary-chip scfc-global-state-chip" data-global-profile-state title="Shows whether the current checkbox selection matches your saved Global Profile.">Global profile: differs from current selection</span>
   </div>
 
   {{#if hasInstalledModules}}
