@@ -122,7 +122,7 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] UI to create, rename, duplicate, delete, and apply presets
 - [ ] Add preset picker with quick actions in Baseline Manager
 - [ ] Support practical preset stacks like "generic", "savage worlds", "savage worlds fantasy"
-- [ ] Add import/export for presets (JSON)
+- [ ] Defer full preset import/export (global presets make this lower priority for now)
 
 ### v0.5.x — Preset Status UX
 - [ ] Show clear status: current selection matches active preset vs has unsaved changes
@@ -148,17 +148,17 @@ This file tracks feature implementation status, the roadmap, Copilot session con
 - [ ] Provide type-specific generic fallback images (item, skill, edge, hindrance, power, etc.) when no direct remap match is found
 
 ### v0.6.x — Baseline Utilities
-- [ ] Preset/module export/import utilities for sharing and backup
+- [ ] Preset/module export/import utilities for sharing and backup (deferred from v0.5.x)
 - [ ] Save and reapply selected settings from other modules so a GM can carry world configuration between worlds
 	- Later design questions: selected modules vs selected settings keys, preset schema versioning, and how to handle missing modules or conflicting target-world values
 - [ ] Add a utility to view and export a list of installed modules that are not used in any baseline, helping GMs identify which mods can be safely removed
 
 ### v0.5.x — Next Step Plan (Immediate)
-1. Define preset data model and settings keys (client presets + world activePresetId)
-2. Implement data-layer helpers in `scripts/main.js` for CRUD + apply
-3. Replace current global action UI with preset picker + create/save/apply buttons
-4. Keep current dependency resolution flow, wired to preset apply
-5. Run focused validation pass for preset CRUD and apply behavior
+1. Run focused validation pass for preset switch/save/revert/apply behavior (including dependency prompts)
+2. Run focused validation pass for GM Quick Access (hotkey + sidebar section placement)
+3. Polish preset management UX (duplicate-name handling, safer delete messaging, small copy refinements)
+4. Keep apply behavior conservative by default: enable listed modules only (no forced disable yet)
+5. Defer full import/export and continue preset-first stability work before adding portability features
 
 ### Cleanup Release (next version after migration window)
 - [ ] Remove `migrateLegacyModuleSettings()` and its call
@@ -179,21 +179,21 @@ Run this after any significant change or before a release.
 1. Load a world with SWADE system active — confirm no console errors on init
 2. Confirm curated pack visibility filters correctly for players
 3. Confirm Quick Insert restrictions sync on ready
-4. Confirm required modules are locked in the baseline UI
+4. Confirm required modules are locked in the preset UI
 
-### Baseline Dependency Flow
-5. Save a custom global baseline in World A — confirm dependency prompt appears if deps unselected
-6. Load and apply that global profile in World B — confirm dependency prompt and world reload
+### Preset Dependency Flow
+5. Save a custom preset in World A — confirm dependency prompt appears if deps unselected
+6. Switch to and apply that preset in World B — confirm dependency prompt and world reload
 7. Confirm required modules remain selected and locked in all actions
 8. Confirm uninstalled dependencies are skipped silently
 9. On world load with a module missing a dependency, confirm warning notification + console log
 
-### Baseline Entry UX
-10. Open baseline manager, expand "Current baseline entries"
+### Preset Entry UX
+10. Open preset manager, expand "Saved Preset Snapshot"
 11. Hover a missing entry — confirm tooltip with fix instructions
 12. Confirm module title shown (not just ID) for known entries
 13. Hover a row and click × — confirm immediate removal and window refresh
-14. Apply baseline — confirm world reloads and baseline manager reopens automatically
+14. Apply preset — confirm world reloads and preset manager reopens automatically
 
 ### Pack Selector
 15. Open pack selector — confirm module-owned packs absent and note shows correct count
