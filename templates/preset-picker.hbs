@@ -1,0 +1,35 @@
+<div class="scfc-preset-picker-dialog">
+  <div class="scfc-preset-list">
+    {{#each presets as |preset|}}
+      <div class="scfc-preset-item {{#if preset.isActive}}scfc-preset-active{{/if}}" data-preset-id="{{preset.id}}">
+        <span class="scfc-preset-item-main">
+          <strong class="scfc-preset-name">{{preset.name}}</strong>
+          <span class="scfc-preset-count">{{preset.moduleCount}} modules</span>
+        </span>
+        <span class="scfc-preset-item-actions">
+          {{#if preset.isActive}}
+            <span class="scfc-preset-active-badge">active</span>
+          {{else}}
+            <button type="button" class="scfc-preset-action" data-preset-switch title="Switch to this preset">
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          {{/if}}
+          <button type="button" class="scfc-preset-action" data-preset-rename title="Rename preset">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button type="button" class="scfc-preset-action" data-preset-duplicate title="Duplicate preset">
+            <i class="fas fa-copy"></i>
+          </button>
+          <button type="button" class="scfc-preset-action scfc-preset-action-danger" data-preset-delete title="Delete preset">
+            <i class="fas fa-trash"></i>
+          </button>
+        </span>
+      </div>
+    {{/each}}
+  </div>
+
+  <button type="button" class="scfc-preset-create">
+    <i class="fas fa-plus"></i>
+    Create New Preset
+  </button>
+</div>

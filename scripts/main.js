@@ -14,6 +14,17 @@ function rerenderCompendiumDirectory() {
   ui.compendium?.render(true);
 }
 
+function openBaselineManager() {
+  const existing = Object.values(ui.windows ?? {}).find((app) => app instanceof BaselineModulesManager);
+  if (existing) {
+    existing.render(false, { focus: true });
+    existing.bringToTop?.();
+    return existing;
+  }
+
+  return new BaselineModulesManager().render(true);
+}
+
 async function handleVisibilitySettingsChanged() {
   rerenderCompendiumDirectory();
   await syncQuickInsertPackRestrictions();
@@ -79,6 +90,56 @@ function styleAndFilterCompendiumRows(htmlRoot) {
 
     element.classList.add("scfc-hidden-pack");
   }
+}
+
+function injectSettingsQuickAccessButton(htmlRoot) {
+  if (!game.user?.isGM) return;
+  if (!game.settings.get(MODULE_ID, "gmQuickAccessSidebarButton")) return;
+
+  const root = htmlRoot?.[0] ?? htmlRoot ?? document;
+  if (!root?.querySelector) return;
+
+  if (document.querySelector("[data-scfc-quick-access-section]")) return;
+
+  const candidateContainers = [
+    "#settings-buttons",
+    ".tab[data-tab='settings'] #settings-buttons",
+    "#sidebar .tab[data-tab='settings'] #settings-buttons",
+    "#sidebar .tab[data-tab='settings'] .settings-list",
+    "#sidebar #settings .settings-list",
+    "#sidebar #settings",
+    "#settings"
+  ];
+
+  let settingsButtons = null;
+  for (const selector of candidateContainers) {
+    settingsButtons = root.querySelector(selector) ?? document.querySelector(selector);
+    if (settingsButtons) break;
+  }
+  if (!settingsButtons) return;
+
+  const section = document.createElement("section");
+  section.dataset.scfcQuickAccessSection = "1";
+  section.className = "scfc-gm-quick-access-section";
+
+  const title = document.createElement("h2");
+  title.className = "scfc-gm-quick-access-title";
+  title.textContent = "SWADE Fantasy World Kit";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.scfcOpenBaselineManager = "1";
+  button.className = "scfc-gm-quick-access";
+  button.innerHTML = '<i class="fas fa-puzzle-piece"></i> Baseline Modules';
+  button.addEventListener("click", () => openBaselineManager());
+
+  section.appendChild(title);
+  section.appendChild(button);
+  settingsButtons.appendChild(section);
+}
+
+function tryInjectSettingsQuickAccessButton() {
+  injectSettingsQuickAccessButton(document);
 }
 
 class ExtraVisiblePacksSelector extends FormApplication {
@@ -208,9 +269,8 @@ class BaselineModulesManager extends FormApplication {
   }
 
   getData() {
-    const rawList = game.settings.get(MODULE_ID, "baselineModules");
     const requiredIds = new Set(getRequiredModuleIds());
-    const selectedIds = new Set(parseModuleIdList(rawList));
+    const selectedIds = new Set(getActivePresetModuleIds());
     for (const id of requiredIds) selectedIds.add(id);
     const installedModules = [...game.modules.values()]
       .filter((module) => module.id !== MODULE_ID)
@@ -267,6 +327,13 @@ class BaselineModulesManager extends FormApplication {
     const configuredMissingCount = configuredCount - configuredInstalledCount;
     const baselineSelectionSignature = buildSelectionSignature([...selectedIds]);
     const activePreset = getActivePresetMeta();
+    const presetMap = getPresetMap();
+    const presetsArray = Object.entries(presetMap).map(([id, preset]) => ({
+      id,
+      name: preset.name ?? id,
+      moduleCount: preset.moduleIds?.length ?? 0,
+      isActive: id === activePreset.id
+    }));
 
     return {
       installedModules,
@@ -281,6 +348,7 @@ class BaselineModulesManager extends FormApplication {
       configuredInstalledCount,
       configuredMissingCount,
       baselineSelectionSignature,
+      presets: presetsArray,
       activePresetName: activePreset.name,
       activePresetId: activePreset.id,
       activePresetModuleCount: activePreset.moduleCount
@@ -297,8 +365,11 @@ class BaselineModulesManager extends FormApplication {
     const filterActiveButton = html[0].querySelector("[data-module-filter-active]");
     const visibleCountLabel = html[0].querySelector("[data-module-visible-count]");
     const clearSelectionButton = html[0].querySelector("[data-module-clear-selection]");
+    const revertPresetButton = html[0].querySelector("[data-revert-preset]");
     const baselineSaveStateLabel = html[0].querySelector("[data-baseline-save-state]");
     const selectionDeltaLabel = html[0].querySelector("[data-selection-delta]");
+    const presetSelector = html[0].querySelector("[data-preset-selector]");
+    const presetManageBtn = html[0].querySelector("[data-preset-manage]");
 
     const baselineSelectionSignature = html[0].dataset.baselineSelectionSignature ?? "";
     const baselineSelectionSet = new Set(baselineSelectionSignature ? baselineSelectionSignature.split("\n") : []);
@@ -318,10 +389,11 @@ class BaselineModulesManager extends FormApplication {
 
       const hasUnsavedChanges = getCurrentSelectionSignature() !== baselineSelectionSignature;
       baselineSaveStateLabel.textContent = hasUnsavedChanges
-        ? "World baseline selection: unsaved changes"
-        : "World baseline selection: saved";
+        ? "Status: unsaved changes"
+        : "Status: matches preset";
       baselineSaveStateLabel.classList.toggle("scfc-save-state-unsaved", hasUnsavedChanges);
       baselineSaveStateLabel.classList.toggle("scfc-save-state-saved", !hasUnsavedChanges);
+      if (revertPresetButton) revertPresetButton.disabled = !hasUnsavedChanges;
     };
 
     const updateSelectionDelta = () => {
@@ -412,6 +484,16 @@ class BaselineModulesManager extends FormApplication {
       updateSelectionState();
     });
 
+    revertPresetButton?.addEventListener("click", () => {
+      for (const row of moduleRows) {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        if (!checkbox) continue;
+        const isRequired = row.dataset.required === "true";
+        checkbox.checked = isRequired || baselineSelectionSet.has(checkbox.value);
+      }
+      updateSelectionState();
+    });
+
     html[0].addEventListener("change", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLInputElement)) return;
@@ -424,15 +506,25 @@ class BaselineModulesManager extends FormApplication {
       if (!btn) return;
       const idToRemove = btn.dataset.removeConfigured;
       if (!idToRemove) return;
-      const currentIds = parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"));
+      const currentIds = getActivePresetModuleIds();
       const updated = currentIds.filter((id) => id && id !== idToRemove);
-      await game.settings.set(MODULE_ID, "baselineModules", updated.join("\n"));
+      await setActivePresetModuleIds(updated);
       await updateTitleCache("baselineModuleTitles", updated);
       await this.render(true);
     });
 
     applyButton?.addEventListener("click", async () => {
       await this._onApplyBaseline();
+    });
+
+    presetSelector?.addEventListener("change", async (event) => {
+      const presetId = event.target.value;
+      await game.settings.set(MODULE_ID, "activeBaselinePresetId", presetId);
+      await this.render(true);
+    });
+
+    presetManageBtn?.addEventListener("click", async () => {
+      await openPresetManagementDialog();
     });
 
     updateActiveFilterButtonState();
@@ -442,17 +534,15 @@ class BaselineModulesManager extends FormApplication {
 
   async _onApplyBaseline() {
     const apply = await Dialog.confirm({
-      title: "Apply Baseline Modules",
-      content: "<p>This will enable installed modules from your baseline list for this world. Uninstalled modules are skipped.</p>",
+      title: "Apply Preset Modules",
+      content: "<p>This will enable installed modules from the active preset for this world. Uninstalled modules are skipped.</p>",
       yes: () => true,
       no: () => false,
       defaultYes: true
     });
     if (!apply) return;
 
-    const configuredIds = mergeWithRequiredModuleIds(
-      parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"))
-    );
+    const configuredIds = mergeWithRequiredModuleIds(getActivePresetModuleIds());
     const configuredBeforeDependencyResolution = new Set(configuredIds);
     let autoIncludedDependencies = [];
 
@@ -466,7 +556,7 @@ class BaselineModulesManager extends FormApplication {
     if (missingDeps.length > 0) {
       const resolution = await promptForDependencyResolution(configuredIds, missingDeps);
       if (!resolution.resolved) {
-        ui.notifications?.info("SWADE Fantasy World Kit baseline apply cancelled.");
+        ui.notifications?.info("SWADE Fantasy World Kit preset apply cancelled.");
         return;
       }
       // Update the list of modules to enable with dependencies
@@ -509,9 +599,9 @@ class BaselineModulesManager extends FormApplication {
       `Auto-included deps: ${autoIncludedDependencies.length}`
     ].join(" | ");
 
-    ui.notifications?.info(`SWADE Fantasy World Kit baseline apply complete. ${summary}`);
+    ui.notifications?.info(`SWADE Fantasy World Kit preset apply complete. ${summary}`);
     if (missing.length > 0) {
-      console.warn("[SWADE Fantasy World Kit] Missing baseline modules:\n" + missing.join("\n"));
+      console.warn("[SWADE Fantasy World Kit] Missing preset modules:\n" + missing.join("\n"));
     }
 
     // Reload the world if any new modules were enabled
@@ -546,12 +636,193 @@ class BaselineModulesManager extends FormApplication {
     }
 
     const normalizedIds = mergeWithRequiredModuleIds(finalIds);
-    const normalized = normalizedIds.join("\n");
-
-    await game.settings.set(MODULE_ID, "baselineModules", normalized);
+    await setActivePresetModuleIds(normalizedIds);
     await updateTitleCache("baselineModuleTitles", normalizedIds);
     await this.render(true);
   }
+}
+
+async function rerenderBaselineManagers() {
+  const windows = Object.values(ui.windows ?? {});
+  const managers = windows.filter((app) => app instanceof BaselineModulesManager);
+  for (const manager of managers) {
+    await manager.render(true);
+  }
+}
+
+// Preset CRUD Helpers
+async function createNewPreset() {
+  const dialog = new Dialog({
+    title: "Create New Preset",
+    content: '<input type="text" id="presetName" placeholder="Preset name..." style="width: 100%;">',
+    buttons: {
+      create: {
+        label: "Create",
+        callback: async (html) => {
+          const name = String(html.find("#presetName").val() ?? "").trim();
+          if (!name) return;
+          
+          const presets = getPresetMap();
+          const newId = `preset-${Date.now()}`;
+          presets[newId] = {
+            name,
+            moduleIds: []
+          };
+          
+          await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
+          await rerenderBaselineManagers();
+          ui.notifications?.info(`Preset "${name}" created.`);
+        }
+      },
+      cancel: {
+        label: "Cancel"
+      }
+    }
+  });
+  dialog.render(true);
+}
+
+async function renamePreset(presetId) {
+  const presets = getPresetMap();
+  const preset = presets[presetId];
+  if (!preset) return;
+
+  const dialog = new Dialog({
+    title: "Rename Preset",
+    content: `<input type="text" id="presetName" value="${preset.name ?? ""}" style="width: 100%;">`,
+    buttons: {
+      rename: {
+        label: "Rename",
+        callback: async (html) => {
+          const name = String(html.find("#presetName").val() ?? "").trim();
+          if (!name) return;
+          
+          preset.name = name;
+          await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
+          await rerenderBaselineManagers();
+          ui.notifications?.info(`Preset renamed to "${name}".`);
+        }
+      },
+      cancel: {
+        label: "Cancel"
+      }
+    }
+  });
+  dialog.render(true);
+}
+
+async function duplicatePreset(presetId) {
+  const presets = getPresetMap();
+  const preset = presets[presetId];
+  if (!preset) return;
+
+  const newId = `preset-${Date.now()}`;
+  const newName = `${preset.name ?? presetId} (copy)`;
+  
+  presets[newId] = {
+    name: newName,
+    moduleIds: [...(preset.moduleIds ?? [])]
+  };
+  
+  await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
+  await rerenderBaselineManagers();
+  ui.notifications?.info(`Preset duplicated: "${newName}".`);
+}
+
+async function deletePreset(presetId) {
+  const presets = getPresetMap();
+  
+  // Don't delete the default preset
+  if (presetId === DEFAULT_PRESET_ID) {
+    ui.notifications?.warn("Cannot delete the default preset.");
+    return;
+  }
+  
+  const confirmed = await Dialog.confirm({
+    title: "Delete Preset",
+    content: `<p>Delete preset "${presets[presetId]?.name ?? presetId}"? This cannot be undone.</p>`,
+    yes: () => true,
+    no: () => false
+  });
+  
+  if (!confirmed) return;
+  
+  delete presets[presetId];
+  await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
+  
+  // If we just deleted the active preset, switch to default
+  const activePresetId = getActivePresetId();
+  if (activePresetId === presetId) {
+    await game.settings.set(MODULE_ID, "activeBaselinePresetId", DEFAULT_PRESET_ID);
+  }
+  
+  await rerenderBaselineManagers();
+  ui.notifications?.info("Preset deleted.");
+}
+
+async function openPresetManagementDialog() {
+  const presets = getPresetMap();
+  const presetList = Object.entries(presets)
+    .map(([id, preset]) => `<option value="${id}">${preset.name ?? id}</option>`)
+    .join("");
+
+  const content = `
+    <div style="display: grid; gap: 0.8rem;">
+      <div style="display: grid; gap: 0.3rem;">
+        <label for="presetSelect" style="font-weight: 600; font-size: 12px;">Select a preset:</label>
+        <select id="presetSelect" style="width: 100%;">
+          ${presetList}
+        </select>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+        <button id="presetRenameBtn" style="cursor: pointer;">Rename</button>
+        <button id="presetDuplicateBtn" style="cursor: pointer;">Duplicate</button>
+        <button id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
+        <button id="presetCreateBtn" style="cursor: pointer;">Create New</button>
+      </div>
+    </div>
+  `;
+
+  const dialog = new Dialog({
+    title: "Manage Presets",
+    content,
+    buttons: {
+      close: { label: "Close" }
+    },
+    render: (html) => {
+      const root = html[0];
+      const presetSelect = root?.querySelector("#presetSelect");
+      const renameBtn = root?.querySelector("#presetRenameBtn");
+      const duplicateBtn = root?.querySelector("#presetDuplicateBtn");
+      const deleteBtn = root?.querySelector("#presetDeleteBtn");
+      const createBtn = root?.querySelector("#presetCreateBtn");
+
+      renameBtn?.addEventListener("click", async () => {
+        const presetId = presetSelect.value;
+        dialog.close();
+        await renamePreset(presetId);
+      });
+
+      duplicateBtn?.addEventListener("click", async () => {
+        const presetId = presetSelect.value;
+        dialog.close();
+        await duplicatePreset(presetId);
+      });
+
+      deleteBtn?.addEventListener("click", async () => {
+        const presetId = presetSelect.value;
+        dialog.close();
+        await deletePreset(presetId);
+      });
+
+      createBtn?.addEventListener("click", async () => {
+        dialog.close();
+        await createNewPreset();
+      });
+    }
+  });
+
+  dialog.render(true);
 }
 
 function getRequiredModuleIds() {
@@ -789,17 +1060,54 @@ function parseTitlesMap(raw) {
   try { return JSON.parse(raw ?? "{}"); } catch { return {}; }
 }
 
+function normalizeModuleIdArray(ids) {
+  if (!Array.isArray(ids)) return [];
+
+  return [...new Set(
+    ids
+      .map((id) => String(id ?? "").trim())
+      .filter((id) => id.length > 0 && id !== "null" && id !== "undefined")
+  )];
+}
+
 function parsePresetMap(raw) {
   try {
     const parsed = JSON.parse(raw ?? "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
+    const source = parsed && typeof parsed === "object" ? parsed : {};
+    const map = {};
+
+    for (const [id, preset] of Object.entries(source)) {
+      const normalizedId = String(id ?? "").trim();
+      if (!normalizedId) continue;
+
+      const name = typeof preset?.name === "string" && preset.name.trim().length > 0
+        ? preset.name.trim()
+        : normalizedId;
+      const moduleIds = normalizeModuleIdArray(preset?.moduleIds);
+
+      map[normalizedId] = { name, moduleIds };
+    }
+
+    // Always keep a default preset visible/selectable.
+    if (!map[DEFAULT_PRESET_ID]) {
+      map[DEFAULT_PRESET_ID] = { name: "Default", moduleIds: [] };
+    }
+    return map;
   } catch {
-    return {};
+    return { [DEFAULT_PRESET_ID]: { name: "Default", moduleIds: [] } };
   }
 }
 
 function getPresetMap() {
-  return parsePresetMap(game.settings.get(MODULE_ID, "namedBaselinePresets"));
+  const map = parsePresetMap(game.settings.get(MODULE_ID, "namedBaselinePresets"));
+  if (!map[DEFAULT_PRESET_ID]) {
+    const legacyBaselineIds = parseModuleIdList(game.settings.get(MODULE_ID, "baselineModules"));
+    map[DEFAULT_PRESET_ID] = {
+      name: "Default",
+      moduleIds: legacyBaselineIds
+    };
+  }
+  return map;
 }
 
 function getActivePresetId() {
@@ -813,15 +1121,39 @@ function getActivePresetMeta() {
   const presetName = typeof preset?.name === "string" && preset.name.trim().length > 0
     ? preset.name.trim()
     : (activePresetId === DEFAULT_PRESET_ID ? "Default" : activePresetId);
-  const moduleIds = Array.isArray(preset?.moduleIds)
-    ? [...new Set(preset.moduleIds.map((id) => String(id ?? "").trim()).filter(Boolean))]
-    : [];
+  const moduleIds = normalizeModuleIdArray(preset?.moduleIds);
 
   return {
     id: activePresetId,
     name: presetName,
     moduleCount: moduleIds.length
   };
+}
+
+function getActivePresetModuleIds() {
+  const presetMap = getPresetMap();
+  const activePresetId = getActivePresetId();
+  const preset = presetMap[activePresetId];
+
+  return normalizeModuleIdArray(preset?.moduleIds);
+}
+
+async function setActivePresetModuleIds(moduleIds) {
+  const presetMap = getPresetMap();
+  const activePresetId = getActivePresetId();
+  const currentPreset = presetMap[activePresetId] ?? {
+    name: activePresetId === DEFAULT_PRESET_ID ? "Default" : activePresetId,
+    moduleIds: []
+  };
+
+  const normalizedIds = normalizeModuleIdArray(moduleIds);
+
+  presetMap[activePresetId] = {
+    ...currentPreset,
+    moduleIds: normalizedIds
+  };
+
+  await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presetMap));
 }
 
 async function updateTitleCache(settingKey, ids) {
@@ -943,6 +1275,19 @@ async function syncQuickInsertPackRestrictions() {
 
 Hooks.once("init", () => {
   console.log(`[${MODULE_ID}] init`);
+
+  game.keybindings.register(MODULE_ID, "openBaselineManager", {
+    name: "Open Baseline Modules",
+    hint: "Open the Baseline Modules manager quickly.",
+    editable: [{ key: "KeyB", modifiers: ["Control", "Shift"] }],
+    onDown: () => {
+      if (!game.user?.isGM) return false;
+      openBaselineManager();
+      return true;
+    },
+    restricted: true,
+    precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
+  });
 
   game.settings.registerMenu(MODULE_ID, "extraVisiblePacksMenu", {
     name: "Choose Visible Packs",
@@ -1069,6 +1414,15 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false
   });
+
+  game.settings.register(MODULE_ID, "gmQuickAccessSidebarButton", {
+    name: "GM Quick Access Button",
+    hint: "Show a quick-open button in the Settings sidebar for Baseline Modules.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
 });
 
 /**
@@ -1078,27 +1432,81 @@ Hooks.once("init", () => {
 async function sanitizeBaselineModules() {
   const raw = game.settings.get(MODULE_ID, "baselineModules");
   const cleaned = parseModuleIdList(raw);
-  
-  if (cleaned.length !== parseModuleIdList(raw).length) {
-    // Only update if we actually removed something
-    const currentIds = new Set(cleaned);
-    const rawIds = new Set(parseModuleIdList(raw));
-    if (currentIds.size !== rawIds.size) {
-      await game.settings.set(MODULE_ID, "baselineModules", cleaned.join("\n"));
-      console.log(`[${MODULE_ID}] Sanitized baselineModules: removed ${rawIds.size - currentIds.size} invalid entries`);
+
+  const rawIds = typeof raw === "string"
+    ? [...new Set(raw.split(/[\n,]/).map((entry) => String(entry ?? "").trim()).filter((entry) => entry.length > 0))]
+    : [];
+
+  if (buildSelectionSignature(cleaned) !== buildSelectionSignature(rawIds)) {
+    await game.settings.set(MODULE_ID, "baselineModules", cleaned.join("\n"));
+    console.log(`[${MODULE_ID}] Sanitized baselineModules: ${rawIds.length} -> ${cleaned.length}`);
+  }
+}
+
+async function sanitizeNamedPresets() {
+  const raw = game.settings.get(MODULE_ID, "namedBaselinePresets");
+  let parsedRaw = {};
+  try {
+    parsedRaw = JSON.parse(raw ?? "{}");
+  } catch {
+    parsedRaw = {};
+  }
+
+  const normalized = parsePresetMap(raw);
+
+  if (JSON.stringify(parsedRaw) !== JSON.stringify(normalized)) {
+    await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(normalized));
+    console.log(`[${MODULE_ID}] Sanitized namedBaselinePresets`);
+  }
+}
+
+function findModulesWithInvalidDependencyMetadata() {
+  const offenders = [];
+
+  for (const module of game.modules.values()) {
+    const requires =
+      module.relationships?.requires ??
+      module.metadata?.relationships?.requires ??
+      [];
+    if (!Array.isArray(requires) || requires.length === 0) continue;
+
+    const invalidEntries = requires.filter((entry) => {
+      const id = entry?.id;
+      if (typeof id !== "string") return true;
+      const trimmed = id.trim();
+      return trimmed.length === 0 || trimmed === "null" || trimmed === "undefined";
+    });
+
+    if (invalidEntries.length > 0) {
+      offenders.push({
+        id: module.id,
+        title: module.title ?? module.id,
+        invalidCount: invalidEntries.length
+      });
     }
   }
+
+  return offenders;
 }
 
 Hooks.once("ready", async () => {
   // TODO(next version): Remove migration call once legacy rename rollout is complete.
   await migrateLegacyModuleSettings();
   await sanitizeBaselineModules();
+  await sanitizeNamedPresets();
+
+  const offenders = findModulesWithInvalidDependencyMetadata();
+  if (offenders.length > 0) {
+    const lines = offenders.map((entry) => `${entry.id} (${entry.invalidCount})`).join("\n");
+    console.warn(`[${MODULE_ID}] Modules with invalid dependency metadata:\n${lines}`);
+    ui.notifications?.warn(`SWADE FWK: ${offenders.length} module(s) have invalid dependency metadata. See console.`);
+  }
+
   applyPlayerPackAccessPatch();
 
   if (localStorage.getItem("swade-fwk-reopen-baseline") === "1") {
     localStorage.removeItem("swade-fwk-reopen-baseline");
-    new BaselineModulesManager().render(true);
+    openBaselineManager();
   }
 
   await syncQuickInsertPackRestrictions();
@@ -1106,6 +1514,11 @@ Hooks.once("ready", async () => {
 
   // Re-apply styling/filtering in case compendium tab is already rendered.
   styleAndFilterCompendiumRows(document.querySelector("#compendium"));
+
+  // Fallback injection if Settings tab is already in DOM.
+  tryInjectSettingsQuickAccessButton();
+  setTimeout(() => tryInjectSettingsQuickAccessButton(), 250);
+  setTimeout(() => tryInjectSettingsQuickAccessButton(), 1000);
 });
 
 Hooks.on("renderCompendiumDirectory", (_app, html) => {
@@ -1113,6 +1526,20 @@ Hooks.on("renderCompendiumDirectory", (_app, html) => {
 });
 
 Hooks.on("renderSidebarTab", (app, html) => {
-  if (app?.options?.id !== "compendium") return;
-  styleAndFilterCompendiumRows(html);
+  if (app?.options?.id === "compendium") {
+    styleAndFilterCompendiumRows(html);
+    return;
+  }
+
+  if (app?.options?.id === "settings" || app?.id === "settings") {
+    injectSettingsQuickAccessButton(html);
+  }
+});
+
+Hooks.on("renderSettings", (_app, html) => {
+  injectSettingsQuickAccessButton(html);
+});
+
+Hooks.on("renderSidebar", (_app, html) => {
+  injectSettingsQuickAccessButton(html);
 });
