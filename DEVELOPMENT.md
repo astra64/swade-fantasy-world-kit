@@ -137,6 +137,12 @@ Run this after significant code changes and before release.
   - export/import named presets with schema versioning,
   - conflict handling for missing modules.
 - Optional "module settings carryover" tools for selected third-party modules.
+- **Phase 1: In-Repo World Setup Tools Organization** (part of orchestrator complexity reduction):
+  - Reorganize world setup tools into `scripts/world-setup-tools/` folder structure.
+  - Extract preset-specific settings and CSS.
+  - Establish clean API boundary via `world-setup-tools/lib/index.js`.
+  - Update orchestrator and settings imports.
+  - Run full validation checklist to ensure no behavior regression.
 - Continue reducing orchestrator complexity in `scripts/main.js` where practical.
 
 ### Cleanup Release (post-legacy window)
@@ -152,15 +158,117 @@ Run this after significant code changes and before release.
 ### Post-Roadmap Modularization (Parked)
 
 - Status: Parked until current roadmap items are completed or explicitly removed.
-- Goal: extract only world setup tools into a system-agnostic dependency module while keeping curated compendiums and visibility behavior SWADE-specific in this package.
-- Planned extraction scope:
-  1. Preset/dependency engine and related manager UI.
-- Guardrails before starting extraction:
-  - Complete and stabilize Near Term and Mid Term roadmap work.
-  - Keep preset apply behavior as an unchanged core contract during extraction and handoff.
-  - Do not move curated compendium or visibility ownership out of this module.
-  - Preserve setting key compatibility with migrations during transition windows.
-- Workflow note: when extraction begins, use one VS Code multi-root workspace for all sibling modules to keep a single Copilot session while developing modules in parallel.
+- Timing: Phase 1 (in-repo organization) is scheduled as part of v0.5.x work. Phase 2 (full module extraction) is planned for after v0.5.x stabilizes (v0.6.x or later).
+- Goal: extract world setup tools into a system-agnostic dependency module while expanding SWADE hub module with genre/setting compendium support and character creation tools.
+
+#### Target Architecture
+
+**Module 1: SWADE Fantasy World Kit (Hub/Composer)**
+- Curated compendiums: expand from single Fantasy set to multi-genre/setting support (Fantasy, Scifi, Eberron, Warhammer, etc.).
+- Controlled visibility: pack allowlisting and GM override, scoped per active genre/setting.
+- Simple character creation tools: skill calculator, edges/hindrances UI (minimal—no prerequisite checking), integrated with active compendium set.
+- Settings ownership: genre/setting selection, pack visibility per context, character creation preferences.
+
+**Module 2: World Setup Tools (System Agnostic)**
+- Preset/dependency engine and manager UI.
+- Used by: SWADE hub module and any other system module that needs preset management.
+- No Foundry system/module dependencies beyond core Foundry APIs.
+
+**Module 3: Character Creation Tools (Recommendation)**
+- **Decision: Keep in SWADE hub module as a separate code organization**, not a separate module. Reasoning:
+  - SWADE-specific tooling; no identified reuse in other modules.
+  - Tightly couples to active compendium set selection (edges, hindrances, skills lists vary by genre).
+  - Simpler dependency graph: character tools use hub settings, not the reverse.
+  - Allows shipping character tools updates together with compendium set additions without multi-module coordination.
+  - Can be cleanly separated in code structure (e.g., `scripts/apps/character-creation/`, `templates/character-*.hbs`) for future refactor if needed.
+
+#### Planned Extraction Scope
+
+1. World Setup Tools module:
+   - `scripts/lib/preset-utils.js` (extract)
+   - `scripts/lib/dependencies.js` (extract)
+   - `scripts/apps/BaselineModulesManager.js` (extract with renaming)
+   - `templates/baseline-modules.hbs` (extract with renaming)
+   - Relevant CSS classes from `styles/module.css` (extract)
+   - Preset-specific settings keys (migrate/create in new module)
+
+2. SWADE Hub module (keep and enhance):
+   - Curated compendiums: generalize pack folder/group logic to support multiple genre sets.
+   - Controlled visibility: parameterize per genre/setting context.
+   - Character creation tools: new files in `scripts/apps/character-creation/` and `templates/character-*.hbs`.
+   - Compendium integration: unify visibility filtering to apply to active genre set.
+
+#### Guardrails Before Starting Extraction
+
+- Complete and stabilize Near Term and Mid Term roadmap work.
+- Keep preset apply behavior as an unchanged core contract during extraction and handoff.
+- Preserve SWADE hub module ownership of curated compendiums, visibility control, and character creation tooling.
+- Preserve setting key compatibility with migrations during transition windows.
+- Ensure World Setup Tools module is testable independently of SWADE system or content.
+- Validate that character creation tools integrate cleanly with genre/setting switching (no hardcoded pack dependencies).
+
+#### Phase 1: In-Repo Organization (Before Full Module Extraction)
+
+Goal: Reorganize world setup tools into a dedicated folder structure to test separation and establish API boundaries without creating a separate module yet.
+
+**Folder Structure (Phase 1):**
+```
+scripts/
+  world-setup-tools/
+    lib/
+      preset-utils.js (moved from scripts/lib/)
+      dependencies.js (moved from scripts/lib/)
+      index.js (exports public API)
+    apps/
+      BaselineModulesManager.js (moved from scripts/apps/)
+    settings.js (preset-specific settings; extracted from scripts/settings.js)
+  apps/
+    character-creation/
+      (new, for future character tools)
+    ExtraVisiblePacksSelector.js (stays here; compendium visibility)
+  (other non-preset files stay at scripts/ root)
+templates/
+  world-setup-tools/
+    baseline-modules.hbs (moved from templates/)
+styles/
+  world-setup-tools/
+    presets.css (extracted preset-specific CSS from module.css)
+```
+
+**Phase 1 Deliverables:**
+1. Folder reorganization with no behavioral changes.
+2. Establish `scripts/world-setup-tools/lib/index.js` as the public API surface:
+   - Export `createPresetApi`, `createDependencyApi`, and manager class.
+   - Document API contract (inputs, outputs, hooks, settings keys).
+3. Update `scripts/main.js` to import from new location and ensure all integrations still work.
+4. Update `scripts/settings.js` to keep only SWADE-specific settings (curated mode, visibility) and extract preset settings to `world-setup-tools/settings.js`.
+5. Update `styles/module.css` to import preset styles from `world-setup-tools/presets.css`.
+6. Run validation checklist to ensure no behavior regression.
+7. Commit: "refactor: organize world setup tools into dedicated folder structure (Phase 1)".
+
+**Phase 1 Benefits:**
+- Clean code boundary without repository fragmentation.
+- Test API isolation and identify missed dependencies before module split.
+- Easier to refactor settings ownership incrementally.
+- Can ship this as a minor version in current module (e.g., v0.4.0).
+- Single Copilot session for refactor, no multi-repo juggling yet.
+
+#### Phase 2: Module Extraction (After Phase 1 Stabilizes)
+
+Once Phase 1 is complete and validated in a few releases:
+1. Create separate `foundry-world-setup-tools` repository.
+2. Move `scripts/world-setup-tools/` folder and associated templates/styles.
+3. Create new `module.json` for World Setup Tools module.
+4. Update SWADE hub module to declare World Setup Tools as a dependency and import from it.
+5. Migrate SWADE hub settings to new module settings schema.
+6. Maintain compatibility shim in SWADE hub for settings migration during transition window.
+
+#### Workflow and Dependencies
+
+- Phase 1 (in-repo): Use this repo, single Copilot session.
+- Phase 2 onwards: Use one VS Code multi-root workspace for SWADE hub and World Setup Tools modules (plus any others) to keep a single Copilot session while developing in parallel.
+- Dependency flow: SWADE hub → World Setup Tools (plugin), no reverse dependency.
+- Character creation tools within hub depend on compendium set state but not vice versa.
 
 ---
 
