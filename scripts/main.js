@@ -1,12 +1,6 @@
-import {
-  createPresetApi,
-  parseModuleIdList,
-  parseTitlesMap,
-  parseVisiblePackList
-} from "./lib/preset-utils.js";
-import { createDependencyApi } from "./lib/dependencies.js";
-import { BaselineModulesManager } from "./apps/BaselineModulesManager.js";
-import { ExtraVisiblePacksSelector } from "./apps/ExtraVisiblePacksSelector.js";
+import { createWorldSetupToolsApi } from "./world-setup-tools/lib/index.js";
+import { BaselineModulesManager } from "./world-setup-tools/apps/BaselineModulesManager.js";
+import { ExtraVisiblePacksSelector } from "./world-setup-tools/apps/ExtraVisiblePacksSelector.js";
 import { setupSettings } from "./settings.js";
 import { setupMigrations } from "./migrations.js";
 import { setupUI } from "./ui.js";
@@ -23,6 +17,11 @@ const MIGRATABLE_WORLD_SETTING_KEYS = [
 const MIGRATABLE_CLIENT_SETTING_KEYS = ["globalBaselineModules"];
 const DEFAULT_PRESET_ID = "default";
 
+const { presetApi, dependencyApi, utilFunctions } = createWorldSetupToolsApi({
+  moduleId: MODULE_ID,
+  defaultPresetId: DEFAULT_PRESET_ID
+});
+
 const {
   getPresetMap,
   getActivePresetId,
@@ -34,28 +33,21 @@ const {
   setActivePresetModuleIds,
   parsePresetMap,
   suggestUniquePresetName
-} = createPresetApi({
-  moduleId: MODULE_ID,
-  defaultPresetId: DEFAULT_PRESET_ID
-});
-
-const {
-  getRequiredModuleIds,
-  getModuleDependencies,
-  collectAllDependencies,
-  resolveMissingDependencies,
-  mergeWithRequiredModuleIds
-} = createDependencyApi({ moduleId: MODULE_ID });
+} = presetApi;
 
 // === Utility Functions (defined early for use in setup calls) ===
 function rerenderCompendiumDirectory() {
   ui.compendium?.render(true);
 }
 
-function buildSelectionSignature(ids) {
-  return [...new Set(ids.map((id) => String(id ?? "").trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b))
-    .join("\n");
+function openBaselineManager() {
+  const existing = Object.values(ui.windows ?? {}).find((app) => app instanceof BaselineModulesManager);
+  if (existing) {
+    existing.render(false, { focus: true });
+    existing.bringToTop?.();
+    return existing;
+  }
+  return new BaselineModulesManager().render(true);
 }
 
 // Setup migrations (returns migration functions bound to helpers)
@@ -65,8 +57,8 @@ const {
   sanitizeNamedPresets,
   findModulesWithInvalidDependencyMetadata
 } = setupMigrations({
-  parseModuleIdList,
-  buildSelectionSignature,
+  parseModuleIdList: utilFunctions.parseModuleIdList,
+  buildSelectionSignature: utilFunctions.buildSelectionSignature,
   parsePresetMap
 });
 
@@ -78,27 +70,9 @@ const {
   applyPlayerPackAccessPatch,
   syncQuickInsertPackRestrictions
 } = setupUI({
-  parseVisiblePackList,
-  openBaselineManager: () => {
-    const existing = Object.values(ui.windows ?? {}).find((app) => app instanceof BaselineModulesManager);
-    if (existing) {
-      existing.render(false, { focus: true });
-      existing.bringToTop?.();
-      return existing;
-    }
-    return new BaselineModulesManager().render(true);
-  }
+  parseVisiblePackList: utilFunctions.parseVisiblePackList,
+  openBaselineManager
 });
-
-function openBaselineManager() {
-  const existing = Object.values(ui.windows ?? {}).find((app) => app instanceof BaselineModulesManager);
-  if (existing) {
-    existing.render(false, { focus: true });
-    existing.bringToTop?.();
-    return existing;
-  }
-  return new BaselineModulesManager().render(true);
-}
 
 async function handleVisibilitySettingsChanged() {
   rerenderCompendiumDirectory();
@@ -412,13 +386,13 @@ async function validateModuleDependencies() {
 }
 
 function getGlobalBaselineModuleIds() {
-  return mergeWithRequiredModuleIds(
-    parseModuleIdList(game.settings.get(MODULE_ID, "globalBaselineModules"))
+  return utilFunctions.mergeWithRequiredModuleIds(
+    utilFunctions.parseModuleIdList(game.settings.get(MODULE_ID, "globalBaselineModules"))
   );
 }
 
 async function updateTitleCache(settingKey, ids) {
-  const map = parseTitlesMap(game.settings.get(MODULE_ID, settingKey));
+  const map = utilFunctions.parseTitlesMap(game.settings.get(MODULE_ID, settingKey));
   const idSet = new Set(ids);
   for (const id of ids) {
     const title = game.modules.get(id)?.title;
@@ -454,40 +428,13 @@ Hooks.once("init", () => {
   });
 
   // Expose APIs and functions to window for app classes
-  window.swadeFwkPresetApi = {
-    getPresetMap,
-    getActivePresetId,
-    getAppliedPresetId,
-    getActivePresetMeta,
-    getAppliedPresetMeta,
-    sanitizeAppliedPresetId,
-    getActivePresetModuleIds,
-    setActivePresetModuleIds,
-    parsePresetMap,
-    suggestUniquePresetName
-  };
+  window.swadeFwkPresetApi = presetApi;
+  window.swadeFwkDependencyApi = dependencyApi;
+  Object.assign(window, utilFunctions);
 
-  window.swadeFwkDependencyApi = {
-    getRequiredModuleIds,
-    getModuleDependencies,
-    collectAllDependencies,
-    resolveMissingDependencies,
-    mergeWithRequiredModuleIds
-  };
-
-  // Expose utility functions
-  window.getRequiredModuleIds = getRequiredModuleIds;
-  window.getModuleDependencies = getModuleDependencies;
-  window.buildSelectionSignature = buildSelectionSignature;
-  window.parseTitlesMap = parseTitlesMap;
-  window.mergeWithRequiredModuleIds = mergeWithRequiredModuleIds;
-  window.collectAllDependencies = collectAllDependencies;
+  // Expose additional helper functions
   window.promptForDependencyResolution = promptForDependencyResolution;
-  window.resolveMissingDependencies = resolveMissingDependencies;
-  window.setActivePresetModuleIds = setActivePresetModuleIds;
-  window.updateTitleCache = updateTitleCache;
   window.openPresetManagementDialog = openPresetManagementDialog;
-  window.parseVisiblePackList = parseVisiblePackList;
   window.handleVisibilitySettingsChanged = handleVisibilitySettingsChanged;
 
   // Expose app classes

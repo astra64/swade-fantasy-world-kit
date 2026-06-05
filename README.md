@@ -10,7 +10,7 @@ A Foundry VTT module for fantasy SWADE games. It does three things:
 
 > **Planned direction (parked):** after current roadmap work is finished, World setup tools are planned for extraction into a separate system-agnostic dependency module. This hub module will be expanded with support for multiple compendium sets across different genres and settings (Fantasy, Scifi, Eberron, Warhammer, etc.) and will gain simple character creation tools (skill calculator and edges/hindrances helpers) integrated with the active compendium set. Curated compendiums and controlled visibility remain SWADE-focused in this package.
 
-**Requires:** Foundry VTT v13+, SWADE system, SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net
+**Requires:** Foundry VTT v14+, SWADE system, SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net
 
 ---
 

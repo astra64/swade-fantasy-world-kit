@@ -130,25 +130,44 @@ Run this after significant code changes and before release.
 
 ## Roadmap
 
-### Complete - v0.4.x
+**See [CHANGELOG.md](CHANGELOG.md) for completed version history and release notes.**
 
-- ✅ Improved apply summary UX with detailed per-action module names (enabled/disabled/already enabled/missing).
-- ✅ Added optional dry-run preview feature showing expected enable/disable diff before apply.
-- Notes: Summary now displays via clear dialogs rather than flat notification text; preview button added to Preset Modules manager.
+### Roadmap Cleanup Policy
+
+Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the next major version ships. This keeps DEVELOPMENT.md focused on active/future work while preserving a full historical record.
+
+**Timeline:**
+- When v0.5.0 ships: Move "Mid Term (v0.5.x)" completed items to CHANGELOG; update this section to show v0.6.x items.
+- Commit: `docs: archive v[N].x completed items to CHANGELOG for v[M].x release`.
 
 ### Mid Term (v0.5.x)
 
-- Preset portability:
-  - export/import named presets with schema versioning,
-  - conflict handling for missing modules.
-- Optional "module settings carryover" tools for selected third-party modules.
-- **Phase 1: In-Repo World Setup Tools Organization** (part of orchestrator complexity reduction):
+**1. Phase 1: In-Repo World Setup Tools Organization** (🚀 in progress)
   - Reorganize world setup tools into `scripts/world-setup-tools/` folder structure.
   - Extract preset-specific settings and CSS.
   - Establish clean API boundary via `world-setup-tools/lib/index.js`.
   - Update orchestrator and settings imports.
   - Run full validation checklist to ensure no behavior regression.
-- Continue reducing orchestrator complexity in `scripts/main.js` where practical.
+
+**2. Foundry v14 and SWADE System Compatibility Update** (high priority, after Phase 1)
+  - Update module manifest to support Foundry v14+.
+  - Test all features against latest SWADE system version (verify compendium structure, item types, data schema).
+  - Fix any breaking changes in preset manager, curated visibility, or settings.
+  - Update validation checklist tests for v14 compatibility.
+  - Verify pack imports and exports work correctly.
+  - Update README with new Foundry/SWADE version requirements.
+
+**3. Additional Improvements**
+  - Preset portability:
+    - export/import named presets with schema versioning,
+    - conflict handling for missing modules.
+  - Optional "module settings carryover" tools for selected third-party modules.
+  - Continue reducing orchestrator complexity in `scripts/main.js` where practical.
+  - Preset manager UX polish:
+    - Auto-select newly created preset after "Manage Presets" → "Create".
+    - Auto-select preset after rename/duplicate/delete in manage dialog.
+    - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
+  - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
 
 ### Cleanup Release (post-legacy window)
 
