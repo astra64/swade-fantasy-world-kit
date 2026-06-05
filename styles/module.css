@@ -90,9 +90,11 @@ body {
 
 .scfc-summary-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.24rem;
+  align-items: center;
   margin: 0.02rem 0 0.42rem 0;
+  overflow-x: auto;
 }
 
 .scfc-help-row {
@@ -236,6 +238,41 @@ body {
   padding: 0.11rem 0.45rem;
   font-size: 10px;
   background: color-mix(in srgb, var(--color-cool-2) 48%, transparent);
+}
+
+.scfc-summary-revert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  height: 18px;
+  width: auto;
+  min-width: fit-content;
+  padding: 0.02rem 0.3rem;
+  font-size: 9px;
+  line-height: 1;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 60%, transparent);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  flex-grow: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.scfc-summary-revert-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-cool-3) 75%, transparent);
+  border-color: color-mix(in srgb, var(--color-text-hyperlink) 40%, var(--color-border-light-primary));
+}
+
+.scfc-summary-revert-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scfc-summary-revert-btn i {
+  font-size: 9px;
 }
 
 .scfc-summary-chip-good {

@@ -123,13 +123,13 @@ export class BaselineModulesManager extends FormApplication {
     super.activateListeners(html);
 
     const applyButton = html[0].querySelector("[data-apply-baseline]");
+    const revertButton = html[0].querySelector("[data-revert-preset]");
     const searchInput = html[0].querySelector("[data-module-search]");
     const moduleRows = [...html[0].querySelectorAll("[data-module-row]")];
     const selectActiveButton = html[0].querySelector("[data-module-select-active]");
     const filterActiveButton = html[0].querySelector("[data-module-filter-active]");
     const visibleCountLabel = html[0].querySelector("[data-module-visible-count]");
     const clearSelectionButton = html[0].querySelector("[data-module-clear-selection]");
-    const revertPresetButton = html[0].querySelector("[data-revert-preset]");
     const baselineSaveStateLabel = html[0].querySelector("[data-baseline-save-state]");
     const selectionDeltaLabel = html[0].querySelector("[data-selection-delta]");
     const presetSelector = html[0].querySelector("[data-preset-selector]");
@@ -158,7 +158,7 @@ export class BaselineModulesManager extends FormApplication {
         : "Status: matches preset";
       baselineSaveStateLabel.classList.toggle("scfc-save-state-unsaved", hasUnsavedChanges);
       baselineSaveStateLabel.classList.toggle("scfc-save-state-saved", !hasUnsavedChanges);
-      if (revertPresetButton) revertPresetButton.disabled = !hasUnsavedChanges;
+      if (revertButton) revertButton.disabled = !hasUnsavedChanges;
     };
 
     const updateSelectionDelta = () => {
@@ -249,7 +249,7 @@ export class BaselineModulesManager extends FormApplication {
       updateSelectionState();
     });
 
-    revertPresetButton?.addEventListener("click", () => {
+    revertButton?.addEventListener("click", () => {
       for (const row of moduleRows) {
         const checkbox = row.querySelector("input[type=checkbox]");
         if (!checkbox) continue;
@@ -288,21 +288,27 @@ export class BaselineModulesManager extends FormApplication {
 
   async _onApplyBaseline() {
     const presetApi = window.swadeFwkPresetApi;
+    const activePreset = presetApi.getActivePresetMeta();
+
+    // Show apply diff dialog
+    const diff = this._calculateApplyDiff();
+    const confirmed = await this._showApplyDiff(activePreset, diff);
+    if (!confirmed) {
+      ui.notifications?.info("SWADE Fantasy World Kit: apply cancelled.");
+      return;
+    }
+
+    // Perform the actual apply
+    await this._performApply();
+  }
+
+  async _performApply() {
+    const presetApi = window.swadeFwkPresetApi;
     const mergeWithRequiredModuleIds = window.mergeWithRequiredModuleIds;
     const promptForDependencyResolution = window.promptForDependencyResolution;
     const resolveMissingDependencies = window.resolveMissingDependencies;
 
     const activePreset = presetApi.getActivePresetMeta();
-
-    const apply = await Dialog.confirm({
-      title: "Apply Preset to World",
-      content: `<p>This will apply <strong>${activePreset.name}</strong> to this world.</p><p>Installed modules in the preset will be enabled. Any other currently active module (except this module) will be disabled. Uninstalled modules are skipped.</p>`,
-      yes: () => true,
-      no: () => false,
-      defaultYes: true
-    });
-    if (!apply) return;
-
     const configuredIds = mergeWithRequiredModuleIds(presetApi.getActivePresetModuleIds());
     const configuredBeforeDependencyResolution = new Set(configuredIds);
     let autoIncludedDependencies = [];
@@ -313,14 +319,13 @@ export class BaselineModulesManager extends FormApplication {
 
     // Check for missing dependencies
     const missingDeps = resolveMissingDependencies(configuredIds, currentModuleConfig);
-    
+
     if (missingDeps.length > 0) {
       const resolution = await promptForDependencyResolution(configuredIds, missingDeps);
       if (!resolution.resolved) {
         ui.notifications?.info("SWADE Fantasy World Kit: apply cancelled.");
         return;
       }
-      // Update the list of modules to enable with dependencies
       const uniqueIds = [...new Set([...resolution.modulesToEnable])];
       autoIncludedDependencies = uniqueIds.filter((id) => !configuredBeforeDependencyResolution.has(id));
       configuredIds.length = 0;
@@ -369,20 +374,7 @@ export class BaselineModulesManager extends FormApplication {
     }
 
     await game.settings.set(MODULE_ID, "appliedBaselinePresetId", activePreset.id);
-
-    const summary = [
-      `Enabled now: ${enabledNow.length}`,
-      `Disabled now: ${disabledNow.length}`,
-      `Already enabled: ${alreadyEnabled.length}`,
-      `Missing: ${missing.length}`,
-      `Auto-included deps: ${autoIncludedDependencies.length}`
-    ].join(" | ");
-
-    ui.notifications?.info(`SWADE Fantasy World Kit: applied preset "${activePreset.name}". ${summary}`);
-    if (missing.length > 0) {
-      ui.notifications?.warn(`SWADE Fantasy World Kit: ${missing.length} preset module(s) are not installed and were skipped.`);
-      console.warn("[SWADE Fantasy World Kit] Missing preset modules:\n" + missing.join("\n"));
-    }
+    this._showApplyResult(enabledNow, disabledNow, alreadyEnabled, missing, autoIncludedDependencies);
 
     // Reload the world if module activation state changed.
     if (enabledNow.length > 0 || disabledNow.length > 0) {
@@ -396,6 +388,289 @@ export class BaselineModulesManager extends FormApplication {
     }
   }
 
+  _showApplyResult(enabledNow, disabledNow, alreadyEnabled, missing, autoIncludedDependencies) {
+    let content = `<div class="scfc-result-dialog">`;
+    content += `<p><strong>Preset applied.</strong></p>`;
+
+    if (enabledNow.length > 0) {
+      content += `<div class="scfc-result-section">`;
+      content += `<strong style="color: #7a9928;">Enabled in World (${enabledNow.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const id of enabledNow) {
+        const mod = game.modules.get(id);
+        content += `<li>${mod?.title ?? id}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (disabledNow.length > 0) {
+      content += `<div class="scfc-result-section">`;
+      content += `<strong style="color: #c48b2b;">Disabled in World (${disabledNow.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const id of disabledNow) {
+        const mod = game.modules.get(id);
+        content += `<li>${mod?.title ?? id}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (alreadyEnabled.length > 0) {
+      content += `<div class="scfc-result-section">`;
+      content += `<strong style="opacity: 0.7;">Already Enabled (${alreadyEnabled.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.7;">`;
+      for (const id of alreadyEnabled) {
+        const mod = game.modules.get(id);
+        content += `<li>${mod?.title ?? id}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (autoIncludedDependencies.length > 0) {
+      content += `<div class="scfc-result-section">`;
+      content += `<strong>Auto-Included Dependencies (${autoIncludedDependencies.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.95em;">`;
+      for (const id of autoIncludedDependencies) {
+        const mod = game.modules.get(id);
+        content += `<li>${mod?.title ?? id}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (missing.length > 0) {
+      content += `<div class="scfc-result-section">`;
+      content += `<strong>Skipped - Not Installed (${missing.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.8;">`;
+      for (const id of missing) {
+        content += `<li><code>${id}</code></li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    content += `</div>`;
+
+    Dialog.confirm({
+      title: "Preset Applied",
+      content,
+      yes: () => true,
+      defaultYes: true
+    });
+  }
+
+  _calculateSaveDiff(newIds) {
+    const presetApi = window.swadeFwkPresetApi;
+    const currentIds = presetApi.getActivePresetModuleIds();
+    const currentSet = new Set(currentIds);
+    const newSet = new Set(newIds);
+
+    const willAdd = [];
+    const willRemove = [];
+    const alreadyIn = [];
+
+    for (const id of newSet) {
+      const mod = game.modules.get(id);
+      const title = mod?.title ?? id;
+
+      // Skip entries with null/undefined/empty id or string "null"
+      if (!id || !String(id).trim() || String(id) === "null") continue;
+
+      if (currentSet.has(id)) {
+        alreadyIn.push({ id, title });
+      } else {
+        willAdd.push({ id, title });
+      }
+    }
+
+    for (const id of currentSet) {
+      if (!newSet.has(id)) {
+        const mod = game.modules.get(id);
+        const title = mod?.title ?? id;
+        willRemove.push({ id, title });
+      }
+    }
+
+    console.log("[SWADE FWK] _calculateSaveDiff:", { willAdd, willRemove, alreadyIn });
+    return { willAdd, willRemove, alreadyIn };
+  }
+
+  async _showSaveDiff(preset, diff) {
+    let content = `<div class="scfc-diff-dialog">`;
+    content += `<p><strong>Preset:</strong> ${preset.name}</p>`;
+    content += `<p>Review your changes before saving to this preset.</p>`;
+
+    if (diff.willAdd.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="color: #7a9928;">Will Add to Preset (${diff.willAdd.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const mod of diff.willAdd) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (diff.willRemove.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="color: #c48b2b;">Will Remove from Preset (${diff.willRemove.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const mod of diff.willRemove) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (diff.alreadyIn.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="opacity: 0.7;">Already in Preset (${diff.alreadyIn.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.7;">`;
+      for (const mod of diff.alreadyIn) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    content += `</div>`;
+
+    return new Promise((resolve) => {
+      const d = new Dialog({
+        title: "Save Preset",
+        content,
+        buttons: {
+          save: {
+            icon: '<i class="fas fa-save"></i>',
+            label: "Save",
+            callback: () => {
+              console.log("[SWADE FWK] Dialog: Save clicked");
+              resolve("save");
+            }
+          },
+          saveApply: {
+            icon: '<i class="fas fa-rocket"></i>',
+            label: "Save & Apply",
+            callback: () => {
+              console.log("[SWADE FWK] Dialog: Save & Apply clicked");
+              resolve("save-and-apply");
+            }
+          },
+          cancel: {
+            icon: '<i class="fas fa-times"></i>',
+            label: "Cancel",
+            callback: () => {
+              console.log("[SWADE FWK] Dialog: Cancel clicked");
+              resolve("cancel");
+            }
+          }
+        },
+        default: "save"
+      });
+      d.render(true);
+    });
+  }
+
+  _calculateApplyDiff() {
+    const presetApi = window.swadeFwkPresetApi;
+    const mergeWithRequiredModuleIds = window.mergeWithRequiredModuleIds;
+
+    const configuredIds = mergeWithRequiredModuleIds(presetApi.getActivePresetModuleIds());
+    const currentModuleConfig = foundry.utils.deepClone(
+      game.settings.get("core", "moduleConfiguration") ?? {}
+    );
+
+    const missing = [];
+    const alreadyEnabled = [];
+    const willEnable = [];
+    const willDisable = [];
+
+    const desiredIdSet = new Set(configuredIds);
+
+    for (const id of configuredIds) {
+      const module = game.modules.get(id);
+      if (!module) {
+        missing.push({ id, title: null });
+        continue;
+      }
+
+      if (module.active) {
+        alreadyEnabled.push({ id, title: module.title ?? id });
+        continue;
+      }
+
+      willEnable.push({ id, title: module.title ?? id });
+    }
+
+    for (const module of game.modules.values()) {
+      const id = module.id;
+      if (id === MODULE_ID) continue;
+      if (desiredIdSet.has(id)) continue;
+
+      const currentlyEnabled = module.active || currentModuleConfig[id] === true;
+      if (!currentlyEnabled) continue;
+
+      willDisable.push({ id, title: module.title ?? id });
+    }
+
+    return {
+      willEnable,
+      willDisable,
+      alreadyEnabled,
+      missing
+    };
+  }
+
+  async _showApplyDiff(preset, diff) {
+    let content = `<div class="scfc-diff-dialog">`;
+    content += `<p><strong>Preset:</strong> ${preset.name}</p>`;
+    content += `<p>Review what will change when this preset is applied to the world.</p>`;
+
+    if (diff.willEnable.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="color: #7a9928;">Will Enable in World (${diff.willEnable.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const mod of diff.willEnable) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (diff.willDisable.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="color: #c48b2b;">Will Disable in World (${diff.willDisable.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">`;
+      for (const mod of diff.willDisable) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (diff.alreadyEnabled.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="opacity: 0.7;">Already Enabled in World (${diff.alreadyEnabled.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.7;">`;
+      for (const mod of diff.alreadyEnabled) {
+        content += `<li>${mod.title}</li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    if (diff.missing.length > 0) {
+      content += `<div class="scfc-diff-section">`;
+      content += `<strong style="color: #cc3333;">Missing / Not Installed (${diff.missing.length}):</strong>`;
+      content += `<ul style="margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.8;">`;
+      for (const mod of diff.missing) {
+        content += `<li><code>${mod.id}</code></li>`;
+      }
+      content += `</ul></div>`;
+    }
+
+    content += `</div>`;
+
+    return Dialog.confirm({
+      title: "Apply Preset to World",
+      content,
+      yes: () => true,
+      no: () => false,
+      defaultYes: true
+    });
+  }
+
   async _updateObject(_event, formData) {
     const presetApi = window.swadeFwkPresetApi;
     const collectAllDependencies = window.collectAllDependencies;
@@ -404,9 +679,13 @@ export class BaselineModulesManager extends FormApplication {
     const setActivePresetModuleIds = window.setActivePresetModuleIds;
     const updateTitleCache = window.updateTitleCache;
 
+    console.log("[SWADE FWK] _updateObject called", { formData });
+
     const values = formData.baselineModulesSelected;
     const selected = Array.isArray(values) ? values : (values ? [values] : []);
-    const deduped = [...new Set(selected.map((entry) => String(entry).trim()).filter(Boolean))];
+    const deduped = [...new Set(selected.map((entry) => String(entry).trim()).filter((id) => id && id !== "null" && id.length > 0))];
+
+    console.log("[SWADE FWK] Selected modules after dedup:", deduped);
 
     // Check if any selected modules have installed dependencies not also selected
     const selectedSet = new Set(deduped);
@@ -415,16 +694,48 @@ export class BaselineModulesManager extends FormApplication {
       return game.modules.has(depId) && !selectedSet.has(depId);
     });
 
+    console.log("[SWADE FWK] Missing dependencies:", missingDeps);
+
     let finalIds = deduped;
     if (missingDeps.length > 0) {
       const resolution = await promptForDependencyResolution(deduped, missingDeps);
-      if (!resolution.resolved) return;
+      if (!resolution.resolved) {
+        console.log("[SWADE FWK] Dependency resolution cancelled");
+        return;
+      }
       finalIds = resolution.modulesToEnable;
+      console.log("[SWADE FWK] Final IDs after dependency resolution:", finalIds);
     }
 
     const normalizedIds = mergeWithRequiredModuleIds(finalIds);
-    await setActivePresetModuleIds(normalizedIds);
-    await updateTitleCache("baselineModuleTitles", normalizedIds);
-    await this.render(true);
+    console.log("[SWADE FWK] Normalized IDs (with required):", normalizedIds);
+
+    const presetApi_local = window.swadeFwkPresetApi;
+    const activePreset = presetApi_local.getActivePresetMeta();
+
+    // Show save diff dialog
+    const preview = this._calculateSaveDiff(normalizedIds);
+    console.log("[SWADE FWK] About to show save diff dialog");
+
+    const action = await this._showSaveDiff(activePreset, preview);
+    console.log("[SWADE FWK] Save diff dialog action:", action);
+
+    if (action === "save") {
+      console.log("[SWADE FWK] Saving preset...");
+      await setActivePresetModuleIds(normalizedIds);
+      await updateTitleCache("baselineModuleTitles", normalizedIds);
+      console.log("[SWADE FWK] Preset saved, re-rendering...");
+      await this.render(true);
+    } else if (action === "save-and-apply") {
+      console.log("[SWADE FWK] Save & Apply selected");
+      // Save first
+      await setActivePresetModuleIds(normalizedIds);
+      await updateTitleCache("baselineModuleTitles", normalizedIds);
+      console.log("[SWADE FWK] Preset saved, now applying...");
+      // Then apply
+      await this._performApply();
+    } else {
+      console.log("[SWADE FWK] Save cancelled");
+    }
   }
 }

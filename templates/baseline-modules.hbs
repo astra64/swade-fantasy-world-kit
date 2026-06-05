@@ -37,6 +37,10 @@
     <span class="scfc-summary-chip" title="Currently saved in the editing preset (may include uninstalled).">Saved: {{configuredCount}}</span>
     <span class="scfc-summary-chip {{#if isEditingPresetApplied}}scfc-summary-chip-good{{else}}scfc-summary-chip-warn{{/if}}" title="Last preset applied to this world in this module workflow.">Applied: {{appliedPresetName}}</span>
     <span class="scfc-summary-chip scfc-save-state-chip" data-baseline-save-state title="Matches = selection matches the editing preset.">Status: matches preset</span>
+    <button type="button" class="scfc-summary-revert-btn" data-revert-preset title="Reset checkboxes to the editing preset snapshot.">
+      <i class="fas fa-undo"></i>
+      Revert
+    </button>
   </div>
 
   {{#if hasInstalledModules}}
@@ -121,15 +125,11 @@
   <p class="scfc-selection-delta" data-selection-delta title="Changes since last save.">No changes</p>
 
   <footer class="sheet-footer flexrow scfc-footer-row">
-    <button type="submit" title="Save checked modules to the editing preset (does not enable them).">
+    <button type="submit" title="Review changes and save to the editing preset.">
       <i class="fas fa-save"></i>
-      Save to Preset
+      Save Preset
     </button>
-    <button type="button" data-revert-preset title="Reset checkboxes to the editing preset snapshot.">
-      <i class="fas fa-undo"></i>
-      Revert to Preset
-    </button>
-    <button type="button" data-apply-baseline title="Enable modules from the editing preset and reload world.">
+    <button type="button" data-apply-baseline title="Review and apply the editing preset to the world.">
       <i class="fas fa-check"></i>
       Apply Preset to World
     </button>

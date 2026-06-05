@@ -31,6 +31,9 @@ This file tracks current architecture, implemented behavior, release readiness c
 - `scripts/apps/BaselineModulesManager.js`
   - Preset Modules manager FormApplication.
   - Save to preset, apply preset, manage presets, dependency prompts.
+  - `_calculateApplyPreview()`: Simulates apply without making changes; returns will-enable/will-disable/already-enabled/missing arrays.
+  - `_showApplyPreview()`: Dialog showing dry-run diff before apply is confirmed.
+  - `_showApplySummary()`: Dialog showing detailed per-action results after apply (module names, not just counts).
 - `scripts/apps/ExtraVisiblePacksSelector.js`
   - Searchable pack visibility selector FormApplication.
 - `templates/baseline-modules.hbs`
@@ -110,26 +113,28 @@ Run this after significant code changes and before release.
 1. Module loads in Foundry v13 with no init/ready errors.
 2. Preset manager opens from settings menu and `Ctrl+Shift+B`.
 3. Save to Preset persists changes to the selected preset.
-4. Apply Preset to World:
+4. **Preview Apply** button shows expected enable/disable diff with module names (new).
+5. Apply Preset to World:
    - enables modules in preset,
    - disables active modules not in preset,
    - prompts for missing installed dependencies,
    - skips uninstalled modules,
+   - shows detailed summary dialog with module names (new),
    - reloads world when needed.
-5. Preset manager reopens after reload when apply triggered reload.
-6. Curated compendium filtering works for players and GM override behaves correctly.
-7. Quick Insert restrictions sync correctly when curated visibility changes.
-8. Extra visible packs selector saves and updates visibility.
+6. Preset manager reopens after reload when apply triggered reload.
+7. Curated compendium filtering works for players and GM override behaves correctly.
+8. Quick Insert restrictions sync correctly when curated visibility changes.
+9. Extra visible packs selector saves and updates visibility.
 
 ---
 
 ## Roadmap
 
-### Near Term (v0.4.x)
+### Complete - v0.4.x
 
-- Improve apply summary UX with clearer per-action details (enabled/disabled/skipped/dependency-added names).
-- Add optional dry-run preview before apply (show expected enable/disable diff).
-- Add focused regression tests/check scripts for preset apply behavior.
+- ✅ Improved apply summary UX with detailed per-action module names (enabled/disabled/already enabled/missing).
+- ✅ Added optional dry-run preview feature showing expected enable/disable diff before apply.
+- Notes: Summary now displays via clear dialogs rather than flat notification text; preview button added to Preset Modules manager.
 
 ### Mid Term (v0.5.x)
 

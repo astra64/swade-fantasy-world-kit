@@ -69,8 +69,13 @@ The Preset Modules manager lets you define named presets of modules, then apply 
 
 1. Search or scroll through the installed modules list and check the ones you want.
 2. Choose the preset you want to edit from **Editing Preset**.
-3. Click **Save to Preset** to store the current selection.
-4. Click **Apply Preset to World** to apply activation changes. Foundry will reload automatically when changes are made.
+3. Click **Save Preset** to review your changes:
+   - A diff dialog shows what will be added/removed from the preset.
+   - Click "Save" to save, or "Save & Apply" to save and immediately apply to the world.
+4. Click **Apply Preset to World** to apply activation changes:
+   - A preview dialog shows what will be enabled/disabled in the world.
+   - Foundry will reload automatically when module activation changes are made.
+5. Use **Revert** (in the summary row) to discard unsaved edits and reset to the saved preset.
 
 The manager will warn you if any selected modules have dependencies that aren't also selected, and offer to include them automatically.
 
