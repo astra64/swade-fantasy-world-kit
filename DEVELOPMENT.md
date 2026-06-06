@@ -155,14 +155,14 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
   - All player and GM features operational; no breaking API changes detected.
   - Known future task: Migrate BaselineModulesManager from V1 to V2 Application framework (deprecation warning appearing in v14, removal planned for v16).
 
-**3. Preset Portability** (planned for v0.5.3)
-  - Export/import named presets with schema versioning.
-  - Conflict handling for missing modules.
-
-**4. Preset Manager UX Polish** (planned for v0.5.4)
+**3. Preset Manager UX Polish** (✅ COMPLETE)
   - Auto-select newly created preset after "Manage Presets" → "Create".
   - Auto-select preset after rename/duplicate/delete in manage dialog.
   - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
+
+**4. Preset Portability** (planned for v0.5.4)
+  - Export/import named presets with schema versioning.
+  - Conflict handling for missing modules.
 
 **5. Pack Selector and Compendium Enhancements** (planned for v0.5.5)
   - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).

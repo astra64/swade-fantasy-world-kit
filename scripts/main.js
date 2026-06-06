@@ -88,7 +88,7 @@ async function rerenderBaselineManagers() {
 }
 
 // Preset CRUD Helpers
-async function createNewPreset() {
+async function createNewPreset(onComplete) {
   const dialog = new Dialog({
     title: "Create New Preset",
     content: '<input type="text" id="presetName" placeholder="Preset name..." style="width: 100%;">',
@@ -98,7 +98,7 @@ async function createNewPreset() {
         callback: async (html) => {
           const name = String(html.find("#presetName").val() ?? "").trim();
           if (!name) return;
-          
+
           const presets = getPresetMap();
           const finalName = suggestUniquePresetName(name, presets);
           const newId = `preset-${Date.now()}`;
@@ -106,14 +106,16 @@ async function createNewPreset() {
             name: finalName,
             moduleIds: []
           };
-          
+
           await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
-          await rerenderBaselineManagers();
+
           if (finalName !== name) {
             ui.notifications?.info(`Preset name already existed; created "${finalName}".`);
           } else {
             ui.notifications?.info(`Preset "${finalName}" created.`);
           }
+
+          onComplete?.(newId);
         }
       },
       cancel: {
@@ -124,7 +126,12 @@ async function createNewPreset() {
   dialog.render(true);
 }
 
-async function renamePreset(presetId) {
+async function renamePreset(presetId, onComplete) {
+  if (presetId === DEFAULT_PRESET_ID) {
+    ui.notifications?.warn("Cannot rename the default preset.");
+    return;
+  }
+
   const presets = getPresetMap();
   const preset = presets[presetId];
   if (!preset) return;
@@ -138,16 +145,18 @@ async function renamePreset(presetId) {
         callback: async (html) => {
           const name = String(html.find("#presetName").val() ?? "").trim();
           if (!name) return;
-          
+
           const finalName = suggestUniquePresetName(name, presets, presetId);
           preset.name = finalName;
           await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
-          await rerenderBaselineManagers();
+
           if (finalName !== name) {
             ui.notifications?.info(`Preset name already existed; renamed to "${finalName}".`);
           } else {
             ui.notifications?.info(`Preset renamed to "${finalName}".`);
           }
+
+          onComplete?.(presetId);
         }
       },
       cancel: {
@@ -158,7 +167,7 @@ async function renamePreset(presetId) {
   dialog.render(true);
 }
 
-async function duplicatePreset(presetId) {
+async function duplicatePreset(presetId, onComplete) {
   const presets = getPresetMap();
   const preset = presets[presetId];
   if (!preset) return;
@@ -166,29 +175,30 @@ async function duplicatePreset(presetId) {
   const newId = `preset-${Date.now()}`;
   const requestedName = `${preset.name ?? presetId} (copy)`;
   const newName = suggestUniquePresetName(requestedName, presets);
-  
+
   presets[newId] = {
     name: newName,
     moduleIds: [...(preset.moduleIds ?? [])]
   };
-  
+
   await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
-  await rerenderBaselineManagers();
   ui.notifications?.info(`Preset duplicated: "${newName}".`);
+
+  onComplete?.(newId);
 }
 
-async function deletePreset(presetId) {
+async function deletePreset(presetId, onComplete) {
   const presets = getPresetMap();
   const activePresetId = getActivePresetId();
   const appliedPresetId = getAppliedPresetId();
   const isActivePreset = activePresetId === presetId;
-  
+
   // Don't delete the default preset
   if (presetId === DEFAULT_PRESET_ID) {
     ui.notifications?.warn("Cannot delete the default preset.");
     return;
   }
-  
+
   const confirmed = await Dialog.confirm({
     title: "Delete Preset",
     content: isActivePreset
@@ -197,12 +207,12 @@ async function deletePreset(presetId) {
     yes: () => true,
     no: () => false
   });
-  
+
   if (!confirmed) return;
-  
+
   delete presets[presetId];
   await game.settings.set(MODULE_ID, "namedBaselinePresets", JSON.stringify(presets));
-  
+
   // If we just deleted the active preset, switch to default
   if (activePresetId === presetId) {
     await game.settings.set(MODULE_ID, "activeBaselinePresetId", DEFAULT_PRESET_ID);
@@ -211,34 +221,109 @@ async function deletePreset(presetId) {
   if (appliedPresetId === presetId) {
     await game.settings.set(MODULE_ID, "appliedBaselinePresetId", DEFAULT_PRESET_ID);
   }
-  
-  await rerenderBaselineManagers();
+
   ui.notifications?.info("Preset deleted.");
+  onComplete?.(DEFAULT_PRESET_ID);
 }
 
 async function openPresetManagementDialog() {
-  const presets = getPresetMap();
-  const activePresetId = getActivePresetId();
-  const presetList = Object.entries(presets)
-    .map(([id, preset]) => `<option value="${id}" ${id === activePresetId ? "selected" : ""}>${preset.name ?? id}</option>`)
-    .join("");
+  const buildDialogContent = (selectedPresetId) => {
+    const presets = getPresetMap();
+    const presetList = Object.entries(presets)
+      .map(([id, preset]) => `<option value="${id}" ${id === selectedPresetId ? "selected" : ""}>${preset.name ?? id}</option>`)
+      .join("");
 
-  const content = `
-    <div style="display: grid; gap: 0.8rem;">
-      <div style="display: grid; gap: 0.3rem;">
-        <label for="presetSelect" style="font-weight: 600; font-size: 12px;">Select a preset:</label>
-        <select id="presetSelect" style="width: 100%;">
-          ${presetList}
-        </select>
+    return `
+      <div style="display: grid; gap: 0.8rem;">
+        <div style="display: grid; gap: 0.3rem;">
+          <label for="presetSelect" style="font-weight: 600; font-size: 12px;">Select a preset:</label>
+          <select id="presetSelect" style="width: 100%;">
+            ${presetList}
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+          <button type="button" id="presetRenameBtn" style="cursor: pointer;">Rename</button>
+          <button type="button" id="presetDuplicateBtn" style="cursor: pointer;">Duplicate</button>
+          <button type="button" id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
+          <button type="button" id="presetCreateBtn" style="cursor: pointer;">Create New</button>
+        </div>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
-        <button type="button" id="presetRenameBtn" style="cursor: pointer;">Rename</button>
-        <button type="button" id="presetDuplicateBtn" style="cursor: pointer;">Duplicate</button>
-        <button type="button" id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
-        <button type="button" id="presetCreateBtn" style="cursor: pointer;">Create New</button>
-      </div>
-    </div>
-  `;
+    `;
+  };
+
+  const refreshDialog = (presetIdToSelect) => {
+    const contentDiv = dialog.element?.[0]?.querySelector(".dialog-content");
+    if (!contentDiv) return;
+
+    contentDiv.innerHTML = buildDialogContent(presetIdToSelect);
+    attachDialogListeners(presetIdToSelect);
+    dialog.bringToTop?.();
+  };
+
+  const attachDialogListeners = (presetIdToSelect) => {
+    const root = dialog.element?.[0]?.querySelector(".dialog-content");
+    if (!root) return;
+
+    const presetSelect = root.querySelector("#presetSelect");
+    const renameBtn = root.querySelector("#presetRenameBtn");
+    const duplicateBtn = root.querySelector("#presetDuplicateBtn");
+    const deleteBtn = root.querySelector("#presetDeleteBtn");
+    const createBtn = root.querySelector("#presetCreateBtn");
+
+    const updateButtonState = () => {
+      if (!presetSelect) return;
+      const isDefaultSelected = presetSelect.value === DEFAULT_PRESET_ID;
+
+      // Disable rename and delete for default preset
+      if (renameBtn) {
+        renameBtn.disabled = isDefaultSelected;
+        renameBtn.title = isDefaultSelected
+          ? "Default preset cannot be renamed."
+          : "Rename selected preset";
+      }
+
+      if (deleteBtn) {
+        deleteBtn.disabled = isDefaultSelected;
+        deleteBtn.title = isDefaultSelected
+          ? "Default preset cannot be deleted."
+          : "Delete selected preset";
+      }
+    };
+
+    updateButtonState();
+    presetSelect?.addEventListener("change", updateButtonState);
+
+    renameBtn?.addEventListener("click", async () => {
+      const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
+      await renamePreset(presetId, (updatedId) => {
+        refreshDialog(updatedId);
+      });
+    });
+
+    duplicateBtn?.addEventListener("click", async () => {
+      const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
+      await duplicatePreset(presetId, (newId) => {
+        refreshDialog(newId);
+      });
+    });
+
+    deleteBtn?.addEventListener("click", async () => {
+      if (deleteBtn.disabled) return;
+      const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
+      await deletePreset(presetId, (nextId) => {
+        refreshDialog(nextId);
+      });
+    });
+
+    createBtn?.addEventListener("click", async () => {
+      await createNewPreset((newId) => {
+        refreshDialog(newId);
+      });
+    });
+  };
+
+  const activePresetId = getActivePresetId();
+  const content = buildDialogContent(activePresetId);
 
   const dialog = new Dialog({
     title: "Manage Presets",
@@ -249,49 +334,21 @@ async function openPresetManagementDialog() {
       }
     },
     default: "close",
-    render: (html) => {
-      const root = html[0];
-      const presetSelect = root?.querySelector("#presetSelect");
-      const renameBtn = root?.querySelector("#presetRenameBtn");
-      const duplicateBtn = root?.querySelector("#presetDuplicateBtn");
-      const deleteBtn = root?.querySelector("#presetDeleteBtn");
-      const createBtn = root?.querySelector("#presetCreateBtn");
+    render: () => {
+      attachDialogListeners(activePresetId);
+    },
+    close: async () => {
+      // When dialog closes, set the currently selected preset as active
+      const presetSelect = dialog.element?.[0]?.querySelector("#presetSelect");
+      if (presetSelect) {
+        const selectedPresetId = presetSelect.value ?? DEFAULT_PRESET_ID;
+        const currentActiveId = getActivePresetId();
 
-      const updateDeleteButtonState = () => {
-        if (!presetSelect || !deleteBtn) return;
-        const isDefaultSelected = presetSelect.value === DEFAULT_PRESET_ID;
-        deleteBtn.disabled = isDefaultSelected;
-        deleteBtn.title = isDefaultSelected
-          ? "Default preset cannot be deleted."
-          : "Delete selected preset";
-      };
-
-      updateDeleteButtonState();
-      presetSelect?.addEventListener("change", updateDeleteButtonState);
-
-      renameBtn?.addEventListener("click", async () => {
-        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
-        dialog.close();
-        await renamePreset(presetId);
-      });
-
-      duplicateBtn?.addEventListener("click", async () => {
-        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
-        dialog.close();
-        await duplicatePreset(presetId);
-      });
-
-      deleteBtn?.addEventListener("click", async () => {
-        if (deleteBtn.disabled) return;
-        const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
-        dialog.close();
-        await deletePreset(presetId);
-      });
-
-      createBtn?.addEventListener("click", async () => {
-        dialog.close();
-        await createNewPreset();
-      });
+        if (selectedPresetId !== currentActiveId) {
+          await game.settings.set(MODULE_ID, "activeBaselinePresetId", selectedPresetId);
+          await rerenderBaselineManagers();
+        }
+      }
     }
   });
 

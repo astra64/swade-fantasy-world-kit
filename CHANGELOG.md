@@ -6,17 +6,32 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
+## [0.5.2] - 2026-06-06
+
+### Added
+- **Preset Manager UX Polish**: Keep Manage Presets dialog open during create/rename/duplicate/delete operations instead of exiting to main window
+- **Auto-select presets**: Newly created or modified presets are auto-selected in the Manage Presets dropdown
+- **Active preset sync**: When Manage Presets dialog closes, the selected preset becomes active in the Preset Modules manager
+
+### Changed
+- **Default preset protection**: Default preset is now locked from both deletion and renaming (previously only deletion was blocked)
+- **Preset management workflow**: Preset editing is now streamlined with the dialog staying open for multiple operations
+
+### Technical
+- Simplified preset management by setting active preset on dialog close instead of per-operation
+- Removed unnecessary inline rerenders during CRUD operations
+
+---
+
 ## [0.5.1] - In Progress
 
 ### Completed for v0.5.1
 - **Foundry v14 Compatibility**: Validated all core features (preset manager, save/apply, curated visibility, pack access control) work correctly with Foundry v14. No breaking API changes. Updated module.json to require v14+. Added try-catch safeguards around pack method patching for robustness.
 
 ### Upcoming for v0.5.x
-- v0.5.2: BaselineModulesManager ApplicationV2 Migration
 - v0.5.3: Preset export/import with versioning
-- v0.5.4: Preset manager UX polish (auto-select, dialog persistence)
-- v0.5.5: Pack selector enhancements and folder visibility
-- v0.5.6+: Code quality and orchestrator simplification
+- v0.5.4: Pack selector enhancements and folder visibility
+- v0.5.5+: Code quality and orchestrator simplification
 
 ---
 
