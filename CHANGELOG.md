@@ -12,9 +12,18 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 - **Foundry v14 Compatibility**: Validated all core features (preset manager, save/apply, curated visibility, pack access control) work correctly with Foundry v14. No breaking API changes. Updated module.json to require v14+. Added try-catch safeguards around pack method patching for robustness.
 
 ### Upcoming for v0.5.x
-- Preset portability (export/import with versioning).
-- ApplicationV2 migration for BaselineModulesManager (remove V1 Application deprecation warning).
-- UX polish (auto-select presets, manage dialog persistence, pack selector clarity).
+- v0.5.2: BaselineModulesManager ApplicationV2 Migration
+- v0.5.3: Preset export/import with versioning
+- v0.5.4: Preset manager UX polish (auto-select, dialog persistence)
+- v0.5.5: Pack selector enhancements and folder visibility
+- v0.5.6+: Code quality and orchestrator simplification
+
+---
+
+## [0.5.2] - Planned
+
+### Changed
+- **BaselineModulesManager ApplicationV2 Migration**: Migrate from deprecated V1 FormApplication to V2 ApplicationV2 API (removes deprecation warning appearing in v14, addresses removal planned for v16).
 
 ---
 
