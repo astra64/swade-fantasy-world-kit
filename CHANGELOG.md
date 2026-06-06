@@ -6,6 +6,27 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
+## [0.5.0] - In Progress
+
+### Changed
+- **Phase 1: World Setup Tools Organization** (refactor, no behavior changes)
+  - Reorganized preset/dependency code into `scripts/world-setup-tools/` folder structure.
+  - Moved `lib/preset-utils.js`, `lib/dependencies.js`, `apps/BaselineModulesManager.js`, `apps/ExtraVisiblePacksSelector.js` to new folder.
+  - Created `world-setup-tools/lib/index.js` as centralized API export via `createWorldSetupToolsApi()`.
+  - Updated `scripts/main.js` to import from new locations and wired window API exposure.
+  - Removed duplicate functions (`buildSelectionSignature`, `openBaselineManager`).
+  - Established clean API boundary for future v0.6.x module extraction.
+
+### Fixed
+- Apply preset result display simplified (notification only, no confirmation dialog).
+
+### Upcoming for v0.5.x
+- Foundry v14 and SWADE system compatibility testing/updates.
+- Preset portability (export/import with versioning).
+- UX polish (auto-select presets, manage dialog persistence, pack selector clarity).
+
+---
+
 ## [0.4.0] - 2025-06-06
 
 ### Added

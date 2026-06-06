@@ -68,7 +68,7 @@ const {
   injectSettingsQuickAccessButton,
   tryInjectSettingsQuickAccessButton,
   applyPlayerPackAccessPatch,
-  syncQuickInsertPackRestrictions
+  syncSearchModulePackRestrictions
 } = setupUI({
   parseVisiblePackList: utilFunctions.parseVisiblePackList,
   openBaselineManager
@@ -76,7 +76,7 @@ const {
 
 async function handleVisibilitySettingsChanged() {
   rerenderCompendiumDirectory();
-  await syncQuickInsertPackRestrictions();
+  await syncSearchModulePackRestrictions();
 }
 
 async function rerenderBaselineManagers() {
@@ -463,7 +463,7 @@ Hooks.once("ready", async () => {
     openBaselineManager();
   }
 
-  await syncQuickInsertPackRestrictions();
+  await syncSearchModulePackRestrictions();
   await validateModuleDependencies();
 
   // Re-apply styling/filtering in case compendium tab is already rendered.

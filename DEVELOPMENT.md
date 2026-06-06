@@ -142,14 +142,13 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 
 ### Mid Term (v0.5.x)
 
-**1. Phase 1: In-Repo World Setup Tools Organization** (🚀 in progress)
-  - Reorganize world setup tools into `scripts/world-setup-tools/` folder structure.
-  - Extract preset-specific settings and CSS.
-  - Establish clean API boundary via `world-setup-tools/lib/index.js`.
-  - Update orchestrator and settings imports.
-  - Run full validation checklist to ensure no behavior regression.
+**1. Phase 1: In-Repo World Setup Tools Organization** (✅ COMPLETE)
+  - Reorganized world setup tools into `scripts/world-setup-tools/` folder structure.
+  - Established clean API boundary via `world-setup-tools/lib/index.js`.
+  - All preset/save/apply flows validated with full visual regression testing.
+  - Commit: `refactor: move preset/dependency code to world-setup-tools folder`
 
-**2. Foundry v14 and SWADE System Compatibility Update** (high priority, after Phase 1)
+**2. Foundry v14 and SWADE System Compatibility Update** (🚀 in progress)
   - Update module manifest to support Foundry v14+.
   - Test all features against latest SWADE system version (verify compendium structure, item types, data schema).
   - Fix any breaking changes in preset manager, curated visibility, or settings.

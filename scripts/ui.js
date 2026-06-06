@@ -146,7 +146,9 @@ export function setupUI(config) {
     }
   }
 
-  async function syncQuickInsertPackRestrictions() {
+  // Syncs Curated Mode pack filtering to compatible search modules. 
+  // Currently supports Quick Insert, but designed to be expanded for other search alternatives in the future.
+  async function syncSearchModulePackRestrictions() {
     if (!game.user?.isGM) return;
 
     const quickInsertModule = game.modules.get("quick-insert");
@@ -207,6 +209,6 @@ export function setupUI(config) {
     injectSettingsQuickAccessButton,
     tryInjectSettingsQuickAccessButton,
     applyPlayerPackAccessPatch,
-    syncQuickInsertPackRestrictions
+    syncSearchModulePackRestrictions
   };
 }

@@ -1,10 +1,10 @@
 {
   "id": "swade-fantasy-world-kit",
   "title": "SWADE Fantasy World Kit",
-  "version": "0.4.0",
+  "version": "0.5.1",
   "compatibility": {
     "minimum": "13",
-    "verified": "13"
+    "verified": "14"
   },
   "description": "<p>Just some consolidated compendiums for fantasy SWADE games. Includes icons configured to use (mostly) unique https://game-icons.net/ icons for each compendium icon.</p>",
   "flags": {
