@@ -30,13 +30,13 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 ## [0.5.0] - Planned
 
 ### Changed
-- **Phase 1: World Setup Tools Organization** (refactor, no behavior changes)
-  - Reorganized preset/dependency code into `scripts/world-setup-tools/` folder structure.
+- **World Setup Tools Organization (In-Repo Phase 1)** (refactor, no behavior changes)
+  - Reorganized preset/dependency code into `scripts/world-setup-tools/` folder structure as first step toward extracting into separate system-agnostic dependency module.
   - Moved `lib/preset-utils.js`, `lib/dependencies.js`, `apps/BaselineModulesManager.js`, `apps/ExtraVisiblePacksSelector.js` to new folder.
   - Created `world-setup-tools/lib/index.js` as centralized API export via `createWorldSetupToolsApi()`.
   - Updated `scripts/main.js` to import from new locations and wired window API exposure.
   - Removed duplicate functions (`buildSelectionSignature`, `openBaselineManager`).
-  - Established clean API boundary for future v0.6.x module extraction.
+  - Established clean API boundary for future full module extraction.
 
 ### Fixed
 - Apply preset result display simplified (notification only, no confirmation dialog).

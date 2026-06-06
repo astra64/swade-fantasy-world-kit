@@ -142,11 +142,11 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 
 ### Mid Term (v0.5.x)
 
-**1. Phase 1: In-Repo World Setup Tools Organization** (✅ COMPLETE)
+**1. World Setup Tools In-Repo Organization (Phase 1 of Modularization Plan)** (✅ COMPLETE)
+  - First step toward extracting world setup tools into a separate system-agnostic dependency module (see "Post-Roadmap Modularization" section for full plan).
   - Reorganized world setup tools into `scripts/world-setup-tools/` folder structure.
   - Established clean API boundary via `world-setup-tools/lib/index.js`.
   - All preset/save/apply flows validated with full visual regression testing.
-  - Commit: `refactor: move preset/dependency code to world-setup-tools folder`
 
 **2. Foundry v14 and SWADE System Compatibility Update** (✅ COMPLETE)
   - Updated module manifest to support Foundry v14+ (minimum: 14).
@@ -154,34 +154,28 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
   - Verified compendium pack imports/exports work correctly with v14 data schema.
   - All player and GM features operational; no breaking API changes detected.
   - Known future task: Migrate BaselineModulesManager from V1 to V2 Application framework (deprecation warning appearing in v14, removal planned for v16).
-  - Commit: `feat: v14 compatibility validation and safeguards`
 
 **3. BaselineModulesManager ApplicationV2 Migration** (🚀 planned for v0.5.2)
   - Migrate BaselineModulesManager from V1 FormApplication to V2 ApplicationV2.
   - Remove V1 Application deprecation warning (deprecated since v13, removal planned for v16).
   - Adapt getData/activateListeners/render patterns to V2 API.
   - Validate all UI interactions work correctly with V2.
-  - Commit: `refactor: migrate BaselineModulesManager to ApplicationV2`
 
 **4. Preset Portability** (planned for v0.5.3)
   - Export/import named presets with schema versioning.
   - Conflict handling for missing modules.
-  - Commit: `feat: add preset export/import with versioning`
 
 **5. Preset Manager UX Polish** (planned for v0.5.4)
   - Auto-select newly created preset after "Manage Presets" → "Create".
   - Auto-select preset after rename/duplicate/delete in manage dialog.
   - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
-  - Commit: `ux: improve preset manager selection and dialog persistence`
 
 **6. Pack Selector and Compendium Enhancements** (planned for v0.5.5)
   - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
   - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
-  - Commit: `ux: enhance pack selector and folder visibility`
 
 **7. Code Quality and Refactoring** (planned for v0.5.6+)
   - Continue reducing orchestrator complexity in `scripts/main.js` where practical.
-  - Commit: `refactor: simplify main.js orchestration`
 
 ### Cleanup Release (post-legacy window)
 
