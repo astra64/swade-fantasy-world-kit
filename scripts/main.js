@@ -405,8 +405,6 @@ async function updateTitleCache(settingKey, ids) {
 }
 
 Hooks.once("init", () => {
-  console.log(`[${MODULE_ID}] init`);
-
   game.keybindings.register(MODULE_ID, "openBaselineManager", {
     name: "Open Preset Modules",
     hint: "Open the Preset Modules manager quickly.",

@@ -110,16 +110,16 @@ This file tracks current architecture, implemented behavior, release readiness c
 
 Run this after significant code changes and before release.
 
-1. Module loads in Foundry v13 with no init/ready errors.
+1. Module loads in Foundry v14 with no init/ready errors.
 2. Preset manager opens from settings menu and `Ctrl+Shift+B`.
 3. Save to Preset persists changes to the selected preset.
-4. **Preview Apply** button shows expected enable/disable diff with module names (new).
+4. **Preview Apply** button shows expected enable/disable diff with module names.
 5. Apply Preset to World:
    - enables modules in preset,
    - disables active modules not in preset,
    - prompts for missing installed dependencies,
    - skips uninstalled modules,
-   - shows detailed summary dialog with module names (new),
+   - shows detailed summary dialog with module names,
    - reloads world when needed.
 6. Preset manager reopens after reload when apply triggered reload.
 7. Curated compendium filtering works for players and GM override behaves correctly.
@@ -148,13 +148,13 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
   - All preset/save/apply flows validated with full visual regression testing.
   - Commit: `refactor: move preset/dependency code to world-setup-tools folder`
 
-**2. Foundry v14 and SWADE System Compatibility Update** (🚀 in progress)
-  - Update module manifest to support Foundry v14+.
-  - Test all features against latest SWADE system version (verify compendium structure, item types, data schema).
-  - Fix any breaking changes in preset manager, curated visibility, or settings.
-  - Update validation checklist tests for v14 compatibility.
-  - Verify pack imports and exports work correctly.
-  - Update README with new Foundry/SWADE version requirements.
+**2. Foundry v14 and SWADE System Compatibility Update** (✅ COMPLETE)
+  - Updated module manifest to support Foundry v14+ (minimum: 14).
+  - Validated all features against Foundry v14: preset manager, save/apply, curated visibility, pack access control.
+  - Verified compendium pack imports/exports work correctly with v14 data schema.
+  - All player and GM features operational; no breaking API changes detected.
+  - Known future task: Migrate BaselineModulesManager from V1 to V2 Application framework (deprecation warning appearing in v14, removal planned for v16).
+  - Commit: `feat: v14 compatibility validation and safeguards`
 
 **3. Additional Improvements**
   - Preset portability:
@@ -167,6 +167,8 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
     - Auto-select preset after rename/duplicate/delete in manage dialog.
     - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
   - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
+  - Compendium folder visibility enhancement:
+    - When all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
 
 ### Cleanup Release (post-legacy window)
 

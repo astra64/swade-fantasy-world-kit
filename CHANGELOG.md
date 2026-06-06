@@ -6,7 +6,19 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
-## [0.5.0] - In Progress
+## [0.5.1] - In Progress
+
+### Completed for v0.5.1
+- **Foundry v14 Compatibility**: Validated all core features (preset manager, save/apply, curated visibility, pack access control) work correctly with Foundry v14. No breaking API changes. Updated module.json to require v14+. Added try-catch safeguards around pack method patching for robustness.
+
+### Upcoming for v0.5.x
+- Preset portability (export/import with versioning).
+- ApplicationV2 migration for BaselineModulesManager (remove V1 Application deprecation warning).
+- UX polish (auto-select presets, manage dialog persistence, pack selector clarity).
+
+---
+
+## [0.5.0] - Planned
 
 ### Changed
 - **Phase 1: World Setup Tools Organization** (refactor, no behavior changes)
@@ -19,11 +31,6 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ### Fixed
 - Apply preset result display simplified (notification only, no confirmation dialog).
-
-### Upcoming for v0.5.x
-- Foundry v14 and SWADE system compatibility testing/updates.
-- Preset portability (export/import with versioning).
-- UX polish (auto-select presets, manage dialog persistence, pack selector clarity).
 
 ---
 

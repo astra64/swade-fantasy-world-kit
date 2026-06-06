@@ -132,17 +132,24 @@ export function setupUI(config) {
       if (pack._scfcPatchedAccess === true) continue;
       if (typeof pack.testUserPermission !== "function") continue;
 
-      const originalTestUserPermission = pack.testUserPermission.bind(pack);
+      try {
+        const originalTestUserPermission = pack.testUserPermission.bind(pack);
 
-      pack.testUserPermission = function(user, permission, options) {
-        const basePermission = originalTestUserPermission(user, permission, options);
-        if (!basePermission) return false;
+        pack.testUserPermission = function(user, permission, options) {
+          const basePermission = originalTestUserPermission(user, permission, options);
+          if (!basePermission) return false;
 
-        const effectiveUser = user ?? game.user;
-        return isPackAllowedForUser(this.collection, effectiveUser);
-      };
+          const effectiveUser = user ?? game.user;
+          return isPackAllowedForUser(this.collection, effectiveUser);
+        };
 
-      pack._scfcPatchedAccess = true;
+        pack._scfcPatchedAccess = true;
+      } catch (error) {
+        console.warn(
+          `[SWADE Fantasy World Kit] Failed to patch pack.testUserPermission for ${pack.collection}:`,
+          error
+        );
+      }
     }
   }
 
