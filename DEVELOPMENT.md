@@ -155,26 +155,20 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
   - All player and GM features operational; no breaking API changes detected.
   - Known future task: Migrate BaselineModulesManager from V1 to V2 Application framework (deprecation warning appearing in v14, removal planned for v16).
 
-**3. BaselineModulesManager ApplicationV2 Migration** (🚀 planned for v0.5.2)
-  - Migrate BaselineModulesManager from V1 FormApplication to V2 ApplicationV2.
-  - Remove V1 Application deprecation warning (deprecated since v13, removal planned for v16).
-  - Adapt getData/activateListeners/render patterns to V2 API.
-  - Validate all UI interactions work correctly with V2.
-
-**4. Preset Portability** (planned for v0.5.3)
+**3. Preset Portability** (planned for v0.5.3)
   - Export/import named presets with schema versioning.
   - Conflict handling for missing modules.
 
-**5. Preset Manager UX Polish** (planned for v0.5.4)
+**4. Preset Manager UX Polish** (planned for v0.5.4)
   - Auto-select newly created preset after "Manage Presets" → "Create".
   - Auto-select preset after rename/duplicate/delete in manage dialog.
   - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
 
-**6. Pack Selector and Compendium Enhancements** (planned for v0.5.5)
+**5. Pack Selector and Compendium Enhancements** (planned for v0.5.5)
   - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
   - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
 
-**7. Code Quality and Refactoring** (planned for v0.5.6+)
+**6. Code Quality and Refactoring** (planned for v0.5.6+)
   - Continue reducing orchestrator complexity in `scripts/main.js` where practical.
 
 ### Cleanup Release (post-legacy window)
@@ -188,6 +182,7 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 - Developer tools for compendium management: Helper UI for `module.json` updates, validation tools, or other workflow improvements for adding/managing custom compendiums. Currently manual but straightforward enough that tooling is not a priority.
 - Actor/item migration helpers for replacing records with module compendium versions.
 - Optional import-compatibility image remapper fallback.
+- **BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [APPLICATIONV2_MIGRATION.md](APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.
 
 ### Post-Roadmap Modularization (Parked)
 
