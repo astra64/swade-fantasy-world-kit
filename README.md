@@ -91,21 +91,35 @@ The manager will warn you if any selected modules have dependencies that aren't 
 
 ## Editing Compendium Content
 
+> **Note:** This section is for developers maintaining this module. Users and GMs cannot add/edit compendiums through the Foundry UI — see "Planned features" below for potential future changes.
+
 ### Edit an Existing Compendium
 
 1. Open Foundry as GM in a world with this module enabled.
-2. Open the target compendium, unlock it, and make your edits.
-3. Re-lock the compendium when done.
-4. Close Foundry cleanly before committing (avoids partial writes).
+2. In the compendium sidebar, right-click the target compendium and select "Edit" (or click its lock icon to unlock).
+3. Make your edits through Foundry's UI.
+4. Lock the compendium when done.
+5. **Close Foundry completely** before committing changes (Foundry uses LevelDB files that may have partial writes while running).
 
 ### Add a New Compendium
 
 1. Create the new compendium pack in Foundry (set the correct document type and system).
 2. Populate or import entries.
-3. Close Foundry cleanly.
-4. Add a new pack entry to `module.json` under `packs` and add its name to the appropriate `packFolders` group.
-5. Restart Foundry and confirm the pack appears and behaves correctly.
+3. Close Foundry completely.
+4. Open `module.json` and add a new entry under `packs`:
+   - `name`: unique machine-readable ID (e.g., `"powers-custom"`)
+   - `label`: display name in Foundry UI (e.g., `"Powers (Custom)"`)
+   - `path`: folder path where Foundry stores the data (e.g., `"packs/powers-custom"`)
+   - `type`: document type (`"Item"` or `"Actor"`)
+   - `system`: `"swade"`
+   - `ownership`: set appropriate player/assistant permissions
+5. Add the pack name to the appropriate `packFolders` group for organization.
+6. Restart Foundry and confirm the pack appears with the correct data and organization.
 
-> Do not hand-edit `.ldb` files directly. Do not commit while Foundry is running.
+> **Do not:** hand-edit `.ldb` files directly or commit while Foundry is running. Foundry owns these files and corrupting them breaks everything.
+
+### Planned Features
+
+**Developer tools for compendium management** — Potential future workflow improvements for managing custom packs (e.g., helper UI for module.json updates, validation tools). Currently these operations are manual but straightforward enough that tooling is not a priority.
 
 

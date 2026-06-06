@@ -184,6 +184,8 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 
 ### Future (v0.6.x+)
 
+- **Workflow and feature justification review** — Systematically document each user workflow the module enables (e.g., "GM swaps module presets between campaigns", "Player sees curated compendiums"). For each: identify the problem it solves, assess complexity vs. value, consider simpler alternatives. Ensures features justify their maintenance burden and design is sound.
+- Developer tools for compendium management: Helper UI for `module.json` updates, validation tools, or other workflow improvements for adding/managing custom compendiums. Currently manual but straightforward enough that tooling is not a priority.
 - Actor/item migration helpers for replacing records with module compendium versions.
 - Optional import-compatibility image remapper fallback.
 
@@ -310,3 +312,4 @@ Once Phase 1 is complete and validated in a few releases:
 - Keep public settings keys stable unless migration is included.
 - Treat preset apply behavior as a core contract: preset is authoritative.
 - Validate in Foundry after refactors even when static diagnostics are clean.
+- When proposing features or refactors, critically question: what problem does this solve? Can users achieve the same goal another way with less complexity? Be willing to suggest simplifications or deprioritizations if the underlying need is unclear.
