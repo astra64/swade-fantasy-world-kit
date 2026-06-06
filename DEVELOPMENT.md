@@ -168,9 +168,6 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
   - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
   - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
 
-**6. Code Quality and Refactoring** (planned for v0.5.6+)
-  - Continue reducing orchestrator complexity in `scripts/main.js` where practical.
-
 ### Cleanup Release (post-legacy window)
 
 - Remove legacy migration function and flags.
