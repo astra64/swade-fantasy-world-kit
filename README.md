@@ -86,6 +86,8 @@ The manager will warn you if any selected modules have dependencies that aren't 
 - Required dependencies of this module (SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net) are always included and cannot be removed from the baseline.
 - Module titles are cached so previously-configured entries are still identifiable even after a module is uninstalled.
 - Presets can be created, renamed, duplicated, and deleted from **Manage Presets**.
+- **Export/Import Presets**: Export a preset to clipboard as JSON (preserves module IDs and schema version). Import presets from JSON with conflict detection—choose "Import Anyway" to keep all module IDs, or "Filter & Import" to remove modules not installed in your world.
+- Missing modules in presets can be removed via the delete button (×) in the Preset Contents section without re-rendering the entire dialog.
 
 ---
 
