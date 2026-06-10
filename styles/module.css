@@ -7,6 +7,19 @@ body {
   display: none !important;
 }
 
+.scfc-hidden-folder {
+  display: none !important;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 #sidebar #compendium [data-pack].scfc-swade-pack,
 #sidebar #compendium .directory-item.scfc-swade-pack,
 #sidebar #compendium li.scfc-swade-pack {
@@ -587,22 +600,18 @@ body {
 .scfc-remove-configured {
   all: unset;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   padding: 0 0.18rem;
   border-radius: 3px;
   color: var(--color-text-light-6);
-  opacity: 0;
-  transition: opacity 0.1s, color 0.1s;
-}
-
-.scfc-scroll-panel-configured .scfc-list-row:hover .scfc-remove-configured,
-.scfc-scroll-panel-configured .scfc-list-row:focus-within .scfc-remove-configured {
-  opacity: 1;
+  opacity: 0.7;
+  transition: opacity 0.1s, background 0.1s;
 }
 
 .scfc-remove-configured:hover {
-  color: var(--color-text-hyperlink);
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-text-light-6) 15%, transparent);
 }
 
 .scfc-scroll-panel .scfc-panel-header {
@@ -765,11 +774,24 @@ body {
 .scfc-pack-row {
   justify-content: flex-start;
   margin: 0;
-  padding: 0.14rem 0.26rem;
+  padding: 0.08rem 0.26rem;
   min-width: 0;
   min-height: 32px;
   height: 100%;
   gap: 0.35rem;
+}
+
+.scfc-pack-info {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.02rem;
+}
+
+.scfc-pack-module {
+  font-size: 9px;
+  opacity: 0.65;
+  line-height: 1;
 }
 
 .scfc-pack-row .scfc-row-main {
@@ -777,6 +799,8 @@ body {
   flex: 1 1 auto;
   min-width: 0;
   gap: 0.3rem;
+  align-items: flex-start;
+  padding-top: 0.02rem;
 }
 
 .scfc-pack-row .scfc-row-title {

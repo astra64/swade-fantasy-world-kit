@@ -142,11 +142,11 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 
 ### Mid Term (v0.5.x)
 
-**5. Pack Selector and Compendium Enhancements + Preset Display Polish** (planned for v0.5.5)
-  - Pack Selector improvements:
-    - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
-    - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
-  - Preset Contents display: sort modules by status (missing → inactive → active) for better visibility of preset health.
+Completed items for v0.5.x have been archived to [CHANGELOG.md](CHANGELOG.md).
+
+**Next iterations:**
+- Further preset display enhancements or workflow refinements based on user feedback.
+- Consider additional compendium management tools if needed.
 
 ### Cleanup Release (post-legacy window)
 

@@ -6,6 +6,21 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
+## [0.5.5] - 2026-06-10
+
+### Added
+- **Pack Selector Module Display**: Show parent module name (e.g., "Quick Insert • collection-id") for clarity when multiple modules provide compendiums
+- **Pack Selector Sorting**: Sort packs by module name, then label for logical grouping; more discoverable via search
+- **Empty Folder Auto-hiding**: Automatically hide compendium folder rows when all child packs are hidden by curated filtering
+- **Preset Contents Status Sorting**: Sort modules by status (missing → inactive → active) for better preset health visibility
+- **Missing Module Cleanup**: Add delete button (×) for missing modules in Preset Contents to allow removal without full dialog re-render
+
+### Changed
+- **Pack Selector Layout**: Compressed row spacing to show more packs at once with module name on subtitle
+- **Preset Contents UI**: Smaller, grey delete button (×) appears only for missing modules; clicking remove keeps dialog open and fades row smoothly
+
+---
+
 ## [0.5.4] - TBD
 
 ### Added

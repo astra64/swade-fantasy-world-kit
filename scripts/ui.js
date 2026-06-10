@@ -73,6 +73,14 @@ export function setupUI(config) {
 
       element.classList.add("scfc-hidden-pack");
     }
+
+    // Hide empty folder rows when all their child packs are hidden
+    const folderRows = root.querySelectorAll(".directory-item.folder, li.folder");
+    for (const folder of folderRows) {
+      const childPacks = folder.querySelectorAll(".directory-item:not(.folder), li:not(.folder)");
+      const hasVisibleChild = [...childPacks].some((pack) => !pack.classList.contains("scfc-hidden-pack"));
+      folder.classList.toggle("scfc-hidden-folder", !hasVisibleChild);
+    }
   }
 
   function injectSettingsQuickAccessButton(htmlRoot) {

@@ -20,7 +20,10 @@
         <label class="scfc-list-row scfc-pack-row" data-pack-row data-search="{{pack.searchText}}" data-active-module="{{#if pack.isActiveModule}}true{{else}}false{{/if}}">
           <span class="scfc-row-main">
             <input type="checkbox" name="packs" value="{{pack.id}}" {{#if pack.selected}}checked{{/if}} />
-            <strong class="scfc-row-title">{{pack.label}}</strong>
+            <div class="scfc-pack-info">
+              <strong class="scfc-row-title">{{pack.label}}</strong>
+              <div class="scfc-pack-module">{{pack.moduleName}}</div>
+            </div>
             <span class="scfc-row-meta">{{pack.id}}</span>
           </span>
         </label>

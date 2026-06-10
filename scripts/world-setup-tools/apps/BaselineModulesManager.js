@@ -76,6 +76,12 @@ export class BaselineModulesManager extends FormApplication {
           installed: Boolean(module),
           active: Boolean(module?.active)
         };
+      })
+      .sort((a, b) => {
+        const aStatusOrder = !a.installed ? 0 : a.active ? 2 : 1;
+        const bStatusOrder = !b.installed ? 0 : b.active ? 2 : 1;
+        if (aStatusOrder !== bStatusOrder) return aStatusOrder - bStatusOrder;
+        return (a.title ?? a.id).localeCompare(b.title ?? b.id);
       });
 
     const installedCount = installedModules.length;
@@ -280,6 +286,40 @@ export class BaselineModulesManager extends FormApplication {
       const openPresetManagementDialog = window.openPresetManagementDialog;
       await openPresetManagementDialog();
     });
+
+    // Handle removal of missing modules from preset contents
+    const removeConfiguredButtons = html[0].querySelectorAll("[data-remove-configured]");
+    for (const btn of removeConfiguredButtons) {
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const moduleIdToRemove = btn.dataset.removeConfigured;
+        const presetApi = window.swadeFwkPresetApi;
+
+        const currentModuleIds = presetApi.getActivePresetModuleIds();
+        const updated = currentModuleIds.filter((id) => id !== moduleIdToRemove);
+
+        // Update preset
+        await presetApi.setActivePresetModuleIds(updated);
+
+        // Update DOM directly to avoid re-rendering the whole dialog
+        const row = btn.closest("[data-removed]");
+        if (row) {
+          row.style.animation = "fadeOut 0.2s ease-out";
+          setTimeout(() => row.remove(), 200);
+        }
+
+        // Update configured count
+        const summaryEl = html[0].querySelector(".scfc-configured-summary strong");
+        if (summaryEl) {
+          const currentCount = parseInt(summaryEl.textContent) || 0;
+          if (currentCount > 0) {
+            summaryEl.textContent = currentCount - 1;
+          }
+        }
+
+        ui.notifications?.info(`Removed missing module from preset.`);
+      });
+    }
 
     updateActiveFilterButtonState();
     applyModuleFilters();

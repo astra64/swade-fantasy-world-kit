@@ -76,6 +76,12 @@ export class BaselineModulesManager extends FormApplication {
           installed: Boolean(module),
           active: Boolean(module?.active)
         };
+      })
+      .sort((a, b) => {
+        const aStatusOrder = !a.installed ? 0 : a.active ? 2 : 1;
+        const bStatusOrder = !b.installed ? 0 : b.active ? 2 : 1;
+        if (aStatusOrder !== bStatusOrder) return aStatusOrder - bStatusOrder;
+        return (a.title ?? a.id).localeCompare(b.title ?? b.id);
       });
 
     const installedCount = installedModules.length;

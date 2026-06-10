@@ -40,16 +40,23 @@ export class ExtraVisiblePacksSelector extends FormApplication {
         const id = pack.collection;
         const label = pack.metadata?.label ?? id;
         const moduleId = id.split(".")[0] ?? "";
+        const module = game.modules.get(moduleId);
+        const moduleName = module?.title ?? moduleId;
+        console.debug(`[Pack Selector] ${id}: moduleId=${moduleId}, moduleName=${moduleName}, module=${module?.id}`);
         return {
           id,
           label,
           moduleId,
+          moduleName,
           isActiveModule: activeModuleIds.has(moduleId),
           selected: selected.has(id),
-          searchText: `${id} ${label} ${moduleId}`.toLowerCase()
+          searchText: `${id} ${label} ${moduleId} ${moduleName}`.toLowerCase()
         };
       })
-      .sort((a, b) => a.id.localeCompare(b.id));
+      .sort((a, b) => {
+        const moduleCompare = a.moduleName.localeCompare(b.moduleName);
+        return moduleCompare !== 0 ? moduleCompare : a.label.localeCompare(b.label);
+      });
 
     return {
       packs,

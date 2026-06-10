@@ -96,7 +96,7 @@
       <p class="notes scfc-saved-baseline-notes">Shows what is stored in the editing preset. May include uninstalled modules.</p>
       <div class="scfc-scroll-panel scfc-scroll-panel-configured">
         {{#each configured as |entry|}}
-          <div class="scfc-list-row" {{#unless entry.installed}}title="'{{entry.id}}' is saved in your editing preset but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab."{{/unless}}>
+          <div class="scfc-list-row" data-removed {{#unless entry.installed}}title="'{{entry.id}}' is saved in your editing preset but is not installed in this Foundry instance. To fix this: install the module via the Add-on Modules tab."{{/unless}}>
             <span class="scfc-configured-entry-main">
               {{#if entry.title}}
                 <strong class="scfc-row-title">{{entry.title}}</strong>
@@ -111,6 +111,9 @@
                   <strong class="scfc-status-badge">installed</strong>
                 {{/if}}
               {{else}}
+                <button type="button" class="scfc-remove-configured" data-remove-configured="{{entry.id}}" title="Remove from preset">
+                  <i class="fas fa-times"></i>
+                </button>
                 <strong class="scfc-status-badge scfc-status-missing">missing</strong>
               {{/if}}
             </span>
