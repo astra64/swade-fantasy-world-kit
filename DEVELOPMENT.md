@@ -142,31 +142,11 @@ Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the
 
 ### Mid Term (v0.5.x)
 
-**1. World Setup Tools In-Repo Organization (Phase 1 of Modularization Plan)** (✅ COMPLETE)
-  - First step toward extracting world setup tools into a separate system-agnostic dependency module (see "Post-Roadmap Modularization" section for full plan).
-  - Reorganized world setup tools into `scripts/world-setup-tools/` folder structure.
-  - Established clean API boundary via `world-setup-tools/lib/index.js`.
-  - All preset/save/apply flows validated with full visual regression testing.
-
-**2. Foundry v14 and SWADE System Compatibility Update** (✅ COMPLETE)
-  - Updated module manifest to support Foundry v14+ (minimum: 14).
-  - Validated all features against Foundry v14: preset manager, save/apply, curated visibility, pack access control.
-  - Verified compendium pack imports/exports work correctly with v14 data schema.
-  - All player and GM features operational; no breaking API changes detected.
-  - Known future task: Migrate BaselineModulesManager from V1 to V2 Application framework (deprecation warning appearing in v14, removal planned for v16).
-
-**3. Preset Manager UX Polish** (✅ COMPLETE)
-  - Auto-select newly created preset after "Manage Presets" → "Create".
-  - Auto-select preset after rename/duplicate/delete in manage dialog.
-  - Remain in "Manage Presets" dialog when renaming instead of exiting to Preset Modules.
-
-**4. Preset Portability** (planned for v0.5.4)
-  - Export/import named presets with schema versioning.
-  - Conflict handling for missing modules.
-
-**5. Pack Selector and Compendium Enhancements** (planned for v0.5.5)
-  - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
-  - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
+**5. Pack Selector and Compendium Enhancements + Preset Display Polish** (planned for v0.5.5)
+  - Pack Selector improvements:
+    - Show parent module/folder in Pack Selector for clarity (e.g., distinguish multiple "Skills" compendiums from different modules).
+    - Compendium folder visibility enhancement: when all compendiums within a folder are hidden, automatically hide the folder itself for cleaner UI.
+  - Preset Contents display: sort modules by status (missing → inactive → active) for better visibility of preset health.
 
 ### Cleanup Release (post-legacy window)
 

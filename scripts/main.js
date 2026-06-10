@@ -1,4 +1,5 @@
 import { createWorldSetupToolsApi } from "./world-setup-tools/lib/index.js";
+import { exportPreset, importPreset } from "./world-setup-tools/lib/preset-utils.js";
 import { BaselineModulesManager } from "./world-setup-tools/apps/BaselineModulesManager.js";
 import { ExtraVisiblePacksSelector } from "./world-setup-tools/apps/ExtraVisiblePacksSelector.js";
 import { setupSettings } from "./settings.js";
@@ -247,6 +248,13 @@ async function openPresetManagementDialog() {
           <button type="button" id="presetDeleteBtn" style="cursor: pointer;">Delete</button>
           <button type="button" id="presetCreateBtn" style="cursor: pointer;">Create New</button>
         </div>
+        <div style="display: grid; gap: 0.3rem; border-top: 1px solid #ddd; padding-top: 0.5rem; margin-top: 0.5rem;">
+          <label style="font-weight: 600; font-size: 12px; color: #888;">Export / Import:</label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+            <button type="button" id="presetExportBtn" style="cursor: pointer;" title="Copy preset JSON to clipboard">Export</button>
+            <button type="button" id="presetImportBtn" style="cursor: pointer;" title="Import preset from JSON">Import</button>
+          </div>
+        </div>
       </div>
     `;
   };
@@ -269,6 +277,8 @@ async function openPresetManagementDialog() {
     const duplicateBtn = root.querySelector("#presetDuplicateBtn");
     const deleteBtn = root.querySelector("#presetDeleteBtn");
     const createBtn = root.querySelector("#presetCreateBtn");
+    const exportBtn = root.querySelector("#presetExportBtn");
+    const importBtn = root.querySelector("#presetImportBtn");
 
     const updateButtonState = () => {
       if (!presetSelect) return;
@@ -319,6 +329,17 @@ async function openPresetManagementDialog() {
       await createNewPreset((newId) => {
         refreshDialog(newId);
       });
+    });
+
+    exportBtn?.addEventListener("click", async () => {
+      const presetId = presetSelect?.value ?? DEFAULT_PRESET_ID;
+      exportPreset(presetId, MODULE_ID, DEFAULT_PRESET_ID);
+    });
+
+    importBtn?.addEventListener("click", async () => {
+      await importPreset((newId) => {
+        refreshDialog(newId);
+      }, MODULE_ID, DEFAULT_PRESET_ID);
     });
   };
 

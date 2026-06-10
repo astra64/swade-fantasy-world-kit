@@ -6,6 +6,33 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
+## [0.5.4] - TBD
+
+### Added
+- **Preset Export/Import**: Export presets to clipboard as JSON with schema versioning; import presets with conflict detection
+- **Conflict Handling**: When importing presets with missing modules, users can choose to "Import Anyway" (preserves all module IDs) or "Filter & Import" (removes missing modules)
+- **Schema Versioning**: Export format includes `schemaVersion: 1` for forward compatibility with future schema changes
+
+### Technical
+- New `exportPreset()`, `exportPresetToClipboard()`, `importPreset()`, `validatePresetExport()` functions in preset-utils.js
+- Separate Export/Import buttons in Manage Presets dialog
+- Proper callback chaining for new preset selection after import
+
+---
+
+## [0.5.3] - TBD
+
+### Added
+- **World Setup Tools In-Repo Organization (Phase 1)**: Reorganized world setup tools into `scripts/world-setup-tools/` folder structure as first step toward full module extraction
+- **Clean API Boundary**: Established `world-setup-tools/lib/index.js` as centralized API via `createWorldSetupToolsApi()`
+
+### Technical
+- Moved preset-utils.js, dependencies.js, BaselineModulesManager.js to dedicated folder structure
+- Updated main.js imports and window API exposure
+- No behavior changes, all workflows validated
+
+---
+
 ## [0.5.2] - 2026-06-06
 
 ### Added

@@ -184,3 +184,162 @@ export function createPresetApi({ moduleId, defaultPresetId }) {
     suggestUniquePresetName
   };
 }
+
+export function validatePresetExport(json) {
+  try {
+    const data = typeof json === "string" ? JSON.parse(json) : json;
+
+    if (!data || typeof data !== "object") {
+      return { valid: false, error: "Preset file is invalid" };
+    }
+
+    if (typeof data.schemaVersion !== "number") {
+      return { valid: false, error: "Preset file is missing schema version" };
+    }
+
+    if (data.schemaVersion !== 1) {
+      return { valid: false, error: `Preset file schema version ${data.schemaVersion} is not supported` };
+    }
+
+    if (typeof data.presetName !== "string" || data.presetName.trim().length === 0) {
+      return { valid: false, error: "Preset file is missing preset name" };
+    }
+
+    if (!Array.isArray(data.moduleIds)) {
+      return { valid: false, error: "Preset file is missing module IDs list" };
+    }
+
+    return { valid: true, data };
+  } catch (err) {
+    return { valid: false, error: "Preset file is not valid JSON" };
+  }
+}
+
+export function exportPresetToClipboard(presetId, moduleId, defaultPresetId) {
+  const presetMap = parsePresetMap(
+    game.settings.get(moduleId, "namedBaselinePresets"),
+    defaultPresetId
+  );
+
+  const preset = presetMap[presetId];
+  if (!preset) {
+    ui.notifications?.error("Preset not found");
+    return;
+  }
+
+  const exportData = {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    presetName: preset.name,
+    moduleIds: preset.moduleIds ?? []
+  };
+
+  const jsonString = JSON.stringify(exportData, null, 2);
+
+  navigator.clipboard.writeText(jsonString).then(() => {
+    ui.notifications?.info(`Preset "${preset.name}" copied to clipboard`);
+  }).catch(() => {
+    ui.notifications?.error("Could not copy to clipboard");
+  });
+}
+
+export function exportPreset(presetId, moduleId, defaultPresetId) {
+  exportPresetToClipboard(presetId, moduleId, defaultPresetId);
+}
+
+async function completeImport(presetName, moduleIds, presetMap, moduleId) {
+  const uniqueName = suggestUniquePresetName(presetName, presetMap);
+  const newId = `preset-${Date.now()}`;
+
+  presetMap[newId] = {
+    name: uniqueName,
+    moduleIds
+  };
+
+  await game.settings.set(moduleId, "namedBaselinePresets", JSON.stringify(presetMap));
+  ui.notifications?.info(`Preset "${uniqueName}" imported`);
+
+  return newId;
+}
+
+export function importPreset(onComplete, moduleId, defaultPresetId) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+
+  input.onchange = async () => {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    try {
+      const text = await file.text();
+      const validation = validatePresetExport(text);
+
+      if (!validation.valid) {
+        ui.notifications?.error(`Invalid preset file: ${validation.error}`);
+        return;
+      }
+
+      const { data } = validation;
+      const presetName = String(data.presetName).trim();
+      const moduleIds = normalizeModuleIdArray(data.moduleIds ?? []);
+
+      const presetMap = parsePresetMap(
+        game.settings.get(moduleId, "namedBaselinePresets"),
+        defaultPresetId
+      );
+
+      const installedModules = new Set([...game.modules.keys()]);
+      const missingModules = moduleIds.filter((id) => !installedModules.has(id));
+
+      if (missingModules.length > 0) {
+        const missingList = missingModules
+          .map((id) => `<li>${game.modules.get(id)?.title ?? id}</li>`)
+          .join("");
+
+        const content = `
+          <p>The following modules in this preset are not installed:</p>
+          <ul>${missingList}</ul>
+          <p>Choose how to proceed:</p>
+        `;
+
+        const dialog = new Dialog({
+          title: "Some modules not installed",
+          content,
+          buttons: {
+            importAnyway: {
+              label: "Import Anyway",
+              callback: async () => {
+                const newId = await completeImport(presetName, moduleIds, presetMap, moduleId);
+                onComplete?.(newId);
+              }
+            },
+            filterAndImport: {
+              label: "Filter & Import",
+              callback: async () => {
+                const filteredIds = moduleIds.filter((id) => installedModules.has(id));
+                const newId = await completeImport(presetName, filteredIds, presetMap, moduleId);
+                onComplete?.(newId);
+              }
+            },
+            cancel: {
+              label: "Cancel"
+            }
+          },
+          default: "importAnyway"
+        });
+
+        dialog.render(true);
+      } else {
+        const newId = await completeImport(presetName, moduleIds, presetMap, moduleId);
+        onComplete?.(newId);
+      }
+    } catch (err) {
+      ui.notifications?.error("Could not read preset file");
+      console.error(err);
+    }
+  };
+
+  input.click();
+}
