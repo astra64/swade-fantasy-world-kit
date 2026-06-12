@@ -26,12 +26,11 @@ export function setupUI(config) {
     const gmSeesAllPacks = game.settings.get(MODULE_ID, "gmSeesAllPacks");
     if (isGM && gmSeesAllPacks) return true;
 
-    const modulePrefix = `${MODULE_ID}.`;
     const extraVisiblePacks = parseVisiblePackList(
       game.settings.get(MODULE_ID, "extraVisiblePacks")
     );
 
-    return packId.startsWith(modulePrefix) || extraVisiblePacks.has(packId);
+    return extraVisiblePacks.has(packId);
   }
 
   function styleAndFilterCompendiumRows(htmlRoot) {

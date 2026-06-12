@@ -10,10 +10,6 @@
     <button type="button" data-pack-select-active-modules title="Check all packs belonging to currently active modules">Select Active Modules</button>
   </div>
 
-  {{#if ownedPackCount}}
-    <p class="notes">{{ownedPackCount}} pack(s) from this module are always visible to players and do not appear here.</p>
-  {{/if}}
-
   {{#if hasPacks}}
     <div class="form-group scfc-scroll-panel scfc-scroll-panel-packs">
       {{#each packs as |pack|}}

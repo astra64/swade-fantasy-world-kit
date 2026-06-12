@@ -25,29 +25,44 @@ export class ExtraVisiblePacksSelector extends FormApplication {
       return new Set(String(rawValue).split("\n").map((s) => s.trim()).filter(Boolean));
     };
 
+    const extractSettingName = (packName) => {
+      const match = packName.match(/-([a-z]+)$/);
+      return match ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : packName;
+    };
+
     const selected = parseVisiblePackList(game.settings.get(MODULE_ID, "extraVisiblePacks"));
     const ownedPrefix = `${MODULE_ID}.`;
-    let ownedPackCount = 0;
     const activeModuleIds = new Set(
       [...game.modules.values()].filter((m) => m.active && m.id !== MODULE_ID).map((m) => m.id)
     );
     const packs = [...game.packs.values()]
-      .filter((pack) => {
-        if (pack.collection.startsWith(ownedPrefix)) { ownedPackCount++; return false; }
-        return true;
-      })
       .map((pack) => {
         const id = pack.collection;
         const label = pack.metadata?.label ?? id;
-        const moduleId = id.split(".")[0] ?? "";
-        const module = game.modules.get(moduleId);
-        const moduleName = module?.title ?? moduleId;
+        const firstPart = id.split(".")[0] ?? "";
+
+        let moduleId, moduleName, isActiveModule;
+
+        if (firstPart === MODULE_ID) {
+          const packName = id.split(".")[1] ?? "";
+          const settingName = extractSettingName(packName);
+          moduleId = MODULE_ID;
+          moduleName = settingName;
+          isActiveModule = true;
+        } else {
+          moduleId = firstPart;
+          const module = game.modules.get(moduleId);
+          moduleName = module?.title ?? moduleId;
+          isActiveModule = activeModuleIds.has(moduleId);
+        }
+
+        console.debug(`[Pack Selector] ${id}: moduleId=${moduleId}, moduleName=${moduleName}, isActive=${isActiveModule}`);
         return {
           id,
           label,
           moduleId,
           moduleName,
-          isActiveModule: activeModuleIds.has(moduleId),
+          isActiveModule,
           selected: selected.has(id),
           searchText: `${id} ${label} ${moduleId} ${moduleName}`.toLowerCase()
         };
@@ -59,8 +74,7 @@ export class ExtraVisiblePacksSelector extends FormApplication {
 
     return {
       packs,
-      hasPacks: packs.length > 0,
-      ownedPackCount
+      hasPacks: packs.length > 0
     };
   }
 

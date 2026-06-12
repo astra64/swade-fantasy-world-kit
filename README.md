@@ -8,7 +8,7 @@ A Foundry VTT module for fantasy SWADE games. It does three things:
 2. **Controlled visibility** — limits which compendiums players can see, keeping the sidebar clean. You choose what's exposed; Quick Insert automatically respects the same rules.
 3. **World setup tools** — a Preset Modules manager that lets you define named module presets and apply them to the world in one click.
 
-> **Planned direction (parked):** after current roadmap work is finished, World setup tools are planned for extraction into a separate system-agnostic dependency module. This hub module will be expanded with support for multiple compendium sets across different genres and settings (Fantasy, Scifi, Eberron, Warhammer, etc.) and will gain simple character creation tools (skill calculator and edges/hindrances helpers) integrated with the active compendium set. Curated compendiums and controlled visibility remain SWADE-focused in this package.
+> **Planned direction (parked):** after current roadmap work is finished, World setup tools are planned for extraction into a separate system-agnostic dependency module. This hub module will be expanded with support for additional compendium sets across different genres and settings (Sci-fi, Warhammer, etc.) and will gain simple character creation tools (skill calculator and edges/hindrances helpers) integrated with the active compendium set. Curated compendiums and controlled visibility remain SWADE-focused in this package.
 
 **Requires:** Foundry VTT v14+, SWADE system, SWADE Core Rules, SWADE Fantasy Companion, Game Icons.net
 
@@ -93,8 +93,6 @@ The manager will warn you if any selected modules have dependencies that aren't 
 
 ## Editing Compendium Content
 
-> **Note:** This section is for developers maintaining this module. Users and GMs cannot add/edit compendiums through the Foundry UI — see "Planned features" below for potential future changes.
-
 ### Edit an Existing Compendium
 
 1. Open Foundry as GM in a world with this module enabled.
@@ -103,20 +101,20 @@ The manager will warn you if any selected modules have dependencies that aren't 
 4. Lock the compendium when done.
 5. **Close Foundry completely** before committing changes (Foundry uses LevelDB files that may have partial writes while running).
 
-### Add a New Compendium
+### Add a New Compendium Setting
 
-1. Create the new compendium pack in Foundry (set the correct document type and system).
-2. Populate or import entries.
-3. Close Foundry completely.
-4. Open `module.json` and add a new entry under `packs`:
-   - `name`: unique machine-readable ID (e.g., `"powers-custom"`)
-   - `label`: display name in Foundry UI (e.g., `"Powers (Custom)"`)
-   - `path`: folder path where Foundry stores the data (e.g., `"packs/powers-custom"`)
+1. Create new compendium packs in Foundry (one for each category in your setting).
+2. Close Foundry completely.
+3. Open `module.json` and add new entries under `packs`:
+   - `name`: unique machine-readable ID (e.g., `"armor-sets-mysetting"`)
+   - `label`: display name in Foundry UI (e.g., `"Armor Sets (My Setting)"`)
+   - `path`: folder path (e.g., `"packs/armor-sets-mysetting"`)
    - `type`: document type (`"Item"` or `"Actor"`)
    - `system`: `"swade"`
    - `ownership`: set appropriate player/assistant permissions
-5. Add the pack name to the appropriate `packFolders` group for organization.
-6. Restart Foundry and confirm the pack appears with the correct data and organization.
+4. Create a new `packFolders` entry for your setting (Core, Equipment, Characters).
+5. Add all new pack names to your setting's folders.
+6. Restart Foundry and confirm packs appear with correct data and organization.
 
 > **Do not:** hand-edit `.ldb` files directly or commit while Foundry is running. Foundry owns these files and corrupting them breaks everything.
 
