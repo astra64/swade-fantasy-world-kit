@@ -130,65 +130,72 @@ Run this after significant code changes and before release.
 
 ## Roadmap
 
-**See [CHANGELOG.md](CHANGELOG.md) for completed version history and release notes.**
+**Current version:** v0.5.5 | **See [CHANGELOG.md](CHANGELOG.md) for completed version history and release notes.**
 
-### Roadmap Cleanup Policy
+Roadmap items are assigned version numbers using semantic versioning (MAJOR.MINOR.PATCH):
+- **Minor version bump** (0.X.0): New features or significant improvements
+- **Patch version bump** (0.0.X): Bug fixes, optional variants, and smaller refinements
+- **Major version** (reserved for far future): Breaking changes or major architectural shifts
 
-Completed roadmap sections are archived to [CHANGELOG.md](CHANGELOG.md) when the next major version ships. This keeps DEVELOPMENT.md focused on active/future work while preserving a full historical record.
+### Near-Term Roadmap
 
-**Timeline:**
-- When v0.5.0 ships: Move "Mid Term (v0.5.x)" completed items to CHANGELOG; update this section to show v0.6.x items.
-- Commit: `docs: archive v[N].x completed items to CHANGELOG for v[M].x release`.
+Linear list of upcoming work, prioritized top-to-bottom.
 
-### Mid Term (v0.5.x)
+1. **v0.5.6: Refine and expand icon mappings** — Review and test all 102 path mappings and 35 skill name mappings for accuracy. Verify matches against actual item icons in SWADE system and Fantasy Companion. Expand name-based mappings beyond Skills to cover Edges, Hindrances, Powers, and Ancestries. Document any gaps or incorrect mappings, add fallback refinements as needed.
+   - Addresses: Mappings are the foundation of the remapper; confidence in accuracy is required before shipping FormApplication. Name-based matching for non-skill items improves match quality.
+   - Approach: Manual review in Foundry, test remapper factory output against compendium items, add new name mappings for item types with common default icons, document edge cases.
+   - Output: Updated icon-mappings.js with validated/refined path mappings and expanded name-based mappings for Edges/Hindrances/Powers/Ancestries; test report documenting coverage and known limitations.
 
-Completed items for v0.5.x have been archived to [CHANGELOG.md](CHANGELOG.md).
+2. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes and scope selection (World / Selected Tokens / Scene Actors). Replaces the unsafe utility macro as the primary icon remapping tool.
+   - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors.
+   - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and "Remap" button.
+   - Files: `scripts/apps/IconRemapper.js`, `templates/icon-remapper.hbs`, updates to `scripts/main.js` and `README.md`.
+   - Prerequisite: v0.5.6 mappings validation complete.
 
-**Next iterations:**
-- Further preset display enhancements or workflow refinements based on user feedback.
-- Consider additional compendium management tools if needed.
+3. **v0.6.1: Icon Remapping Scoped Macro** — Simplified copy/paste macro alternative for users who prefer macro entry point over Settings menu. Launches FormApplication with scope dialog or applies icons to selected tokens directly.
+   - Depends on: Icon Remapping FormApplication feature above.
+   - File: `scripts/macros/remap-icons-scoped-macro.js`.
 
-### Cleanup Release (post-legacy window)
+4. **v0.6.1: Investigate and repair Eberron Edges linked items** — Discovered broken linked items in Fantasy Edges arcane backgrounds during parallel curation (likely from restructuring). Needs investigation to understand scope and repair strategy before resuming content population.
+   - Milestone: Fixes data integrity issue blocking curation.
+   - Deliverable: Root cause analysis + repair process documented in DEVELOPMENT.md.
 
-- Remove legacy migration function and flags.
-- Remove legacy constants and old setting compatibility scaffolding.
+5. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
+   - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
+   - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
 
-### Compendium Population Status
+6. ⏸️ **v0.5.6-0.6.1: Pause Eberron Content Population** — Hold all Eberron compendium curation (beyond Ancestries) until Icon Remapping FormApplication is released and tested. The safe UI will allow curators to iterate confidently on compendium content without data loss risk.
+   - Affected: Eberron Edges (currently in progress with discovered broken linked items), Eberron Actions, Armor & Shields, Armor Sets, Gear, Hindrances, Magic Items, Powers, Skills, Weapons.
+   - Unblocked: Icon remapper infrastructure (factory, mappings, initial macro) is complete; testing with unlocked compendiums can continue in parallel.
+   - Resume after: v0.6.1 ships with stable FormApplication and Eberron Edges fixed.
 
-Tracks work on icon mapping refinement (code) and compendium content curation (Foundry UI manual work). These are separate tracks.
+### Future Releases
 
-#### Code Work (Developer)
+Linear list of proposed features for future consideration, organized by target version.
 
-##### In Progress
-- **Icon Remapping Infrastructure** — Foundation complete (102 path mappings, 35 skill name mappings, remapper factory, utility macro with compendium support). TODO: Test macro with unlocked compendiums. Mappings need refinement and testing for accuracy.
+**v0.7.0**
 
-##### Completed
-- Icon remapper factory and configuration foundation ✓
-- Utility macro for batch remapping ✓
-- README documentation ✓
+1. **Workflow and feature justification review** — Systematically document each user workflow the module enables (e.g., "GM swaps module presets between campaigns", "Player sees curated compendiums"). For each: identify the problem it solves, assess complexity vs. value, consider simpler alternatives. Ensures features justify their maintenance burden and design is sound.
+   - Why: Prevents scope creep and ensures new features solve real user problems, not hypothetical ones.
+   - Prerequisite: None; can be done independently to clarify roadmap direction.
+   - Output: Updated DEVELOPMENT.md with documented workflows and feature justification decisions.
+   - Decision gate: If review suggests deferring other features or pivoting focus, update roadmap accordingly before proceeding.
 
-#### Compendium Content Curation (Foundry UI)
+**v0.7.1**
 
-Tracks manual population work done via Foundry's compendium editor. Empty scaffolds remain until content is added.
+None currently planned. May add items here based on v0.7.0 workflow review findings.
 
-##### Completed
-- **Eberron Ancestries** ✓
+**v0.8.0+**
 
-##### In Progress
-- **Eberron Edges** — Ongoing; discovered broken linked items in Fantasy Edges arcane backgrounds during parallel curation (likely from restructuring). Needs investigation and repair.
+4. **Developer tools for compendium management** — Helper UI for `module.json` updates, validation tools, or other workflow improvements for adding/managing custom compendiums.
+   - Status: Low priority. Currently manual but straightforward enough that automation is optional.
+   - Evaluate first: Does this solve a real pain point? Is the manual workflow fast enough to defer indefinitely?
+   - Defer indefinitely if: Manual process remains fast and error-free in practice.
 
-##### Not Started
-- Eberron Actions, Armor & Shields, Armor Sets, Gear, Hindrances, Magic Items, Powers, Skills, Weapons
+### Cleanup and Maintenance
 
----
-
-### Future (v0.6.x+)
-
-- **Actor/item migration helpers** — Tools for replacing world actor/item records with module compendium versions. Simplifies updating homebrew content to curated versions.
-- **Optional import-compatibility image remapper fallback** — Fallback remapping for content imported from other modules (builds on icon remapping infrastructure).
-- **Workflow and feature justification review** — Systematically document each user workflow the module enables (e.g., "GM swaps module presets between campaigns", "Player sees curated compendiums"). For each: identify the problem it solves, assess complexity vs. value, consider simpler alternatives. Ensures features justify their maintenance burden and design is sound.
-- Developer tools for compendium management: Helper UI for `module.json` updates, validation tools, or other workflow improvements for adding/managing custom compendiums. Currently manual but straightforward enough that tooling is not a priority.
-- **BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [APPLICATIONV2_MIGRATION.md](APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.
+- **v0.7.0+: Cleanup Release** — Remove legacy migration function and flags, legacy constants, and old setting compatibility scaffolding. Scheduled after stabilization window.
+- **v1.6.0+: BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [APPLICATIONV2_MIGRATION.md](APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.
 
 ### Post-Roadmap Modularization (Parked)
 
