@@ -5,8 +5,14 @@ import { ExtraVisiblePacksSelector } from "./world-setup-tools/apps/ExtraVisible
 import { setupSettings } from "./settings.js";
 import { setupMigrations } from "./migrations.js";
 import { setupUI } from "./ui.js";
+import { createIconRemapper } from "./lib/icon-remapper.js";
+import { pathMappings, nameMappings, fallbackIconMappings } from "./lib/icon-mappings.js";
 
 const MODULE_ID = "swade-fantasy-world-kit";
+
+// Expose icon remapping utilities immediately
+window.swadeFwkIconRemapper = createIconRemapper(pathMappings, nameMappings, fallbackIconMappings);
+window.swadeFwkIconMappings = { pathMappings, nameMappings, fallbackIconMappings };
 // TODO(next version): Remove legacy ID support after one release cycle.
 const LEGACY_MODULE_ID = "swade-consolidated-fantasy-compendiums";
 const MIGRATABLE_WORLD_SETTING_KEYS = [

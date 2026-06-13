@@ -166,9 +166,6 @@ Tracks manual content population and curation work done via Foundry UI. Items ar
 #### Not Started
 - Eberron Actions, Armor & Shields, Armor Sets, Gear, Hindrances, Magic Items, Powers, Skills, Weapons
 
-#### Known Issues
-- **Fantasy Edges** — Broken linked items in arcane backgrounds (need to be readded)
-
 ---
 
 ### Future (v0.6.x+)

@@ -91,6 +91,92 @@ The manager will warn you if any selected modules have dependencies that aren't 
 
 ---
 
+## Icon Remapping Macro
+
+This module includes a utility macro that remaps old Fantasy Companion icons to modern **game-icons-net** equivalents. Useful after updating your world to use game-icons-net.
+
+### What It Does
+
+The macro scans and remaps icons for:
+- All world items
+- All items in world actors
+
+It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 Fantasy Companion icons) and applies appropriate fallback icons for unmapped items.
+
+**Mapping Priority:**
+1. Path-based exact match (SWADE system or Fantasy Companion icon paths)
+2. Name-based soft lookup (for items sharing default icons)
+3. Fallback icon by item type (Skill, Edge, Hindrance, Power, Ancestry)
+
+### How to Use
+
+**Via Macro in Foundry:**
+
+1. Open Foundry and go to the **Macros** tab
+2. Click **Create Macro**
+3. Set type to **Script**
+4. Paste this code:
+```javascript
+(async () => {
+  if (!game.user?.isGM) {
+    ui.notifications?.error("Only GMs can remap icons.");
+    return;
+  }
+
+  const remapper = window.swadeFwkIconRemapper;
+  if (!remapper) {
+    ui.notifications?.error("Icon remapper not loaded. Ensure SWADE Fantasy World Kit module is active and enabled.");
+    return;
+  }
+
+  let count = 0;
+
+  // Scan world items
+  for (const item of game.items ?? []) {
+    const newIcon = remapper(item);
+    if (newIcon && newIcon !== item.img) {
+      await item.update({ img: newIcon });
+      count++;
+    }
+  }
+
+  // Scan actor items
+  for (const actor of game.actors ?? []) {
+    for (const item of actor.items ?? []) {
+      const newIcon = remapper(item);
+      if (newIcon && newIcon !== item.img) {
+        await item.update({ img: newIcon });
+        count++;
+      }
+    }
+  }
+
+  ui.notifications?.info(`Icon remapping complete. ${count} item(s) updated.`);
+
+  new Dialog({
+    title: "Icon Remapping Summary",
+    content: `<p>${count} item icon(s) successfully remapped to game-icons-net.</p>`,
+    buttons: {
+      close: {
+        label: "Close"
+      }
+    }
+  }).render(true);
+})();
+```
+
+5. Name it "Remap Icons" (or your preference)
+6. Run as GM by clicking **Execute Macro**
+
+### Notes
+
+- Only remaps icons that have a known mapping (existing icons unchanged if not in mapping)
+- Safe to run multiple times (skips already-remapped icons)
+- Shows summary dialog with count of remapped items
+- GM-only for security
+
+---
+
 ## Editing Compendium Content
 
 ### Edit an Existing Compendium

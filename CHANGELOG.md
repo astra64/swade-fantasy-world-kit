@@ -6,6 +6,26 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Icon Remapping Infrastructure**: New icon remapping system supporting 102 path mappings and fallback icons by item type
+  - 36 SWADE system icons (ability, skill variants, status icons) → game-icons-net equivalents
+  - 66 SWADE Fantasy Companion icons → game-icons-net equivalents
+  - Intelligent fallback icons for unmapped items (Skill, Edge, Hindrance, Power, Ancestry)
+- **Icon Remapping Macro**: Utility macro to scan world items and actor items, remapping old icons to game-icons-net equivalents
+  - Simple copy-paste setup via Foundry macro editor
+  - GM-only execution with item count summary
+  - Non-destructive (skips already-mapped items)
+
+### Technical
+- New `scripts/lib/icon-remapper.js` factory function with priority-based remapping logic
+- New `scripts/lib/icon-mappings.js` configuration with path, name, and fallback mappings
+- New `scripts/macros/remap-icons-macro.js` utility macro for batch icon updates
+- Icon remapper exposed on `window.swadeFwkIconRemapper` for console access
+
+---
+
 ## [0.5.5] - 2026-06-10
 
 ### Added
