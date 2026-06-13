@@ -169,6 +169,23 @@ Linear list of upcoming work, prioritized top-to-bottom.
    - Unblocked: Icon remapper infrastructure (factory, mappings, initial macro) is complete; testing with unlocked compendiums can continue in parallel.
    - Resume after: v0.6.1 ships with stable FormApplication and Eberron Edges fixed.
 
+7. **v0.7.0 (Planning): Compendium Sync Workflow Between Local and Hosted Foundry** — Document and validate safe process for syncing custom compendium edits between local Foundry dev instance and Molten Hosting server without manual re-creation or data loss.
+   - Context: Module remains private (personal use) on GitHub. Pain point: Local changes to packs (edits, new items) need to sync to hosted server; currently manual and error-prone.
+   - Solution: Simple zip-upload workflow via Molten web file manager. Full step-by-step procedures documented in README (see "Syncing Compendiums Between Local and Hosted Foundry").
+   - Safeguards: Always close both Foundry instances before file operations (LevelDB corruption risk). Validate pack integrity after each sync.
+   - Future optimization: Once World Setup Tools is extracted as public module, can keep it on Foundry registry (auto-updates via manifest) while keeping this private module manual-synced. If zip-upload becomes bottleneck, evaluate cloud storage sync (Dropbox) or CI automation.
+   
+   **Planned Module Structure (Post-Extraction):**
+   
+   | Module | Visibility | Distribution | Sync |
+   |---|---|---|---|
+   | **World Setup Tools** | Public | Foundry Registry | Auto-update via manifest |
+   | **Character Creation Tools** | Public | Foundry Registry | Auto-update via manifest |
+   | **SWADE Fantasy World Kit** | Private | Manual only | Manual zip-upload to Molten |
+   
+   **Why extractable:** Character Creation Tools only references compendiums users already have installed (no premium content bundled), making it safe for public distribution.
+   - Output: README section with procedures, safety checklist, and decision tree for full vs. packs-only sync.
+
 ### Future Releases
 
 Linear list of proposed features for future consideration, organized by target version.
@@ -216,13 +233,12 @@ None currently planned. May add items here based on v0.7.0 workflow review findi
 - Used by: SWADE hub module and any other system module that needs preset management.
 - No Foundry system/module dependencies beyond core Foundry APIs.
 
-**Module 3: Character Creation Tools (Recommendation)**
-- **Decision: Keep in SWADE hub module as a separate code organization**, not a separate module. Reasoning:
-  - SWADE-specific tooling; no identified reuse in other modules.
-  - Tightly couples to active compendium set selection (edges, hindrances, skills lists vary by genre).
-  - Simpler dependency graph: character tools use hub settings, not the reverse.
-  - Allows shipping character tools updates together with compendium set additions without multi-module coordination.
-  - Can be cleanly separated in code structure (e.g., `scripts/apps/character-creation/`, `templates/character-*.hbs`) for future refactor if needed.
+**Module 3: Character Creation Tools (System Agnostic, SWADE-focused UI)**
+- Skill calculator, edges/hindrances selector, ancestry picker.
+- Reads from compendiums user has installed (no bundled content).
+- Safe for public distribution (no premium content; only uses what users already own).
+- Dependency: World Setup Tools (for preset/dependency infrastructure, if applicable).
+- Can be used independently or integrated with SWADE hub module.
 
 #### Planned Extraction Scope
 
@@ -234,20 +250,26 @@ None currently planned. May add items here based on v0.7.0 workflow review findi
    - Relevant CSS classes from `styles/module.css` (extract)
    - Preset-specific settings keys (migrate/create in new module)
 
-2. SWADE Hub module (keep and enhance):
+2. Character Creation Tools module:
+   - `scripts/apps/character-creation/` (extract)
+   - `templates/character-*.hbs` (extract)
+   - Character creation settings and compendium integration logic
+
+3. SWADE Hub module (keep and enhance):
    - Curated compendiums: generalize pack folder/group logic to support multiple genre sets.
    - Controlled visibility: parameterize per genre/setting context.
-   - Character creation tools: new files in `scripts/apps/character-creation/` and `templates/character-*.hbs`.
    - Compendium integration: unify visibility filtering to apply to active genre set.
+   - Integrate with Character Creation Tools module as optional companion.
 
 #### Guardrails Before Starting Extraction
 
 - Complete and stabilize Near Term and Mid Term roadmap work.
 - Keep preset apply behavior as an unchanged core contract during extraction and handoff.
-- Preserve SWADE hub module ownership of curated compendiums, visibility control, and character creation tooling.
+- Preserve SWADE hub module ownership of curated compendiums and controlled visibility.
 - Preserve setting key compatibility with migrations during transition windows.
 - Ensure World Setup Tools module is testable independently of SWADE system or content.
-- Validate that character creation tools integrate cleanly with genre/setting switching (no hardcoded pack dependencies).
+- Ensure Character Creation Tools only references compendiums (never bundles content), allowing public distribution.
+- Design Character Creation Tools to work standalone or integrate cleanly with hub (no hard coupling to hub settings).
 
 #### Phase 1: In-Repo Organization (Before Full Module Extraction)
 
@@ -266,12 +288,14 @@ scripts/
     settings.js (preset-specific settings; extracted from scripts/settings.js)
   apps/
     character-creation/
-      (new, for future character tools)
+      (organize here; ready for Phase 2 extraction)
     ExtraVisiblePacksSelector.js (stays here; compendium visibility)
   (other non-preset files stay at scripts/ root)
 templates/
   world-setup-tools/
     baseline-modules.hbs (moved from templates/)
+  character-creation/
+    (organize here; ready for Phase 2 extraction)
 styles/
   world-setup-tools/
     presets.css (extracted preset-specific CSS from module.css)
@@ -301,16 +325,18 @@ Once Phase 1 is complete and validated in a few releases:
 1. Create separate `foundry-world-setup-tools` repository.
 2. Move `scripts/world-setup-tools/` folder and associated templates/styles.
 3. Create new `module.json` for World Setup Tools module.
-4. Update SWADE hub module to declare World Setup Tools as a dependency and import from it.
-5. Migrate SWADE hub settings to new module settings schema.
-6. Maintain compatibility shim in SWADE hub for settings migration during transition window.
+4. Create separate `foundry-character-creation-tools` repository.
+5. Move `scripts/apps/character-creation/` and associated templates/styles.
+6. Create new `module.json` for Character Creation Tools module.
+7. Update SWADE hub module to declare both as optional dependencies and import from them.
+8. Maintain compatibility shims for settings migration during transition window.
 
 #### Workflow and Dependencies
 
-- Phase 1 (in-repo): Use this repo, single Copilot session.
-- Phase 2 onwards: Use one VS Code multi-root workspace for SWADE hub and World Setup Tools modules (plus any others) to keep a single Copilot session while developing in parallel.
-- Dependency flow: SWADE hub → World Setup Tools (plugin), no reverse dependency.
-- Character creation tools within hub depend on compendium set state but not vice versa.
+- Phase 1 (in-repo): Organize into separate code folders in this repo. Single Copilot session.
+- Phase 2 onwards: Extract into three separate repos (SWADE hub, World Setup Tools, Character Creation Tools). Use one VS Code multi-root workspace for all three to maintain single Copilot session.
+- Dependency flow: SWADE hub optionally depends on both World Setup Tools and Character Creation Tools. Character Creation Tools is independent (works solo or integrated with hub).
+- SWADE hub can ship without Character Creation Tools; users optionally install it as a companion.
 
 ---
 

@@ -222,6 +222,45 @@ It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 F
 
 > **Do not:** hand-edit `.ldb` files directly or commit while Foundry is running. Foundry owns these files and corrupting them breaks everything.
 
+### Syncing Compendiums Between Local and Hosted Foundry
+
+If you run Foundry both locally (for development) and on a hosted server (like Molten Hosting), you'll need to sync compendium edits from local to hosted. Use this workflow to keep them in sync safely.
+
+**Prerequisites:** You have access to the hosted server's file manager (web UI or SFTP).
+
+#### Full Module Sync (recommended for code or settings changes)
+
+1. In local Foundry, make all edits to compendiums (items, actors, etc.).
+2. Close Foundry completely. Wait for graceful shutdown; verify no lock files remain.
+3. Commit changes to git (`git log` and `git status` to verify).
+4. On GitHub: download updated ZIP (stay authenticated for private repos).
+5. Extract ZIP locally to a temporary folder.
+6. Via hosted server file manager:
+   - Navigate to `Data/modules/`
+   - Delete or rename the existing `swade-fantasy-world-kit` folder as backup
+   - Upload the extracted `swade-fantasy-world-kit` folder from ZIP
+7. Restart the hosted Foundry instance.
+8. Verify: open a compendium online, spot-check a few items to confirm updates.
+
+#### Packs-Only Sync (faster if only compendium content changed)
+
+1. Same as Full Sync steps 1–5.
+2. Via hosted server file manager:
+   - Navigate to `Data/modules/swade-fantasy-world-kit/packs/`
+   - For each modified pack folder (e.g., `edges-fantasy/`):
+     - Delete or rename the old folder as backup
+     - Upload the new folder from extracted ZIP
+3. Restart the hosted Foundry instance.
+4. Verify: open updated packs online, confirm changes are present.
+
+#### Safety Checklist
+
+- ✓ **Both Foundry instances closed** before uploading (LevelDB corruption risk if files written while running)
+- ✓ **Changes committed to git** before downloading ZIP (easy rollback if needed)
+- ✓ **Hosted restart completes** without errors (check logs if available)
+- ✓ **Spot-check in hosted Foundry** to confirm updates (item count, recent edits visible)
+- ✓ **Local remains source of truth** — if local and hosted diverge, local changes are authoritative
+
 ### Planned Features
 
 **Developer tools for compendium management** — Potential future workflow improvements for managing custom packs (e.g., helper UI for module.json updates, validation tools). Currently these operations are manual but straightforward enough that tooling is not a priority.
