@@ -93,13 +93,14 @@ The manager will warn you if any selected modules have dependencies that aren't 
 
 ## Icon Remapping Macro
 
-This module includes a utility macro that remaps old Fantasy Companion icons to modern **game-icons-net** equivalents. Useful after updating your world to use game-icons-net.
+This module includes a utility macro that remaps old Fantasy Companion icons to modern **game-icons-net** equivalents. Useful for updating world items and iterating on compendium content.
 
 ### What It Does
 
 The macro scans and remaps icons for:
 - All world items
 - All items in world actors
+- All items in **unlocked compendiums** (useful for maintaining compendium consistency as you iterate)
 
 It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 Fantasy Companion icons) and applies appropriate fallback icons for unmapped items.
 
@@ -130,6 +131,7 @@ It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 F
   }
 
   let count = 0;
+  let packCount = 0;
 
   // Scan world items
   for (const item of game.items ?? []) {
@@ -151,11 +153,26 @@ It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 F
     }
   }
 
-  ui.notifications?.info(`Icon remapping complete. ${count} item(s) updated.`);
+  // Scan unlocked compendiums
+  for (const pack of game.packs) {
+    if (!pack.locked) {
+      for (const item of pack.contents ?? []) {
+        const newIcon = remapper(item);
+        if (newIcon && newIcon !== item.img) {
+          await item.update({ img: newIcon });
+          count++;
+          packCount++;
+        }
+      }
+    }
+  }
+
+  const summary = `${count} item(s) updated (${packCount} in compendiums)`;
+  ui.notifications?.info(`Icon remapping complete. ${summary}`);
 
   new Dialog({
     title: "Icon Remapping Summary",
-    content: `<p>${count} item icon(s) successfully remapped to game-icons-net.</p>`,
+    content: `<p>${summary}</p>`,
     buttons: {
       close: {
         label: "Close"
@@ -174,6 +191,7 @@ It intelligently matches icons across 102 mappings (36 SWADE system icons + 66 F
 - Safe to run multiple times (skips already-remapped icons)
 - Shows summary dialog with count of remapped items
 - GM-only for security
+- **Compendium Note:** Only unlocks compendiums that you've manually unlocked in Foundry are affected. This is intentional—lock compendiums you don't want modified.
 
 ---
 

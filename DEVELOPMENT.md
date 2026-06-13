@@ -155,15 +155,29 @@ Completed items for v0.5.x have been archived to [CHANGELOG.md](CHANGELOG.md).
 
 ### Compendium Population Status
 
-Tracks manual content population and curation work done via Foundry UI. Items are populated by setting; empty scaffolds remain until content is added.
+Tracks work on icon mapping refinement (code) and compendium content curation (Foundry UI manual work). These are separate tracks.
 
-#### Completed
+#### Code Work (Developer)
+
+##### In Progress
+- **Icon Remapping Infrastructure** — Foundation complete (102 path mappings, 35 skill name mappings, remapper factory, utility macro with compendium support). TODO: Test macro with unlocked compendiums. Mappings need refinement and testing for accuracy.
+
+##### Completed
+- Icon remapper factory and configuration foundation ✓
+- Utility macro for batch remapping ✓
+- README documentation ✓
+
+#### Compendium Content Curation (Foundry UI)
+
+Tracks manual population work done via Foundry's compendium editor. Empty scaffolds remain until content is added.
+
+##### Completed
 - **Eberron Ancestries** ✓
 
-#### In Progress
+##### In Progress
 - **Eberron Edges** — Ongoing; discovered broken linked items in Fantasy Edges arcane backgrounds during parallel curation (likely from restructuring). Needs investigation and repair.
 
-#### Not Started
+##### Not Started
 - Eberron Actions, Armor & Shields, Armor Sets, Gear, Hindrances, Magic Items, Powers, Skills, Weapons
 
 ---
@@ -171,8 +185,7 @@ Tracks manual content population and curation work done via Foundry UI. Items ar
 ### Future (v0.6.x+)
 
 - **Actor/item migration helpers** — Tools for replacing world actor/item records with module compendium versions. Simplifies updating homebrew content to curated versions.
-- **Image remapping to use game-icons SVGs** — Automatically apply game-icons SVGs to items lacking icons. Target only items with known default SWADE images to ensure aesthetic consistency without unexpected overwrites.
-- **Optional import-compatibility image remapper fallback** — Fallback remapping for content imported from other modules.
+- **Optional import-compatibility image remapper fallback** — Fallback remapping for content imported from other modules (builds on icon remapping infrastructure).
 - **Workflow and feature justification review** — Systematically document each user workflow the module enables (e.g., "GM swaps module presets between campaigns", "Player sees curated compendiums"). For each: identify the problem it solves, assess complexity vs. value, consider simpler alternatives. Ensures features justify their maintenance burden and design is sound.
 - Developer tools for compendium management: Helper UI for `module.json` updates, validation tools, or other workflow improvements for adding/managing custom compendiums. Currently manual but straightforward enough that tooling is not a priority.
 - **BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [APPLICATIONV2_MIGRATION.md](APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.

@@ -1,8 +1,8 @@
 /**
  * Icon Remapping Macro
  *
- * Scans world items and actor items, remapping old Fantasy Companion icons
- * to game-icons-net equivalents based on configured mappings.
+ * Scans and remaps icons for world items, actor items, and unlocked compendiums.
+ * Useful for keeping icon mappings consistent across compendium iterations.
  *
  * Paste this code into a Foundry macro.
  */
@@ -20,6 +20,7 @@
   }
 
   let count = 0;
+  let packCount = 0;
 
   // Scan world items
   for (const item of game.items ?? []) {
@@ -41,11 +42,26 @@
     }
   }
 
-  ui.notifications?.info(`Icon remapping complete. ${count} item(s) updated.`);
+  // Scan unlocked compendiums
+  for (const pack of game.packs) {
+    if (!pack.locked) {
+      for (const item of pack.contents ?? []) {
+        const newIcon = remapper(item);
+        if (newIcon && newIcon !== item.img) {
+          await item.update({ img: newIcon });
+          count++;
+          packCount++;
+        }
+      }
+    }
+  }
+
+  const summary = `${count} item(s) updated (${packCount} in compendiums)`;
+  ui.notifications?.info(`Icon remapping complete. ${summary}`);
 
   new Dialog({
     title: "Icon Remapping Summary",
-    content: `<p>${count} item icon(s) successfully remapped to game-icons-net.</p>`,
+    content: `<p>${summary}</p>`,
     buttons: {
       close: {
         label: "Close"
