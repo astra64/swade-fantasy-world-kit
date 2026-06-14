@@ -200,7 +200,10 @@ Linear list of proposed features for future consideration, organized by target v
 
 **v0.7.1**
 
-None currently planned. May add items here based on v0.7.0 workflow review findings.
+1. **Module/Setting Isolation Infrastructure** — Add per-setting configuration controls to prevent content from one setting (e.g., Eberron) from interfering with other modules or active settings. This includes module disabling (opt-out of other modules when a setting is active) and setting-specific visibility rules.
+   - Addresses: Multi-setting support requires content isolation; currently all settings share the same visibility and module state, causing unintended interactions.
+   - Approach: Extend preset system to include per-setting module blocklists/allowlists; extend visibility settings to support setting-specific overrides.
+   - Output: Setting-specific preset configurations and updated BaselineModulesManager to respect isolation rules.
 
 **v0.8.0+**
 
