@@ -64,19 +64,7 @@ export function setupSettings(config) {
       "swade-fantasy-world-kit.powers-fantasy",
       "swade-fantasy-world-kit.pregens-fantasy",
       "swade-fantasy-world-kit.skills-fantasy",
-      "swade-fantasy-world-kit.weapons-fantasy",
-      "swade-fantasy-world-kit.actions-eberron",
-      "swade-fantasy-world-kit.ancestries-eberron",
-      "swade-fantasy-world-kit.armor-and-shields-eberron",
-      "swade-fantasy-world-kit.armor-sets-eberron",
-      "swade-fantasy-world-kit.edges-eberron",
-      "swade-fantasy-world-kit.gear-eberron",
-      "swade-fantasy-world-kit.hindrances-eberron",
-      "swade-fantasy-world-kit.magic-items-eberron",
-      "swade-fantasy-world-kit.powers-eberron",
-      "swade-fantasy-world-kit.pregens-eberron",
-      "swade-fantasy-world-kit.skills-eberron",
-      "swade-fantasy-world-kit.weapons-eberron"
+      "swade-fantasy-world-kit.weapons-fantasy"
     ].join("\n"),
     onChange: handleVisibilitySettingsChanged
   });

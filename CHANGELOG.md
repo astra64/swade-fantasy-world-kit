@@ -8,6 +8,12 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ## [Unreleased]
 
+### Changed
+- **Eberron Compendiums Removed**: Removed all 12 Eberron-specific compendium packs from this module. Focus remains on Fantasy setting curation. Users can supplement with Eberron content from official modules and use the icon remapping tools to customize appearance as needed.
+- **Roadmap: Expanded Smart Icon Mappings (v0.5.6)**: Smart/soft name mappings now cover all item types (Ancestry, Edge, Hindrance, Power, Weapon, Armor, Skill, etc.) with normalization rules for common variants (singular/plural, compound names, abbreviations). Enables cross-setting consistency without manual per-setting pack curation.
+- **Roadmap: Per-Item Fallback Override (v0.6.0)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.
+- **Future Direction**: Shift from manually-maintained setting-specific compendium packs to on-demand automated compendium generation approach.
+
 ### Added
 - **Icon Remapping Infrastructure**: New icon remapping system supporting 102 path mappings and fallback icons by item type
   - 36 SWADE system icons (ability, skill variants, status icons) → game-icons-net equivalents

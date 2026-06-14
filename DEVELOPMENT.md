@@ -141,14 +141,14 @@ Roadmap items are assigned version numbers using semantic versioning (MAJOR.MINO
 
 Linear list of upcoming work, prioritized top-to-bottom.
 
-1. **v0.5.6: Refine and expand icon mappings** — Review and test all 102 path mappings and 35 skill name mappings for accuracy. Verify matches against actual item icons in SWADE system and Fantasy Companion. Expand name-based mappings beyond Skills to cover Edges, Hindrances, Powers, and Ancestries. Document any gaps or incorrect mappings, add fallback refinements as needed.
-   - Addresses: Mappings are the foundation of the remapper; confidence in accuracy is required before shipping FormApplication. Name-based matching for non-skill items improves match quality.
-   - Approach: Manual review in Foundry, test remapper factory output against compendium items, add new name mappings for item types with common default icons, document edge cases.
-   - Output: Updated icon-mappings.js with validated/refined path mappings and expanded name-based mappings for Edges/Hindrances/Powers/Ancestries; test report documenting coverage and known limitations.
+1. **v0.5.6: Refine and expand icon mappings** — Review and test all 102 path mappings for accuracy. Expand name-based smart/soft mappings to **all item types** (Ancestry, Edge, Hindrance, Power, Weapon, Armor, Skill, etc.) with normalization rules for common variants: singular/plural (elf/elves), compound names (half-elf), abbreviations (longsword), typos. Test against actual item icons in SWADE system, Fantasy Companion, and other settings to ensure cross-setting consistency.
+   - Addresses: Mappings are the foundation of the remapper; confidence in accuracy is required before shipping FormApplication. Broad smart mappings enable setting-agnostic icon consistency (Eberron weapons use same names as Fantasy).
+   - Approach: Manual review in Foundry, test remapper factory output against compendium items, build comprehensive name mappings for each item type with variant normalization, document edge cases and confidence levels.
+   - Output: Updated icon-mappings.js with validated path mappings and comprehensive name-based mappings for all item types with normalization rules; test report documenting coverage and known limitations.
 
-2. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes and scope selection (World / Selected Tokens / Scene Actors). Replaces the unsafe utility macro as the primary icon remapping tool.
-   - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors.
-   - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and "Remap" button.
+2. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes, scope selection (World / Selected Tokens / Scene Actors), and **per-item fallback override** button. When smart mappings are incorrect, users can click "Use Fallback" to switch that item to its type-specific default icon instead of the smart-mapped one. Replaces the unsafe utility macro as the primary icon remapping tool.
+   - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors. Smart mappings may be incorrect for some items, so users need a way to correct without manual icon selection.
+   - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and per-item "Use Fallback" override. Main "Remap" button applies checked items using their displayed (mapped or fallback) icon.
    - Files: `scripts/apps/IconRemapper.js`, `templates/icon-remapper.hbs`, updates to `scripts/main.js` and `README.md`.
    - Prerequisite: v0.5.6 mappings validation complete.
 
@@ -156,20 +156,11 @@ Linear list of upcoming work, prioritized top-to-bottom.
    - Depends on: Icon Remapping FormApplication feature above.
    - File: `scripts/macros/remap-icons-scoped-macro.js`.
 
-4. **v0.6.1: Investigate and repair Eberron Edges linked items** — Discovered broken linked items in Fantasy Edges arcane backgrounds during parallel curation (likely from restructuring). Needs investigation to understand scope and repair strategy before resuming content population.
-   - Milestone: Fixes data integrity issue blocking curation.
-   - Deliverable: Root cause analysis + repair process documented in DEVELOPMENT.md.
-
-5. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
+4. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
    - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
    - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
 
-6. ⏸️ **v0.5.6-0.6.1: Pause Eberron Content Population** — Hold all Eberron compendium curation (beyond Ancestries) until Icon Remapping FormApplication is released and tested. The safe UI will allow curators to iterate confidently on compendium content without data loss risk.
-   - Affected: Eberron Edges (currently in progress with discovered broken linked items), Eberron Actions, Armor & Shields, Armor Sets, Gear, Hindrances, Magic Items, Powers, Skills, Weapons.
-   - Unblocked: Icon remapper infrastructure (factory, mappings, initial macro) is complete; testing with unlocked compendiums can continue in parallel.
-   - Resume after: v0.6.1 ships with stable FormApplication and Eberron Edges fixed.
-
-7. **v0.7.0 (Planning): Compendium Sync Workflow Between Local and Hosted Foundry** — Document and validate safe process for syncing custom compendium edits between local Foundry dev instance and Molten Hosting server without manual re-creation or data loss.
+5. **v0.7.0 (Planning): Compendium Sync Workflow Between Local and Hosted Foundry** — Document and validate safe process for syncing custom compendium edits between local Foundry dev instance and Molten Hosting server without manual re-creation or data loss.
    - Context: Module remains private (personal use) on GitHub. Pain point: Local changes to packs (edits, new items) need to sync to hosted server; currently manual and error-prone.
    - Solution: Simple zip-upload workflow via Molten web file manager. Full step-by-step procedures documented in README (see "Syncing Compendiums Between Local and Hosted Foundry").
    - Safeguards: Always close both Foundry instances before file operations (LevelDB corruption risk). Validate pack integrity after each sync.
@@ -200,10 +191,7 @@ Linear list of proposed features for future consideration, organized by target v
 
 **v0.7.1**
 
-1. **Module/Setting Isolation Infrastructure** — Add per-setting configuration controls to prevent content from one setting (e.g., Eberron) from interfering with other modules or active settings. This includes module disabling (opt-out of other modules when a setting is active) and setting-specific visibility rules.
-   - Addresses: Multi-setting support requires content isolation; currently all settings share the same visibility and module state, causing unintended interactions.
-   - Approach: Extend preset system to include per-setting module blocklists/allowlists; extend visibility settings to support setting-specific overrides.
-   - Output: Setting-specific preset configurations and updated BaselineModulesManager to respect isolation rules.
+None currently planned. May add items here based on v0.7.0 workflow review findings.
 
 **v0.8.0+**
 
@@ -221,15 +209,15 @@ Linear list of proposed features for future consideration, organized by target v
 
 - Status: Parked until current roadmap items are completed or explicitly removed.
 - Timing: Phase 1 (in-repo organization) is scheduled as part of v0.5.x work. Phase 2 (full module extraction) is planned for after v0.5.x stabilizes (v0.6.x or later).
-- Goal: extract world setup tools into a system-agnostic dependency module while expanding SWADE hub module with genre/setting compendium support and character creation tools.
+- Goal: extract world setup tools into a system-agnostic dependency module while keeping SWADE hub module focused on Fantasy compendium curation.
 
 #### Target Architecture
 
-**Module 1: SWADE Fantasy World Kit (Hub/Composer)**
-- Curated compendiums: expand from single Fantasy set to multi-genre/setting support (Fantasy, Scifi, Eberron, Warhammer, etc.).
-- Controlled visibility: pack allowlisting and GM override, scoped per active genre/setting.
-- Simple character creation tools: skill calculator, edges/hindrances UI (minimal—no prerequisite checking), integrated with active compendium set.
-- Settings ownership: genre/setting selection, pack visibility per context, character creation preferences.
+**Module 1: SWADE Fantasy World Kit (Hub)**
+- Curated compendiums: Fantasy setting only (curated from SWADE Core Rules + Fantasy Companion).
+- Controlled visibility: pack allowlisting and GM override.
+- Icon remapping tools: utility macro and FormApplication for remapping icons across world items, actors, and unlocked compendiums.
+- Simple character creation tools: skill calculator, edges/hindrances UI (minimal—no prerequisite checking), integrated with Fantasy compendium set.
 
 **Module 2: World Setup Tools (System Agnostic)**
 - Preset/dependency engine and manager UI.
@@ -242,6 +230,15 @@ Linear list of proposed features for future consideration, organized by target v
 - Safe for public distribution (no premium content; only uses what users already own).
 - Dependency: World Setup Tools (for preset/dependency infrastructure, if applicable).
 - Can be used independently or integrated with SWADE hub module.
+
+#### Future: Compendium Generation for Other Settings
+
+Once the Fantasy module is stable, consider automated solutions for generating curated compendium sets for other SWADE settings (Eberron, Sci-Fi, etc.) rather than maintaining them manually. This could be a standalone tool that:
+- Takes base SWADE compendiums as input (e.g., Eberron content from modules)
+- Applies icon remapping and customization
+- Generates pre-curated compendium packs for distribution or personal use
+
+This approach avoids the maintenance burden of manually curating multiple setting-specific packs while preserving the ability to create on-demand packs when needed.
 
 #### Planned Extraction Scope
 
@@ -259,9 +256,9 @@ Linear list of proposed features for future consideration, organized by target v
    - Character creation settings and compendium integration logic
 
 3. SWADE Hub module (keep and enhance):
-   - Curated compendiums: generalize pack folder/group logic to support multiple genre sets.
-   - Controlled visibility: parameterize per genre/setting context.
-   - Compendium integration: unify visibility filtering to apply to active genre set.
+   - Curated compendiums: maintain Fantasy setting focus with enhanced icon remapping and character creation tools.
+   - Controlled visibility: GM-configurable pack allowlisting with player filtering.
+   - Compendium integration: unified visibility filtering for sidebar and Quick Insert.
    - Integrate with Character Creation Tools module as optional companion.
 
 #### Guardrails Before Starting Extraction
