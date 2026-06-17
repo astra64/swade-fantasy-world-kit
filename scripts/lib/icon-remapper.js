@@ -2,8 +2,8 @@
  * Icon remapper factory - creates a function that applies icon mappings to items.
  *
  * Remapping priority:
- * 1. Path-based mappings (exact match on source icon path)
- * 2. Name-based soft lookup (item name match within type)
+ * 1. Name-based soft lookup (item name match within type) - curated/specific icons take priority
+ * 2. Path-based mappings (exact match on source icon path) - generic system/companion icons
  * 3. Fallback icon by type (generic default)
  */
 
@@ -22,12 +22,8 @@ export function createIconRemapper(pathMappings, nameMappings, fallbackMappings)
     const currentIcon = item.img;
     if (!currentIcon) return null;
 
-    // Step 1: Check path-based mappings (exact match on source icon path)
-    if (pathMappings && pathMappings[currentIcon]) {
-      return pathMappings[currentIcon];
-    }
-
-    // Step 2: Check name-based soft lookup (match by item name and type)
+    // Step 1: Check name-based soft lookup first (match by item name and type)
+    // Curated/specific item names take priority over generic system icons
     if (nameMappings && item.type && nameMappings[item.type]) {
       const typeMapping = nameMappings[item.type];
       const nameKey = Object.keys(typeMapping).find(
@@ -38,6 +34,12 @@ export function createIconRemapper(pathMappings, nameMappings, fallbackMappings)
       }
     }
 
+    // Step 2: Check path-based mappings (exact match on source icon path)
+    // Fallback for items without specific name mappings
+    if (pathMappings && pathMappings[currentIcon]) {
+      return pathMappings[currentIcon];
+    }
+
     // Step 3: Check fallback icon by type
     if (fallbackMappings && item.type && fallbackMappings[item.type]) {
       return fallbackMappings[item.type];
@@ -46,3 +48,4 @@ export function createIconRemapper(pathMappings, nameMappings, fallbackMappings)
     return null;
   };
 }
+

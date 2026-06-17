@@ -3,3 +3,6 @@ packs/**/LOCK
 packs/**/LOG
 packs/**/LOG.old
 packs/**/*.log
+
+# Development data and analysis outputs
+.dev-data/
