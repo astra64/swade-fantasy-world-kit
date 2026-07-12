@@ -141,21 +141,7 @@ Roadmap items are assigned version numbers using semantic versioning (MAJOR.MINO
 
 Linear list of upcoming work, prioritized top-to-bottom.
 
-1. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes, scope selection (World / Selected Tokens / Scene Actors), and **per-item fallback override** button. When smart mappings are incorrect, users can click "Use Fallback" to switch that item to its type-specific default icon instead of the smart-mapped one. Replaces the unsafe utility macro as the primary icon remapping tool.
-   - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors. Smart mappings may be incorrect for some items, so users need a way to correct without manual icon selection.
-   - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and per-item "Use Fallback" override. Main "Remap" button applies checked items using their displayed (mapped or fallback) icon.
-   - Files: `scripts/apps/IconRemapper.js`, `templates/icon-remapper.hbs`, updates to `scripts/main.js` and `README.md`.
-   - Prerequisite: v0.5.6 mappings validation complete.
-
-2. **v0.6.1: Icon Remapping Scoped Macro** — Simplified copy/paste macro alternative for users who prefer macro entry point over Settings menu. Launches FormApplication with scope dialog or applies icons to selected tokens directly.
-   - Depends on: Icon Remapping FormApplication feature above.
-   - File: `scripts/macros/remap-icons-scoped-macro.js`.
-
-3. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
-   - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
-   - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
-
-4. **v0.6.2: Character Manager — Unified Character Creation & Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
+1. **v0.6.0: Character Manager — Unified Character Creation & Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
    - Addresses: The module should support actual character building workflows, not just compendium curation. Guided advancement helps players and GMs apply experience, edge points, and item upgrades consistently.
    - Approach: Single unified FormApplication for character creation and mid-campaign management (similar to Pathbuilder for PF2e). Users create blank actor first, then open Character Manager from the actor sheet. Follows official SWADE rulebook flow: Concept → Ancestry → Hindrances → Attributes → Skills → Edges → Gear → Summary. Features hindrance trade-off system, auto-applied ancestry bonuses, real-time budget tracking, and gear drag-drop interface.
    - Files: `scripts/apps/CharacterManager.js`, `templates/character-manager.hbs`, updates to `scripts/lib/calculator.js` and `scripts/lib/compendium-utils.js`, `styles/character-manager.css`, `scripts/main.js`, `README.md`.
@@ -163,6 +149,20 @@ Linear list of upcoming work, prioritized top-to-bottom.
    - **Testing:** [docs/v0.6.2/TESTING.md](docs/v0.6.2/TESTING.md) — Comprehensive test cases aligned with new design.
    - Prerequisite: curated compendium access and existing compendium visibility/integration flow.
    - Output: SWADE-focused character management tool supporting creation, editing, and advancement workflows with real-time SWADE rule compliance checking.
+
+2. **v0.6.1: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes, scope selection (World / Selected Tokens / Scene Actors), and **per-item fallback override** button. When smart mappings are incorrect, users can click "Use Fallback" to switch that item to its type-specific default icon instead of the smart-mapped one. Replaces the unsafe utility macro as the primary icon remapping tool.
+   - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors. Smart mappings may be incorrect for some items, so users need a way to correct without manual icon selection.
+   - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and per-item "Use Fallback" override. Main "Remap" button applies checked items using their displayed (mapped or fallback) icon.
+   - Files: `scripts/apps/IconRemapper.js`, `templates/icon-remapper.hbs`, updates to `scripts/main.js` and `README.md`.
+   - Prerequisite: v0.5.6 mappings validation complete.
+
+3. **v0.6.2: Icon Remapping Scoped Macro** — Simplified copy/paste macro alternative for users who prefer macro entry point over Settings menu. Launches FormApplication with scope dialog or applies icons to selected tokens directly.
+   - Depends on: Icon Remapping FormApplication feature above.
+   - File: `scripts/macros/remap-icons-scoped-macro.js`.
+
+4. **v0.6.2: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
+   - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
+   - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
 
 5. **v0.6.3: Compendium Generation Tool** — Deprecate shipped premium compendium content and provide an export/import workflow for user-created compendiums.
   - Addresses: Avoid shipping proprietary Fantasy Companion content while still giving GMs an easy way to recreate custom compendiums from installed official modules.

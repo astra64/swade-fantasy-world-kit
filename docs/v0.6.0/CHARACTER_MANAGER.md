@@ -90,13 +90,19 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - [ ] Sticky footer with budget tracker
   - [ ] Action buttons (Save, Export JSON, Cancel)
 
+- [ ] **Individual Tab Templates (_concept.hbs through _summary.hbs)**
+  - [ ] Each tab template includes new player-friendly guidance text (see Phase 3 tab specs)
+  - [ ] Guidance is shown prominently at top of each tab
+  - [ ] Clear, conversational tone explaining what the tab does and what choices matter
+
 - [ ] **styles/character-manager.css**
   - [ ] Base layout (tabs, footer, buttons)
   - [ ] Budget tracker styling (red over-limit states)
+  - [ ] Guidance text styling (boxed, distinguished from form elements)
   - [ ] Responsive design for mobile
   - [ ] Tab transitions/animations
 
-**Estimated Lines of Code:** 400-500 (CharacterManager.js), 100-150 (template), 300-400 (CSS)
+**Estimated Lines of Code:** 400-500 (CharacterManager.js), 100-150 (main template), 100-150 (guidance text across tab templates), 300-400 (CSS)
 
 ---
 
@@ -107,6 +113,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] Archetype text input (freeform)
 - [ ] Concept textarea (freeform)
 - [ ] Auto-save on change
+- [ ] **New Player Guidance:**
+  > "What's your character's basic idea? Choose an archetype (like 'Rogue', 'Wizard', 'Ranger') and briefly describe them. This is just flavor—you'll define your actual abilities on the next tabs."
 - [ ] **Validation:** Optional (no blocking)
 
 **Estimated Lines:** 50 (template + handler)
@@ -116,6 +124,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] Display ancestry bonuses (attributes, edges, skills, etc.)
 - [ ] On selection: Auto-apply bonuses to Attributes tab
 - [ ] Show message: "Ancestry bonuses applied: ..."
+- [ ] **New Player Guidance:**
+  > "Pick your character's ancestry (like Human, Dwarf, Elf). Each ancestry gives you starting bonuses to skills and stats. The bonuses automatically apply to later tabs—don't worry about adding them yourself."
 - [ ] **Validation:** Inform only if not selected
 
 **Estimated Lines:** 100 (template + handler) + calculator updates
@@ -128,6 +138,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - Major hindrances can show 2 dropdowns if using 1-point trade-offs
 - [ ] Points tracking: Show X/4 total
 - [ ] On dropdown change: Auto-undo previous, recalculate budgets
+- [ ] **New Player Guidance:**
+  > "Hindrances are flaws or quirks that give you bonus points. Major hindrances are worth 2 points, minor ones worth 1. Pick up to 4 points' worth. For each, choose what bonus you want: a +2 to an attribute, a free edge, extra skill point, or extra money. First-timers should pick 2–3 hindrances to keep things simple."
 - [ ] **Validation:** Warn if over 4 points, inform of unused points
 
 **Estimated Lines:** 200-300 (template + handler)
@@ -138,6 +150,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] Show ancestry bonus message if applied
 - [ ] Lock minimums if ancestry bonus (e.g., d6 Vigor locked to d6+)
 - [ ] Real-time point tracking: X/5 in footer
+- [ ] **New Player Guidance:**
+  > "You have 5 points to boost your core abilities. Start with d6 in each (your base), then pick which ones matter most to your character. A strong warrior bumps Strength and Vigor; a sneaky rogue boosts Agility and Smarts. Moving a die up one step (d6→d8) costs 1 point. Raising from d12 costs 2 points but has a limit—ask your GM if unsure."
 - [ ] **Validation:** Warn if over 5 points
 
 **Estimated Lines:** 150-200 (template + handler)
@@ -148,6 +162,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): ★ or bold, free at d4
 - [ ] Search/filter box (optional, add if list gets long)
 - [ ] Real-time point tracking: Y/12 in footer (+ hindrance bonus)
+- [ ] **New Player Guidance:**
+  > "Pick what your character is good at. You have 12 points to spend. Core skills (marked with ★) start free at d4—you just pay to boost them higher. Other skills cost points to use. Each die step up (d4→d6) costs 1 point. Pro tip: Pick 3–4 skills your character uses often; leave the rest. Your ancestry and edges might add free bonuses here too."
 - [ ] **Validation:** Warn if over budget
 
 **Estimated Lines:** 200-300 (template + handler)
@@ -158,6 +174,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] Show prerequisite info (non-blocking, info-only)
 - [ ] Show edge cost if available
 - [ ] Real-time edge point tracking: Z/? in footer
+- [ ] **New Player Guidance:**
+  > "Edges are cool special abilities and perks. You get edge points from hindrances and your ancestry (Humans get a bonus edge). Pick abilities that fit your character—a rogue might pick Fast Draw or Luck, a mage picks spellcasting edges. No rush to pick everything on your first try; you can always take more edges with advances as your character grows. Check the prerequisites—some edges require skills or attributes at certain levels."
 - [ ] **Validation:** Inform if prerequisites not met, warn if over edge points
 
 **Estimated Lines:** 150-200 (template + handler)
@@ -167,6 +185,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 - [ ] List items with individual cost, quantity, running total
 - [ ] Show remaining budget (300 - used)
 - [ ] Remove item button
+- [ ] **New Player Guidance:**
+  > "Pick your starting equipment. You have 300 silver to spend. Drag items from the compendium list on the left into your gear. Don't sweat perfection—you can't break anything here, and you'll pick up more loot in the game. A new character usually grabs one good weapon, armor if available, and handy adventuring gear like rope or a torch. Anything over budget is fine, but the GM might tell you to trim down."
 - [ ] **Validation:** Warn if over 300 silver budget
 
 **Estimated Lines:** 150-200 (template + handler)
@@ -178,11 +198,13 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - Parry (2 + Fighting/2)
   - Toughness (2 + Vigor/2 + Armor bonus)
 - [ ] Show gear cost breakdown
+- [ ] **New Player Guidance:**
+  > "Here's your final character. Review everything—if something looks off, go back to earlier tabs and fix it. The derived stats at the bottom (Pace, Parry, Toughness) are calculated automatically from your choices. Ready? Hit Save to add your character to the world!"
 - [ ] **Validation:** List all invalid states if any
 
 **Estimated Lines:** 100-150 (template + handler)
 
-**Total Phase 3:** ~1500-1800 lines of code
+**Total Phase 3:** ~1600-1900 lines of code
 
 ---
 
