@@ -7,6 +7,7 @@ import { setupMigrations } from "./migrations.js";
 import { setupUI } from "./ui.js";
 import { createIconRemapper } from "./lib/icon-remapper.js";
 import { pathMappings, nameMappings, fallbackIconMappings } from "./lib/icon-mappings.js";
+import { setupCharacterCreationTools, CharacterManager, AdvancementManager } from "./apps/character-creation/index.js";
 
 const MODULE_ID = "swade-fantasy-world-kit";
 
@@ -506,7 +507,40 @@ Hooks.once("init", () => {
   setupSettings({
     BaselineModulesManager,
     ExtraVisiblePacksSelector,
+    CharacterManager,
+    AdvancementManager,
     handleVisibilitySettingsChanged
+  });
+
+  // Setup character creation tools
+  setupCharacterCreationTools();
+
+  // Register Handlebars helpers for character creation templates
+  Handlebars.registerHelper('eq', (a, b) => a === b);
+  Handlebars.registerHelper('in', (value, collection) => {
+    if (Array.isArray(collection)) return collection.includes(value);
+    if (typeof collection === 'object' && collection !== null) return value in collection;
+    return false;
+  });
+  Handlebars.registerHelper('capitalize', (str) => {
+    if (typeof str !== 'string') return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  });
+  Handlebars.registerHelper('skills-count', (obj) => {
+    if (typeof obj !== 'object' || obj === null) return 0;
+    return Object.keys(obj).length;
+  });
+  Handlebars.registerHelper('array', (...args) => {
+    // Remove the last argument which is the Handlebars context object
+    args.pop();
+    return args;
+  });
+  Handlebars.registerHelper('gte', (a, b) => a >= b);
+  Handlebars.registerHelper('lookup', (obj, key) => {
+    if (typeof obj === 'object' && obj !== null) {
+      return obj[key];
+    }
+    return undefined;
   });
 
   // Expose APIs and functions to window for app classes
@@ -522,6 +556,8 @@ Hooks.once("init", () => {
   // Expose app classes
   window.BaselineModulesManager = BaselineModulesManager;
   window.ExtraVisiblePacksSelector = ExtraVisiblePacksSelector;
+  window.CharacterManager = CharacterManager;
+  window.AdvancementManager = AdvancementManager;
 });
 
 Hooks.once("ready", async () => {

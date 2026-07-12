@@ -155,12 +155,14 @@ Linear list of upcoming work, prioritized top-to-bottom.
    - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
    - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
 
-4. **v0.6.2: Character Creation & Guided Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
+4. **v0.6.2: Character Manager — Unified Character Creation & Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
    - Addresses: The module should support actual character building workflows, not just compendium curation. Guided advancement helps players and GMs apply experience, edge points, and item upgrades consistently.
-   - Approach: Create a character creation app with ancestry/skill/edge/hindrance selection using curated Fantasy compendia, plus an advancement automation app for stepwise advancement, XP tracking, and recommended advancement actions.
-   - Files: `scripts/apps/CharacterCreator.js`, `scripts/apps/AdvancementManager.js`, `templates/character-creator.hbs`, `templates/advancement-manager.hbs`, `scripts/main.js`, `README.md`.
+   - Approach: Single unified FormApplication for character creation and mid-campaign management (similar to Pathbuilder for PF2e). Users create blank actor first, then open Character Manager from the actor sheet. Follows official SWADE rulebook flow: Concept → Ancestry → Hindrances → Attributes → Skills → Edges → Gear → Summary. Features hindrance trade-off system, auto-applied ancestry bonuses, real-time budget tracking, and gear drag-drop interface.
+   - Files: `scripts/apps/CharacterManager.js`, `templates/character-manager.hbs`, updates to `scripts/lib/calculator.js` and `scripts/lib/compendium-utils.js`, `styles/character-manager.css`, `scripts/main.js`, `README.md`.
+   - **Detailed Specification:** [docs/v0.6.2/CHARACTER_MANAGER.md](docs/v0.6.2/CHARACTER_MANAGER.md) — Contains complete UX design, implementation phases, tab-by-tab specs, testing checklist, estimated effort, and success criteria.
+   - **Testing:** [docs/v0.6.2/TESTING.md](docs/v0.6.2/TESTING.md) — Comprehensive test cases aligned with new design.
    - Prerequisite: curated compendium access and existing compendium visibility/integration flow.
-   - Output: SWADE-focused character creation tools with optional advanced guidance and automation for advancement choices.
+   - Output: SWADE-focused character management tool supporting creation, editing, and advancement workflows with real-time SWADE rule compliance checking.
 
 5. **v0.6.3: Compendium Generation Tool** — Deprecate shipped premium compendium content and provide an export/import workflow for user-created compendiums.
   - Addresses: Avoid shipping proprietary Fantasy Companion content while still giving GMs an easy way to recreate custom compendiums from installed official modules.
@@ -212,7 +214,7 @@ None currently planned. May add items here based on v0.7.0 workflow review findi
 ### Cleanup and Maintenance
 
 - **v0.7.0+: Cleanup Release** — Remove legacy migration function and flags, legacy constants, and old setting compatibility scaffolding. Scheduled after stabilization window.
-- **v1.6.0+: BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [APPLICATIONV2_MIGRATION.md](APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.
+- **v1.6.0+: BaselineModulesManager ApplicationV2 Migration** (⏸️ deferred to v16 era) — Migrate from deprecated V1 FormApplication to V2 ApplicationV2 when Foundry v16 approaches. See [docs/APPLICATIONV2_MIGRATION.md](docs/APPLICATIONV2_MIGRATION.md) for detailed migration plan. Currently deferred: FormApplication works reliably; V2 complexity not justified while v16 is years away.
 
 ### Post-Roadmap Modularization (Parked)
 

@@ -1,0 +1,204 @@
+<form class="swade-character-creator">
+  <div class="form-header">
+    <h2>Create SWADE Character</h2>
+  </div>
+
+  <div class="form-tabs">
+    <div class="tab active" data-tab="basics">
+      <h3>Character Basics</h3>
+      
+      <div class="form-group">
+        <label for="characterName">Character Name *</label>
+        <input 
+          type="text" 
+          id="characterName"
+          name="characterName" 
+          value="{{character.name}}" 
+          placeholder="Enter character name"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="ancestry">Ancestry *</label>
+        <select id="ancestry" name="ancestry" required>
+          <option value="">-- Select Ancestry --</option>
+          {{#each ancestries}}
+            <option value="{{this.uuid}}" {{#if (eq ../character.ancestry this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea 
+          name="description" 
+          placeholder="Character background and notes"
+          rows="4"
+        >{{character.description}}</textarea>
+      </div>
+    </div>
+
+    <div class="tab" data-tab="attributes">
+      <h3>Attributes</h3>
+      
+      <div class="attributes-grid">
+        {{#each character.attributes}}
+          <div class="attribute-card">
+            <label>{{capitalize @key}}</label>
+            <div class="attribute-die">{{this.die}}</div>
+            <small>{{this.advances}} advances</small>
+          </div>
+        {{/each}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Note:</strong> During character creation, attributes start at d4. 
+        Attribute improvement is available during advancement.</p>
+      </div>
+    </div>
+
+    <div class="tab" data-tab="skills">
+      <h3>Skills</h3>
+      
+      <div class="form-group">
+        <label for="skills">Select Skills (Ctrl+Click for multiple)</label>
+        <select 
+          id="skills" 
+          name="skills" 
+          multiple 
+          size="8"
+        >
+          {{#each skills}}
+            <option value="{{this.uuid}}" {{#if (in ../character.skills this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if character.skills}}
+        <div class="selected-items">
+          <h4>Selected Skills</h4>
+          <ul>
+            {{#each character.skills}}
+              <li>{{this.name}} ({{this.die}})</li>
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="tab" data-tab="edges">
+      <h3>Edges</h3>
+      
+      <div class="form-group">
+        <label for="edges">Select Edges (Ctrl+Click for multiple)</label>
+        <select 
+          id="edges" 
+          name="edges" 
+          multiple 
+          size="8"
+        >
+          {{#each edges}}
+            <option value="{{this.uuid}}" {{#if (in ../character.edges this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if character.edges}}
+        <div class="selected-items">
+          <h4>Selected Edges</h4>
+          <ul>
+            {{#each character.edges}}
+              <li>{{this.name}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="tab" data-tab="hindrances">
+      <h3>Hindrances</h3>
+      
+      <div class="form-group">
+        <label for="hindrances">Select Hindrances (Ctrl+Click for multiple)</label>
+        <select 
+          id="hindrances" 
+          name="hindrances" 
+          multiple 
+          size="8"
+        >
+          {{#each hindrances}}
+            <option value="{{this.uuid}}" {{#if (in ../character.hindrances this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if character.hindrances}}
+        <div class="selected-items">
+          <h4>Selected Hindrances</h4>
+          <ul>
+            {{#each character.hindrances}}
+              <li>{{this.name}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="tab" data-tab="summary">
+      <h3>Summary</h3>
+      
+      <div class="character-summary">
+        <h4>{{character.name}}</h4>
+        <p><strong>Ancestry:</strong> {{character.ancestry}}</p>
+        <p><strong>Skills:</strong> {{skills-count character.skills}}</p>
+        <p><strong>Edges:</strong> {{character.edges.length}}</p>
+        <p><strong>Hindrances:</strong> {{character.hindrances.length}}</p>
+      </div>
+
+      <div class="derived-stats">
+        <h4>Derived Statistics</h4>
+        <div class="stats-grid">
+          <div class="stat">
+            <span class="label">Pace</span>
+            <span class="value">{{derivedStats.pace}}</span>
+          </div>
+          <div class="stat">
+            <span class="label">Parry</span>
+            <span class="value">{{derivedStats.parry}}</span>
+          </div>
+          <div class="stat">
+            <span class="label">Toughness</span>
+            <span class="value">{{derivedStats.toughness}}</span>
+          </div>
+          <div class="stat">
+            <span class="label">Charisma</span>
+            <span class="value">{{derivedStats.charisma}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <div class="action-buttons">
+      <button type="button" class="btn btn-success" data-action="create-actor">
+        <i class="fas fa-save"></i> Create Character
+      </button>
+      <button type="button" class="btn btn-info" data-action="export-json">
+        <i class="fas fa-download"></i> Export JSON
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="this.closest('.window-app').remove()">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
+  </div>
+</form>

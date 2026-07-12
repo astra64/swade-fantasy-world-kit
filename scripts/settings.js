@@ -5,6 +5,8 @@ export function setupSettings(config) {
   const {
     BaselineModulesManager,
     ExtraVisiblePacksSelector,
+    CharacterManager,
+    AdvancementManager,
     handleVisibilitySettingsChanged
   } = config;
 
@@ -24,6 +26,15 @@ export function setupSettings(config) {
     icon: "fas fa-puzzle-piece",
     type: BaselineModulesManager,
     restricted: true
+  });
+
+  game.settings.registerMenu(MODULE_ID, "characterCreatorMenu", {
+    name: "Create Character",
+    label: "Open Creator",
+    hint: "Create a new SWADE character with ancestry, skills, edges, and hindrances from curated compendiums.",
+    icon: "fas fa-user-plus",
+    type: CharacterCreator,
+    restricted: false
   });
 
   game.settings.register(MODULE_ID, "curatedMode", {

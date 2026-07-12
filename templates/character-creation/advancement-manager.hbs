@@ -1,14 +1,151 @@
 <form class="swade-advancement-manager">
-  <div class="form-group">
-    <label>Experience Points</label>
-    <input type="number" name="xp" value="0" readonly />
+  <div class="form-header">
+    <h2>Advance {{actor.name}}</h2>
   </div>
 
-  <!-- TODO: Implement advancement form -->
-  <!-- XP tracking, skill selection, edge selection, etc. -->
+  <div class="form-tabs">
+    <div class="tab active" data-tab="xp">
+      <h3>Experience & Summary</h3>
+      
+      <div class="xp-display">
+        <div class="xp-box">
+          <label>Current Experience Points</label>
+          <input type="number" name="xp" value="{{currentXP}}" />
+        </div>
+        
+        <div class="xp-box">
+          <label>Advances Used</label>
+          <input type="number" value="{{currentAdvances}}" readonly />
+        </div>
+      </div>
+
+      <div class="advancement-costs">
+        <h4>Advancement Costs</h4>
+        <ul>
+          <li><strong>Skill Increase:</strong> {{skillIncreaseCost}} XP</li>
+          <li><strong>Attribute Increase:</strong> {{attributeIncreaseCost}} XP</li>
+        </ul>
+      </div>
+
+      <div class="selected-advancements">
+        <h4>Selected Advancements (Total Cost: {{totalAdvancementCost}} XP)</h4>
+        {{#if selectedAdvancements.length}}
+          <ul>
+            {{#each selectedAdvancements}}
+              <li>
+                {{this.type}} - {{this.target}}
+                <button type="button" class="btn btn-small" data-action="remove-advancement" data-index="{{@index}}">
+                  Remove
+                </button>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p><em>No advancements selected yet.</em></p>
+        {{/if}}
+      </div>
+    </div>
+
+    <div class="tab" data-tab="skills">
+      <h3>Skill Advancement</h3>
+      
+      {{#if availableSkillAdvancements.length}}
+        <div class="advancement-options">
+          {{#each availableSkillAdvancements}}
+            <div class="option-card">
+              <div class="option-header">
+                <strong>{{this.name}}</strong>
+              </div>
+              <div class="option-footer">
+                <button 
+                  type="button" 
+                  class="btn btn-small btn-success" 
+                  data-action="add-skill-advancement"
+                  data-skill-uuid="{{this.uuid}}"
+                >
+                  Add (+{{../skillIncreaseCost}} XP)
+                </button>
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="info-box">
+          <p>Insufficient XP for skill advancements. Required: {{skillIncreaseCost}} XP</p>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="tab" data-tab="attributes">
+      <h3>Attribute Advancement</h3>
+      
+      {{#if availableAttributeAdvancements.length}}
+        <div class="advancement-options attributes-list">
+          {{#each availableAttributeAdvancements}}
+            <div class="attribute-option">
+              <div class="attribute-name">
+                <strong>{{capitalize this}}</strong>
+              </div>
+              <button 
+                type="button" 
+                class="btn btn-small btn-success" 
+                data-action="add-attribute-advancement"
+                data-attribute="{{this}}"
+              >
+                Increase (+{{../attributeIncreaseCost}} XP)
+              </button>
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="info-box">
+          <p>Insufficient XP for attribute advancements. Required: {{attributeIncreaseCost}} XP</p>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="tab" data-tab="edges">
+      <h3>Edge Selection</h3>
+      
+      <div class="info-box">
+        <p><strong>Note:</strong> Edge advancement is available but may have prerequisites. 
+        Prerequisite checking is deferred to v0.6.2+ expansion.</p>
+      </div>
+
+      {{#if edges.length}}
+        <div class="advancement-options">
+          {{#each edges}}
+            <div class="option-card">
+              <div class="option-header">
+                <strong>{{this.name}}</strong>
+              </div>
+              <div class="option-footer">
+                <button 
+                  type="button" 
+                  class="btn btn-small btn-info" 
+                  data-action="add-edge"
+                  data-edge-uuid="{{this.uuid}}"
+                >
+                  Add Edge
+                </button>
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <p><em>No edges available.</em></p>
+      {{/if}}
+    </div>
+  </div>
 
   <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Apply Advancement</button>
-    <button type="button" class="btn btn-secondary" onclick="this.closest('.window-app').closest('.app').remove()">Cancel</button>
+    <div class="action-buttons">
+      <button type="button" class="btn btn-success" data-action="apply-advancements">
+        <i class="fas fa-check"></i> Apply Advancements
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="this.closest('.window-app').remove()">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
   </div>
 </form>

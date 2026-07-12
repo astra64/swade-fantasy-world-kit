@@ -1,14 +1,225 @@
 <form class="swade-character-creator">
-  <div class="form-group">
-    <label>Character Name</label>
-    <input type="text" name="characterName" value="" />
+  <div class="form-header">
+    <h2>Create SWADE Character</h2>
   </div>
 
-  <!-- TODO: Implement character creation form -->
-  <!-- Ancestry selector, skill picker, edge/hindrance selection, etc. -->
+  <div class="form-tabs">
+    {{!-- BASICS TAB: Name, Ancestry, Description --}}
+    <div class="tab active" data-tab="basics">
+      <h3>Character Basics</h3>
+      
+      <div class="form-group">
+        <label for="characterName">Character Name *</label>
+        <input 
+          type="text" 
+          id="characterName"
+          name="characterName" 
+          value="{{character.name}}" 
+          placeholder="Enter character name"
+          required
+        />
+      </div>
 
-  <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Create Character</button>
-    <button type="button" class="btn btn-secondary" onclick="this.closest('.window-app').closest('.app').remove()">Cancel</button>
+      <div class="form-group">
+        <label for="ancestry">Ancestry *</label>
+        <select id="ancestry" name="ancestry" required>
+          <option value="">-- Select Ancestry --</option>
+          {{#each ancestries}}
+            <option value="{{this.uuid}}" {{#if (eq ../character.ancestry this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea 
+          name="description" 
+          placeholder="Character background and notes"
+          rows="4"
+        >{{character.description}}</textarea>
+      </div>
+    </div>
+
+    {{!-- TRAITS TAB: Attributes + Skills combined --}}
+    <div class="tab" data-tab="traits">
+      <h3>Traits</h3>
+      
+      <div class="swade-traits-container">
+        {{#each character.attributes as |attr attrName|}}
+          <div class="attribute-section">
+            <div class="attribute-header">
+              <h4>{{capitalize attrName}}</h4>
+              <div class="attribute-die-buttons">
+                {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                  <button 
+                    type="button" 
+                    class="die-btn {{#if (eq attr.die die)}}active{{/if}}"
+                    data-action="set-attribute"
+                    data-attribute="{{attrName}}"
+                    data-die="{{die}}"
+                    {{#if (eq die "d4")}}disabled{{/if}}
+                  >
+                    {{die}}
+                  </button>
+                {{/each}}
+              </div>
+            </div>
+
+            {{!-- Skills for this attribute --}}
+            <div class="skills-for-attribute">
+              {{#each (lookup ../../skillsByAttribute attrName) as |skill|}}
+                <div class="skill-row {{#if skill.isCoreSkill}}core-skill{{/if}}">
+                  <div class="skill-name">
+                    <span class="skill-label">{{skill.name}}</span>
+                    {{#if skill.isCoreSkill}}
+                      <span class="core-badge" title="Free core skill at d4">FREE</span>
+                    {{/if}}
+                  </div>
+                  <div class="skill-die-buttons">
+                    {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                      <button 
+                        type="button" 
+                        class="die-btn {{#if (eq skill.die die)}}active{{/if}}"
+                        data-action="set-skill"
+                        data-skill-uuid="{{skill.uuid}}"
+                        data-skill-name="{{skill.name}}"
+                        data-die="{{die}}"
+                      >
+                        {{die}}
+                      </button>
+                    {{/each}}
+                  </div>
+                </div>
+              {{/each}}
+            </div>
+          </div>
+        {{/each}}
+      </div>
+
+      {{!-- Pinned footer with point counters --}}
+      <div class="traits-footer">
+        <div class="points-counter">
+          <span class="points {{#if (gte attributePointsUsed 5)}}over-limit{{/if}}">
+            Attributes: {{attributePointsUsed}}/5
+          </span>
+          <span class="points {{#if (gte skillPointsUsed 12)}}over-limit{{/if}}">
+            Skills: {{skillPointsUsed}}/12
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {{!-- EDGES TAB --}}
+    <div class="tab" data-tab="edges">
+      <h3>Edges</h3>
+      
+      <div class="form-group">
+        <label for="edges">Select Edges (Ctrl+Click for multiple)</label>
+        <select 
+          id="edges" 
+          name="edges" 
+          multiple 
+          size="8"
+        >
+          {{#each edges}}
+            <option value="{{this.uuid}}" {{#if (in ../character.edges this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if character.edges}}
+        <div class="selected-items">
+          <h4>Selected Edges</h4>
+          <ul>
+            {{#each character.edges}}
+              <li>{{this.name}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+
+    {{!-- HINDRANCES TAB --}}
+    <div class="tab" data-tab="hindrances">
+      <h3>Hindrances</h3>
+      
+      <div class="form-group">
+        <label for="hindrances">Select Hindrances (Ctrl+Click for multiple)</label>
+        <select 
+          id="hindrances" 
+          name="hindrances" 
+          multiple 
+          size="8"
+        >
+          {{#each hindrances}}
+            <option value="{{this.uuid}}" {{#if (in ../character.hindrances this.uuid)}}selected{{/if}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if character.hindrances}}
+        <div class="selected-items">
+          <h4>Selected Hindrances</h4>
+          <ul>
+            {{#each character.hindrances}}
+              <li>{{this.name}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </div>
+
+    {{!-- SUMMARY TAB --}}
+    <div class="tab" data-tab="summary">
+      <h3>Summary</h3>
+      
+      <div class="character-summary">
+        <h4>{{character.name}}</h4>
+        {{#if character.ancestry}}<p><strong>Ancestry:</strong> {{character.ancestry}}</p>{{/if}}
+        <p><strong>Skills:</strong> {{skills-count character.skills}}</p>
+        <p><strong>Edges:</strong> {{skills-count character.edges}}</p>
+        <p><strong>Hindrances:</strong> {{skills-count character.hindrances}}</p>
+      </div>
+
+      <div class="derived-stats">
+        <h4>Derived Statistics</h4>
+        <div class="stats-grid">
+          <div class="stat">
+            <span class="label">Parry</span>
+            <span class="value">{{derivedStats.parry}}</span>
+          </div>
+          <div class="stat">
+            <span class="label">Toughness</span>
+            <span class="value">{{derivedStats.toughness}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-info" data-action="export-json" title="Download character as JSON">
+          <i class="fas fa-download"></i> Export JSON
+        </button>
+        <button type="button" class="btn btn-success" data-action="create-actor" title="Create as actor in world">
+          <i class="fas fa-save"></i> Create Character
+        </button>
+        <button type="button" class="btn btn-secondary" data-action="close" title="Close without saving">
+          <i class="fas fa-times"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {{!-- PINNED FOOTER: Derived stats shown on all tabs --}}
+  <div class="character-footer">
+    <div class="derived-stats-pinned">
+      <span class="stat-item">Parry: <strong>{{derivedStats.parry}}</strong></span>
+      <span class="stat-item">Toughness: <strong>{{derivedStats.toughness}}</strong></span>
+    </div>
   </div>
 </form>
