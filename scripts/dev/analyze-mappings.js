@@ -33,6 +33,44 @@ const analysis = {
   nameBasedMappingCandidates: {}
 };
 
+function getTypeMapping(mappingTable, itemType) {
+  if (!mappingTable || !itemType) return null;
+
+  const normalizedType = String(itemType).trim().toLowerCase();
+  if (!normalizedType) return null;
+
+  const directMatch = mappingTable[itemType];
+  if (directMatch) return directMatch;
+
+  const matchedKey = Object.keys(mappingTable).find(
+    (key) => String(key).trim().toLowerCase() === normalizedType
+  );
+
+  return matchedKey ? mappingTable[matchedKey] : null;
+}
+
+function normalizeIconPath(iconPath) {
+  if (!iconPath) return iconPath;
+  return String(iconPath).trim();
+}
+
+function normalizeItemName(name) {
+  return String(name ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function hasNameMapping(item) {
+  const typeMapping = getTypeMapping(mappings.nameMappings, item.type);
+  if (!typeMapping) return false;
+
+  const itemName = normalizeItemName(item.name);
+  return Object.keys(typeMapping).some(
+    (key) => normalizeItemName(key) === itemName
+  );
+}
+
 // Analyze each pack
 for (const [packName, packData] of Object.entries(data.packs)) {
   const itemCount = packData.count;
@@ -46,7 +84,13 @@ for (const [packName, packData] of Object.entries(data.packs)) {
   };
 
   for (const item of items) {
-    const icon = item.img;
+    const icon = normalizeIconPath(item.img);
+
+    // Check if runtime can already remap by name regardless of source path.
+    if (hasNameMapping(item)) {
+      analysis.summary[packName].mapped++;
+      continue;
+    }
 
     // Check if using system icon
     if (icon.startsWith("systems/")) {
@@ -54,7 +98,7 @@ for (const [packName, packData] of Object.entries(data.packs)) {
       analysis.systemIconItems.push({
         pack: packName,
         name: item.name,
-        icon,
+        icon: item.img,
         type: item.type
       });
       continue;

@@ -130,7 +130,7 @@ Run this after significant code changes and before release.
 
 ## Roadmap
 
-**Current version:** v0.5.5 | **See [CHANGELOG.md](CHANGELOG.md) for completed version history and release notes.**
+**Current version:** v0.5.6 | **See [CHANGELOG.md](CHANGELOG.md) for completed version history and release notes.**
 
 Roadmap items are assigned version numbers using semantic versioning (MAJOR.MINOR.PATCH):
 - **Minor version bump** (0.X.0): New features or significant improvements
@@ -141,27 +141,35 @@ Roadmap items are assigned version numbers using semantic versioning (MAJOR.MINO
 
 Linear list of upcoming work, prioritized top-to-bottom.
 
-1. **v0.5.6: Refine and expand icon mappings** — Review and test all 102 path mappings for accuracy. Expand name-based smart/soft mappings to **all item types** (Ancestry, Edge, Hindrance, Power, Weapon, Armor, Skill, etc.) with normalization rules for common variants: singular/plural (elf/elves), compound names (half-elf), abbreviations (longsword), typos. Test against actual item icons in SWADE system, Fantasy Companion, and other settings to ensure cross-setting consistency.
-   - Addresses: Mappings are the foundation of the remapper; confidence in accuracy is required before shipping FormApplication. Broad smart mappings enable setting-agnostic icon consistency (Eberron weapons use same names as Fantasy).
-   - **Completed:** Generated 596 comprehensive name-based mappings across all 11 item types; created name-normalization utility for variants; prioritized nameMappings over pathMappings; added fallback icons for all types; 98.8% coverage (794/804 items)
-   - **Remaining:** (1) Map 10 unmapped items (5 ROF actions with system icons, 5 edges with Forge URLs); (2) Reorder icon-mappings.js objects alphabetically (Action, Ancestry, Armor, ArmorSet, Edge, Gear, Hindrance, MagicItem, Power, Skill, Weapon); (3) Create validation testing checklist (sample per type, verify priority, verify fallback)
-   - Output: Updated icon-mappings.js with curated mappings and fallback coverage; validation testing checklist in DEVELOPMENT.md
-
-2. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes, scope selection (World / Selected Tokens / Scene Actors), and **per-item fallback override** button. When smart mappings are incorrect, users can click "Use Fallback" to switch that item to its type-specific default icon instead of the smart-mapped one. Replaces the unsafe utility macro as the primary icon remapping tool.
+1. **v0.6.0: Icon Remapping FormApplication** — Safe, preview-driven UI for remapping item icons with per-item checkboxes, scope selection (World / Selected Tokens / Scene Actors), and **per-item fallback override** button. When smart mappings are incorrect, users can click "Use Fallback" to switch that item to its type-specific default icon instead of the smart-mapped one. Replaces the unsafe utility macro as the primary icon remapping tool.
    - Addresses: The current macro is destructive with no preview or rollback; users can't verify changes or target subsets of actors. Smart mappings may be incorrect for some items, so users need a way to correct without manual icon selection.
    - Approach: FormApplication (like Preset Modules Manager) with preview table showing old/new icons, checkboxes for per-item selection, scope radio buttons, and per-item "Use Fallback" override. Main "Remap" button applies checked items using their displayed (mapped or fallback) icon.
    - Files: `scripts/apps/IconRemapper.js`, `templates/icon-remapper.hbs`, updates to `scripts/main.js` and `README.md`.
    - Prerequisite: v0.5.6 mappings validation complete.
 
-3. **v0.6.1: Icon Remapping Scoped Macro** — Simplified copy/paste macro alternative for users who prefer macro entry point over Settings menu. Launches FormApplication with scope dialog or applies icons to selected tokens directly.
+2. **v0.6.1: Icon Remapping Scoped Macro** — Simplified copy/paste macro alternative for users who prefer macro entry point over Settings menu. Launches FormApplication with scope dialog or applies icons to selected tokens directly.
    - Depends on: Icon Remapping FormApplication feature above.
    - File: `scripts/macros/remap-icons-scoped-macro.js`.
 
-4. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
+3. **v0.6.1: Test icon remapper with unlocked compendiums** — Validate end-to-end behavior: unlock a compendium, use Icon Remapping FormApplication, verify icons update correctly, lock compendium, verify persisted changes. Covers edge cases and confirms remapper idempotency.
    - Covered by: Validation checklist in DEVELOPMENT.md (icon remapper section).
    - Output: Pass/fail confirmation; any edge cases or bugs found during testing.
 
-5. **v0.7.0 (Planning): Compendium Sync Workflow Between Local and Hosted Foundry** — Document and validate safe process for syncing custom compendium edits between local Foundry dev instance and Molten Hosting server without manual re-creation or data loss.
+4. **v0.6.2: Character Creation & Guided Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
+   - Addresses: The module should support actual character building workflows, not just compendium curation. Guided advancement helps players and GMs apply experience, edge points, and item upgrades consistently.
+   - Approach: Create a character creation app with ancestry/skill/edge/hindrance selection using curated Fantasy compendia, plus an advancement automation app for stepwise advancement, XP tracking, and recommended advancement actions.
+   - Files: `scripts/apps/CharacterCreator.js`, `scripts/apps/AdvancementManager.js`, `templates/character-creator.hbs`, `templates/advancement-manager.hbs`, `scripts/main.js`, `README.md`.
+   - Prerequisite: curated compendium access and existing compendium visibility/integration flow.
+   - Output: SWADE-focused character creation tools with optional advanced guidance and automation for advancement choices.
+
+5. **v0.6.3: Compendium Generation Tool** — Deprecate shipped premium compendium content and provide an export/import workflow for user-created compendiums.
+  - Addresses: Avoid shipping proprietary Fantasy Companion content while still giving GMs an easy way to recreate custom compendiums from installed official modules.
+  - Approach: Let users build a compendium in the Foundry UI, export it in a minimal format, and import that export in another world to rebuild the same compendium from official content.
+   - Files: `scripts/apps/CompendiumRecipeBuilder.js`, `templates/compendium-recipe-builder.hbs`, `scripts/main.js`, `README.md`.
+   - Prerequisite: official SWADE modules installed in the target world and robust pack item lookup by name/identifier.
+   - Output: Public-friendly toolkit behavior that retains personal workflow support without shipping premium content.
+
+6. **v0.7.0: Compendium Sync Workflow Between Local and Hosted Foundry** — Document and validate safe process for syncing custom compendium edits between local Foundry dev instance and Molten Hosting server without manual re-creation or data loss.
    - Context: Module remains private (personal use) on GitHub. Pain point: Local changes to packs (edits, new items) need to sync to hosted server; currently manual and error-prone.
    - Solution: Simple zip-upload workflow via Molten web file manager. Full step-by-step procedures documented in README (see "Syncing Compendiums Between Local and Hosted Foundry").
    - Safeguards: Always close both Foundry instances before file operations (LevelDB corruption risk). Validate pack integrity after each sync.
@@ -177,20 +185,6 @@ Linear list of upcoming work, prioritized top-to-bottom.
    
    **Why extractable:** Character Creation Tools only references compendiums users already have installed (no premium content bundled), making it safe for public distribution.
    - Output: README section with procedures, safety checklist, and decision tree for full vs. packs-only sync.
-
-2. **v0.6.2: Character Creation & Guided Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
-   - Addresses: The module should support actual character building workflows, not just compendium curation. Guided advancement helps players and GMs apply experience, edge points, and item upgrades consistently.
-   - Approach: Create a character creation app with ancestry/skill/edge/hindrance selection using curated Fantasy compendia, plus an advancement automation app for stepwise advancement, XP tracking, and recommended advancement actions.
-   - Files: `scripts/apps/CharacterCreator.js`, `scripts/apps/AdvancementManager.js`, `templates/character-creator.hbs`, `templates/advancement-manager.hbs`, `scripts/main.js`, `README.md`.
-   - Prerequisite: curated compendium access and existing compendium visibility/integration flow.
-   - Output: SWADE-focused character creation tools with optional advanced guidance and automation for advancement choices.
-
-3. **v0.6.3: Compendium Generation Tool** — Deprecate shipped premium compendium content and provide an export/import workflow for user-created compendiums.
-  - Addresses: Avoid shipping proprietary Fantasy Companion content while still giving GMs an easy way to recreate custom compendiums from installed official modules.
-  - Approach: Let users build a compendium in the Foundry UI, export it in a minimal format, and import that export in another world to rebuild the same compendium from official content.
-   - Files: `scripts/apps/CompendiumRecipeBuilder.js`, `templates/compendium-recipe-builder.hbs`, `scripts/main.js`, `README.md`.
-   - Prerequisite: official SWADE modules installed in the target world and robust pack item lookup by name/identifier.
-   - Output: Public-friendly toolkit behavior that retains personal workflow support without shipping premium content.
 
 ### Future Releases
 
