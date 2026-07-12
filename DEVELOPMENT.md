@@ -178,6 +178,20 @@ Linear list of upcoming work, prioritized top-to-bottom.
    **Why extractable:** Character Creation Tools only references compendiums users already have installed (no premium content bundled), making it safe for public distribution.
    - Output: README section with procedures, safety checklist, and decision tree for full vs. packs-only sync.
 
+2. **v0.6.2: Character Creation & Guided Advancement Tools** — Build SWADE character creation support plus guided advancement automation for hassle-free campaign progression.
+   - Addresses: The module should support actual character building workflows, not just compendium curation. Guided advancement helps players and GMs apply experience, edge points, and item upgrades consistently.
+   - Approach: Create a character creation app with ancestry/skill/edge/hindrance selection using curated Fantasy compendia, plus an advancement automation app for stepwise advancement, XP tracking, and recommended advancement actions.
+   - Files: `scripts/apps/CharacterCreator.js`, `scripts/apps/AdvancementManager.js`, `templates/character-creator.hbs`, `templates/advancement-manager.hbs`, `scripts/main.js`, `README.md`.
+   - Prerequisite: curated compendium access and existing compendium visibility/integration flow.
+   - Output: SWADE-focused character creation tools with optional advanced guidance and automation for advancement choices.
+
+3. **v0.6.3: Compendium Generation Tool** — Deprecate shipped premium compendium content and provide an export/import workflow for user-created compendiums.
+  - Addresses: Avoid shipping proprietary Fantasy Companion content while still giving GMs an easy way to recreate custom compendiums from installed official modules.
+  - Approach: Let users build a compendium in the Foundry UI, export it in a minimal format, and import that export in another world to rebuild the same compendium from official content.
+   - Files: `scripts/apps/CompendiumRecipeBuilder.js`, `templates/compendium-recipe-builder.hbs`, `scripts/main.js`, `README.md`.
+   - Prerequisite: official SWADE modules installed in the target world and robust pack item lookup by name/identifier.
+   - Output: Public-friendly toolkit behavior that retains personal workflow support without shipping premium content.
+
 ### Future Releases
 
 Linear list of proposed features for future consideration, organized by target version.
@@ -226,21 +240,22 @@ None currently planned. May add items here based on v0.7.0 workflow review findi
 - No Foundry system/module dependencies beyond core Foundry APIs.
 
 **Module 3: Character Creation Tools (System Agnostic, SWADE-focused UI)**
-- Skill calculator, edges/hindrances selector, ancestry picker.
+- Skill calculator, edges/hindrances selector, ancestry picker, and guided advancement automation.
 - Reads from compendiums user has installed (no bundled content).
 - Safe for public distribution (no premium content; only uses what users already own).
 - Dependency: World Setup Tools (for preset/dependency infrastructure, if applicable).
 - Can be used independently or integrated with SWADE hub module.
 
-#### Future: Compendium Generation for Other Settings
+#### Future: Compendium Generation from Official Sources
 
-Once the Fantasy module is stable, consider automated solutions for generating curated compendium sets for other SWADE settings (Eberron, Sci-Fi, etc.) rather than maintaining them manually. This could be a standalone tool that:
-- Takes base SWADE compendiums as input (e.g., Eberron content from modules)
-- Applies icon remapping and customization
-- Generates pre-curated compendium packs for distribution or personal use
+Instead of shipping curated compendium packs, the long-term direction is to make this module a tool for creating, exporting, and rebuilding compendium content from installed official SWADE modules.
 
-This approach avoids the maintenance burden of manually curating multiple setting-specific packs while preserving the ability to create on-demand packs when needed.
+Once the Fantasy module is stable, consider evolving this into a more general recipe-based workflow that:
+- Exports a user-created compendium from the Foundry UI as a minimal portable format
+- Applies icon remapping and metadata normalization as part of the export/import flow
+- Rebuilds the selection in another world from the same official source packs
 
+This approach avoids shipping proprietary content, reduces repository risk, and preserves the ability to create campaign-specific custom compendiums on-demand.
 #### Planned Extraction Scope
 
 1. World Setup Tools module:
