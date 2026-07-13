@@ -1,0 +1,143 @@
+<form class="swade-character-manager" id="character-manager">
+  <div class="form-tabs">
+    <!-- Tab 1: Concept -->
+    <div class="tab {{#if (eq currentTab 'concept')}}active{{/if}}" data-tab="concept">
+      <h3>Concept</h3>
+
+      <div class="tab-content">
+        <div class="guidance-box">
+          <p>{{tabGuidance.concept}}</p>
+        </div>
+
+        <div class="form-group">
+          <label for="name">Character Name</label>
+          <input type="text" id="name" name="name" value="{{character.name}}" placeholder="What is your character's name?" data-action="set-name">
+        </div>
+
+        <div class="form-group">
+          <label for="archetype">Archetype</label>
+          <input type="text" id="archetype" name="archetype" value="{{character.archetype}}" placeholder="e.g., Rogue, Wizard, Ranger" data-action="set-archetype">
+        </div>
+
+        <div class="form-group">
+          <label for="concept">Character Concept</label>
+          <textarea id="concept" name="concept" placeholder="Briefly describe your character concept..." data-action="set-concept">{{character.concept}}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Ancestry -->
+    <div class="tab {{#if (eq currentTab 'ancestry')}}active{{/if}}" data-tab="ancestry">
+      <h3>Ancestry</h3>
+
+      <div class="tab-content">
+        <div class="guidance-box">
+          <p>{{tabGuidance.ancestry}}</p>
+        </div>
+
+        <!-- Add Ancestry Section -->
+        <p class="hint-text">Search the dropdown, select an ancestry, and click Add. Or drag an ancestry from the compendium browser.</p>
+
+        <div class="form-group">
+          <div class="ancestry-input-inline">
+            <div class="ancestry-search-container">
+              <input type="text" class="ancestry-search" placeholder="Select Ancestry..." autocomplete="off">
+              <div class="ancestry-dropdown-menu"></div>
+            </div>
+            <button type="button" class="btn-add-ancestry" data-action="add-ancestry">Add</button>
+            <button type="button" class="btn-open-compendium" data-action="open-ancestry-compendium">Browse</button>
+          </div>
+        </div>
+
+        <!-- Selected Ancestry Display -->
+        {{#if character.ancestry}}
+        <div class="selected-ancestry">
+          {{#if selectedAncestryData}}
+          <div class="ancestry-item {{#if expandedAncestry}}expanded{{/if}}" data-action="toggle-ancestry-expand" data-item-uuid="{{selectedAncestryData.uuid}}">
+            <div class="ancestry-item-header">
+              {{#if selectedAncestryData.img}}
+              <img src="{{selectedAncestryData.img}}" alt="{{selectedAncestryData.name}}" class="ancestry-item-image">
+              {{/if}}
+              <div class="ancestry-item-info">
+                <span class="ancestry-name">{{selectedAncestryData.name}}</span>
+              </div>
+              <button type="button" class="btn-open-ancestry" data-action="open-ancestry-item" title="Open item"></button>
+              <button type="button" class="btn-remove-ancestry" data-action="remove-ancestry" title="Remove ancestry"></button>
+            </div>
+            {{#if expandedAncestry}}
+            <div class="ancestry-item-description">
+              {{#if selectedAncestryData.system.description}}
+              {{{selectedAncestryData.system.description}}}
+              {{else}}
+              <p class="info-text">No description available.</p>
+              {{/if}}
+            </div>
+            {{/if}}
+          </div>
+          {{#if selectedAncestryData.system.grants}}
+          <div class="ancestry-child-items">
+            <h4>Ancestral Abilities</h4>
+            {{#each childItemsData}}
+            <div class="ancestry-item {{#if this.isExpanded}}expanded{{/if}}" data-action="toggle-child-expand" data-item-uuid="{{this.uuid}}">
+              <div class="ancestry-item-header">
+                {{#if this.img}}
+                <img src="{{this.img}}" alt="{{this.name}}" class="ancestry-item-image">
+                {{/if}}
+                <div class="ancestry-item-info">
+                  <span class="ancestry-name">{{this.name}}</span>
+                </div>
+                <button type="button" class="btn-open-ancestry" data-action="open-child-item" data-uuid="{{this.uuid}}" title="Open item"></button>
+              </div>
+              {{#if this.isExpanded}}
+              <div class="ancestry-item-description">
+                {{#if this.system.description}}
+                {{{this.system.description}}}
+                {{else}}
+                <p class="info-text">No description available.</p>
+                {{/if}}
+              </div>
+              {{/if}}
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+          {{/if}}
+        </div>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- COMMENTED OUT - Tabs 3-8 will be added incrementally
+
+    Tab 3: Hindrances
+    ... (rest of tabs)
+
+    END COMMENTED OUT -->
+
+    <!-- Sticky Footer with Budget Tracker and Action Buttons -->
+    <div class="character-manager-footer">
+      <div class="budget-tracker">
+        <span class="budget-item">
+          <span class="budget-label">Attributes:</span>
+          <span class="budget-value">{{attributePointsUsed}}/5</span>
+        </span>
+        <span class="budget-item">
+          <span class="budget-label">Skills:</span>
+          <span class="budget-value">{{skillPointsUsed}}/12</span>
+        </span>
+        <span class="budget-item">
+          <span class="budget-label">Edges:</span>
+          <span class="budget-value">0/{{edgePointsMax}}</span>
+        </span>
+      </div>
+
+      {{#if (eq @root.currentTab "summary")}}
+      <div class="form-actions">
+        <button type="button" class="action-button primary" data-action="save">Save Character</button>
+        <button type="button" class="action-button secondary" data-action="cancel">Cancel</button>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</form>
+

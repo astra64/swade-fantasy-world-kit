@@ -1,0 +1,35 @@
+<div class="tab-content">
+  <div class="guidance-box">
+    <p>{{tabGuidance.hindrances}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>Available Hindrances (up to 4 points)</label>
+    <div class="hindrances-list">
+      {{#each hindrances}}
+      <div class="hindrance-item">
+        <input type="checkbox" id="hindrance-{{@index}}" class="hindrance-checkbox" value="{{this.uuid}}" data-action="toggle-hindrance">
+        <label for="hindrance-{{@index}}">
+          <span class="hindrance-name">{{this.name}}</span>
+          {{#if this.type}}<span class="hindrance-type">({{this.type}})</span>{{/if}}
+        </label>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{#if (keys character.hindrances).length}}
+  <div class="selected-hindrances">
+    <h4>Selected Hindrances</h4>
+    <ul>
+      {{#each character.hindrances}}
+      <li>{{this.name}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
+
+  <div class="points-info">
+    <p><strong>Total Hindrance Points:</strong> <span data-hindrance-points>0</span>/4</p>
+  </div>
+</div>

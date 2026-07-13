@@ -1,0 +1,553 @@
+/* Character Manager - FWK Aligned Styling */
+
+.swade-character-manager {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ede5d9;
+}
+
+.swade-character-manager .form-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ===== Tab Navigation - Horizontal, FWK Style ===== */
+
+.swade-character-manager .tab-navigation {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  background: #d6d2c8;
+  border-bottom: 1px solid var(--color-border-light-primary);
+  flex-wrap: wrap;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .tab-navigation .tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-border-light-primary);
+  background: color-mix(in srgb, var(--color-cool-2) 60%, white 40%);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex: 0 0 fit-content;
+  line-height: 1;
+}
+
+.swade-character-manager .tab-navigation .tab-btn:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 70%, white 30%);
+}
+
+.swade-character-manager .tab-navigation .tab-btn.active {
+  background: color-mix(in srgb, var(--color-cool-2) 40%, #d6d2c8 75%);
+  border-color: color-mix(in srgb, #7a9928 55%, var(--color-border-light-primary));
+  color: var(--color-text-dark-primary);
+  font-weight: 600;
+}
+
+/* ===== Tab Content ===== */
+
+.swade-character-manager .tab {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #ede5d9;
+}
+
+.swade-character-manager .tab.active {
+  display: block;
+}
+
+.swade-character-manager .tab h3 {
+  display: none;
+}
+
+.swade-character-manager .tab-content {
+  max-width: 900px;
+}
+
+/* ===== Guidance Box - Warm Colors ===== */
+
+.swade-character-manager .guidance-box {
+  background: #fffaf0;
+  border: 1px solid color-mix(in srgb, #d4a574 70%, var(--color-border-light-primary));
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  color: #c48b2b;
+  line-height: 1.5;
+}
+
+.swade-character-manager .guidance-box p {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* ===== Form Groups - More Spacious ===== */
+
+.swade-character-manager .form-group {
+  margin-bottom: 1rem;
+}
+
+.swade-character-manager .form-group label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+  font-size: 11px;
+}
+
+.swade-character-manager .form-group input[type="text"],
+.swade-character-manager .form-group input[type="number"],
+.swade-character-manager .form-group textarea,
+.swade-character-manager .form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  font-size: 11px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .form-group select {
+  padding: 0;
+  min-height: 28px;
+}
+
+.swade-character-manager .form-group input[type="text"]:focus,
+.swade-character-manager .form-group input[type="number"]:focus,
+.swade-character-manager .form-group textarea:focus,
+.swade-character-manager .form-group select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
+}
+
+.swade-character-manager .form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+/* ===== Budget Tracker Footer - All Tabs ===== */
+
+.swade-character-manager .character-manager-footer {
+  position: sticky;
+  bottom: 0;
+  background: #d6d2c8;
+  border-top: 1px solid var(--color-border-light-primary);
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 -1px 3px color-mix(in srgb, black 10%, transparent);
+}
+
+.swade-character-manager .budget-tracker {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.swade-character-manager .budget-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 11px;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .budget-label {
+  font-weight: 600;
+}
+
+.swade-character-manager .budget-value {
+  font-weight: bold;
+  color: color-mix(in srgb, #7a9928 85%, black 15%);
+  min-width: 35px;
+  text-align: right;
+}
+
+/* ===== Action Buttons - FWK Style ===== */
+
+.swade-character-manager .form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.swade-character-manager .action-button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .action-button.primary {
+  background: color-mix(in srgb, #7a9928 35%, #d6d2c8 65%);
+  border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
+}
+
+.swade-character-manager .action-button.primary:hover {
+  background: color-mix(in srgb, #7a9928 50%, #d6d2c8 50%);
+  border-color: color-mix(in srgb, #7a9928 85%, black 15%);
+}
+
+.swade-character-manager .action-button.secondary {
+  background: color-mix(in srgb, var(--color-cool-2) 70%, white 30%);
+  border-color: var(--color-border-light-primary);
+}
+
+.swade-character-manager .action-button.secondary:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
+}
+
+/* ===== Info Text ===== */
+
+.swade-character-manager .info-text {
+  color: color-mix(in srgb, #7a9928 85%, black 15%);
+  font-size: 10px;
+  font-style: italic;
+  margin: 0.35rem 0 !important;
+  opacity: 0.9;
+}
+
+.swade-character-manager .ancestry-bonuses {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-cool-2) 35%, transparent);
+}
+
+.swade-character-manager .ancestry-bonuses h4 {
+  margin: 0 0 0.35rem 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .ancestry-input-inline {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.swade-character-manager .ancestry-search-container {
+  flex: 1;
+  position: relative;
+}
+
+.swade-character-manager .ancestry-search {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+  box-sizing: border-box;
+}
+
+.swade-character-manager .ancestry-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--color-border-light-primary);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+  z-index: 1000;
+  box-shadow: 0 2px 4px color-mix(in srgb, black 10%, transparent);
+}
+
+.swade-character-manager .ancestry-dropdown-menu.show {
+  display: block;
+}
+
+.swade-character-manager .ancestry-option {
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-dark-primary);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-primary) 50%, transparent);
+}
+
+.swade-character-manager .ancestry-option:last-child {
+  border-bottom: none;
+}
+
+.swade-character-manager .ancestry-option:hover {
+  background: color-mix(in srgb, var(--color-cool-2) 20%, transparent);
+}
+
+.swade-character-manager .ancestry-option.selected {
+  background: color-mix(in srgb, #7a9928 20%, transparent);
+  font-weight: 600;
+}
+
+.swade-character-manager .btn-add-ancestry,
+.swade-character-manager .btn-open-compendium {
+  padding: 0 8px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 70%, white 30%);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  width: auto;
+}
+
+.swade-character-manager .btn-add-ancestry:hover,
+.swade-character-manager .btn-open-compendium:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
+}
+
+.swade-character-manager .hint-text {
+  margin: 0 0 0.75rem 0;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 70%, transparent);
+  font-style: italic;
+}
+
+.swade-character-manager .selected-ancestry {
+  margin-top: 1.5rem;
+}
+
+.swade-character-manager .ancestry-item-container {
+  margin-bottom: 0;
+}
+
+.swade-character-manager .ancestry-item {
+  width: fit-content;
+}
+
+.swade-character-manager .ancestry-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.swade-character-manager .ancestry-item-header::before {
+  content: '▶';
+  font-size: 10px;
+  color: var(--color-text-dark-primary);
+  transition: transform 0.15s ease;
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .ancestry-item.expanded .ancestry-item-header::before {
+  transform: rotate(90deg);
+}
+
+.swade-character-manager .ancestry-item-image {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-light-primary);
+  display: block;
+}
+
+.swade-character-manager .tab[data-tab="ancestry"] .btn-remove-ancestry {
+  display: none;
+}
+
+.swade-character-manager .btn-open-ancestry {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-dark-primary);
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .btn-open-ancestry::before {
+  content: '\f044';
+  font-family: FontAwesome;
+  font-size: 12px;
+}
+
+.swade-character-manager .btn-open-ancestry:hover {
+  color: color-mix(in srgb, #7a9928 85%, black 15%);
+  box-shadow: none;
+  border: none;
+}
+
+
+.swade-character-manager .ancestry-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.swade-character-manager .ancestry-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .btn-remove-ancestry {
+  background: none;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  color: color-mix(in srgb, #c85050 70%, transparent);
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  transition: color 0.15s ease;
+  display: inline-block;
+  width: auto;
+}
+
+.swade-character-manager .btn-remove-ancestry::before {
+  content: '×';
+}
+
+.swade-character-manager .btn-remove-ancestry:hover {
+  color: #c85050;
+  border: none;
+  box-shadow: none;
+}
+
+.swade-character-manager .ancestry-item-description {
+  padding: 1rem;
+  border-top: 1px solid var(--color-border-light-primary);
+  background: white;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .ancestry-item-description img {
+  display: none;
+}
+
+.swade-character-manager .ancestry-item-description p {
+  margin: 0 0 0.75rem 0;
+}
+
+.swade-character-manager .ancestry-item-description p:last-child {
+  margin-bottom: 0;
+}
+
+.swade-character-manager .ancestry-child-items {
+  padding: 0.75rem 0.75rem 0.75rem 0;
+  border-top: 1px solid var(--color-border-light-primary);
+  background: color-mix(in srgb, var(--color-cool-2) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+}
+
+.swade-character-manager .ancestry-child-items h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Ancestry Tab Drag-Over ===== */
+
+.swade-character-manager .tab[data-tab="ancestry"].dragover {
+  background: color-mix(in srgb, #7a9928 8%, transparent);
+  outline: 2px dashed #7a9928;
+  outline-offset: -2px;
+}
+
+@media (max-width: 900px) {
+  .swade-character-manager .tab {
+    padding: 0.75rem;
+  }
+
+  .swade-character-manager .budget-tracker {
+    gap: 1rem;
+  }
+
+  .swade-character-manager .character-manager-footer {
+    flex-wrap: wrap;
+  }
+
+  .swade-character-manager .form-actions {
+    width: 100%;
+  }
+
+  .swade-character-manager .action-button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .swade-character-manager .tab-navigation {
+    padding: 0.35rem;
+  }
+
+  .swade-character-manager .tab-btn {
+    padding: 0.25rem 0.4rem;
+    font-size: 10px;
+  }
+
+  .swade-character-manager .tab {
+    padding: 0.5rem;
+  }
+
+  .swade-character-manager .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .swade-character-manager .budget-tracker {
+    gap: 0.75rem;
+    font-size: 10px;
+  }
+
+  .swade-character-manager .character-manager-footer {
+    padding: 0.35rem;
+    gap: 0.35rem;
+  }
+}

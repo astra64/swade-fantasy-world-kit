@@ -14,7 +14,8 @@
     "scripts/main.js"
   ],
   "styles": [
-    "styles/module.css"
+    "styles/module.css",
+    "styles/character-manager.css"
   ],
   "packs": [
     {

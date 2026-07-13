@@ -1,0 +1,35 @@
+<div class="tab-content">
+  <div class="guidance-box">
+    <p>{{tabGuidance.edges}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>Available Edges</label>
+    <div class="edges-list">
+      {{#each edges}}
+      <div class="edge-item">
+        <input type="checkbox" id="edge-{{@index}}" class="edge-checkbox" value="{{this.uuid}}" data-action="toggle-edge">
+        <label for="edge-{{@index}}">
+          <span class="edge-name">{{this.name}}</span>
+          {{#if this.prerequisites}}<span class="edge-prereq">(Requires: {{this.prerequisites}})</span>{{/if}}
+        </label>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{#if (keys character.edges).length}}
+  <div class="selected-edges">
+    <h4>Selected Edges</h4>
+    <ul>
+      {{#each character.edges}}
+      <li>{{this.name}}</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
+
+  <div class="points-info">
+    <p><strong>Edge Points:</strong> <span data-edge-points-used>0</span>/<span data-edge-points-available>?</span></p>
+  </div>
+</div>

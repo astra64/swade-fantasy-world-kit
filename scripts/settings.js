@@ -33,7 +33,7 @@ export function setupSettings(config) {
     label: "Open Creator",
     hint: "Create a new SWADE character with ancestry, skills, edges, and hindrances from curated compendiums.",
     icon: "fas fa-user-plus",
-    type: CharacterCreator,
+    type: CharacterManager,
     restricted: false
   });
 

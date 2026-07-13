@@ -49,8 +49,12 @@ export function initializeCharacter() {
   return {
     name: "",
     description: "",
+    archetype: "",
+    concept: "",
     ancestry: null,
-    
+    expandedAncestry: false,
+    expandedChildItems: {},
+
     // Attributes: Each is {die: "d6", advances: 0}
     attributes: {
       agility: { die: "d4", advances: 0 },
@@ -59,14 +63,14 @@ export function initializeCharacter() {
       strength: { die: "d4", advances: 0 },
       vigor: { die: "d4", advances: 0 },
     },
-    
+
     // Skills: Each is {die: "d4", advances: 0, linkedAttribute: "agility"}
     skills: {},
-    
+
     // Character options: Each is {name: "edge/hindrance name"}
     edges: {},
     hindrances: {},
-    
+
     // Advancement tracking
     experience: 0,
     advances: 0,

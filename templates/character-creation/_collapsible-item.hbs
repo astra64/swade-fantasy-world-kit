@@ -1,0 +1,32 @@
+{{!-- Reusable Collapsible Item Component
+  Parameters:
+  - item: The item object (name, img, uuid, system.description)
+  - isExpanded: Boolean indicating if expanded
+  - toggleAction: String for data-action (e.g., "toggle-ancestry-expand")
+  - openAction: String for data-action (e.g., "open-ancestry-item")
+  - removeAction: String for data-action (e.g., "remove-ancestry") - optional
+  - showRemoveButton: Boolean, default false
+--}}
+<div class="ancestry-item {{#if isExpanded}}expanded{{/if}}" data-action="{{toggleAction}}" data-item-uuid="{{item.uuid}}">
+  <div class="ancestry-item-header">
+    {{#if item.img}}
+    <img src="{{item.img}}" alt="{{item.name}}" class="ancestry-item-image">
+    {{/if}}
+    <div class="ancestry-item-info">
+      <span class="ancestry-name">{{item.name}}</span>
+    </div>
+    <button type="button" class="btn-open-ancestry" data-action="{{openAction}}" data-uuid="{{item.uuid}}" title="Open item"></button>
+    {{#if showRemoveButton}}
+    <button type="button" class="btn-remove-ancestry" data-action="{{removeAction}}" data-uuid="{{item.uuid}}" title="Remove item"></button>
+    {{/if}}
+  </div>
+  {{#if isExpanded}}
+  <div class="ancestry-item-description">
+    {{#if item.system.description}}
+    {{{item.system.description}}}
+    {{else}}
+    <p class="info-text">No description available.</p>
+    {{/if}}
+  </div>
+  {{/if}}
+</div>

@@ -8,6 +8,24 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ## [Unreleased]
 
+### Added
+- **Character Manager v0.6.0 (Phase 1 In Progress)**:
+  - **Concept Tab**: Archetype, concept description, and character name inputs with auto-save
+  - **Ancestry Tab**: Searchable dropdown selection from Fantasy Companion ancestries with compendium browser integration
+  - **Drag-Drop Support**: Drag ancestries directly from compendium browser into ancestry tab
+  - **Ancestral Abilities Display**: Each ancestry shows granted abilities/items as collapsible expandable cards with descriptions
+  - **Edit Buttons**: Click edit icon on ancestry or abilities to open item sheets in new windows
+  - **Embedded Content Enrichment**: Ancestry and ability descriptions properly render Foundry UUID links as clickable items
+  - **Tab Handler Architecture**: Modular handlers (TabHandler pattern) for each tab enable scalable multi-tab implementation
+  - **Reusable Components**: SearchableDropdown, DragDropManager, TabManager, CollapsibleItem partial for consistent UI patterns
+  - **Centralized Configuration**: New `constants.js` with tab guidance text, budgets, skill mappings, compendium IDs
+
+### Technical
+- New modular component structure: `handlers/`, `components/`, `constants.js`, `_collapsible-item.hbs` partial
+- Tab handlers pattern enables clean separation of concerns for future tabs (Hindrances, Attributes, Skills, Edges, Gear, Summary)
+- Character data model extended with collapsible expansion state tracking
+- Added `TextEditor.enrichHTML()` processing for embedded content links in descriptions
+
 ### Changed
 - **Roadmap: Per-Item Fallback Override (v0.6.0)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.
 - **Future Direction**: Shift from manually-maintained setting-specific compendium packs to on-demand automated compendium generation approach.

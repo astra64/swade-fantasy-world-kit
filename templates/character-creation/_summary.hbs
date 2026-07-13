@@ -1,0 +1,108 @@
+<div class="tab-content">
+  <div class="guidance-box">
+    <p>{{tabGuidance.summary}}</p>
+  </div>
+
+  <div class="summary-sections">
+    <!-- Character Concept -->
+    <div class="summary-section">
+      <h4>Character Concept</h4>
+      <p><strong>Archetype:</strong> {{character.archetype}}</p>
+      <p><strong>Description:</strong> {{character.concept}}</p>
+    </div>
+
+    <!-- Ancestry -->
+    <div class="summary-section">
+      <h4>Ancestry</h4>
+      <p>{{#if character.ancestry}}{{character.ancestry}}{{else}}Not selected{{/if}}</p>
+    </div>
+
+    <!-- Attributes Summary -->
+    <div class="summary-section">
+      <h4>Attributes</h4>
+      <div class="attributes-summary">
+        {{#each character.attributes}}
+        <p><strong>{{capitalize @key}}:</strong> {{this.die}}</p>
+        {{/each}}
+      </div>
+    </div>
+
+    <!-- Skills Summary -->
+    <div class="summary-section">
+      <h4>Skills</h4>
+      {{#if (keys character.skills).length}}
+      <ul class="skills-summary">
+        {{#each character.skills}}
+        <li><strong>{{this.name}}:</strong> {{this.die}}</li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-text">No skills selected.</p>
+      {{/if}}
+    </div>
+
+    <!-- Edges Summary -->
+    <div class="summary-section">
+      <h4>Edges</h4>
+      {{#if (keys character.edges).length}}
+      <ul class="edges-summary">
+        {{#each character.edges}}
+        <li>{{this.name}}</li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-text">No edges selected.</p>
+      {{/if}}
+    </div>
+
+    <!-- Hindrances Summary -->
+    <div class="summary-section">
+      <h4>Hindrances</h4>
+      {{#if (keys character.hindrances).length}}
+      <ul class="hindrances-summary">
+        {{#each character.hindrances}}
+        <li>{{this.name}}</li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-text">No hindrances selected.</p>
+      {{/if}}
+    </div>
+
+    <!-- Gear Summary -->
+    <div class="summary-section">
+      <h4>Starting Gear</h4>
+      {{#if (keys character.gear).length}}
+      <ul class="gear-summary">
+        {{#each character.gear}}
+        <li>{{this.name}} {{#if this.cost}}({{this.cost}} silver){{/if}}</li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-text">No gear selected.</p>
+      {{/if}}
+    </div>
+
+    <!-- Derived Stats -->
+    <div class="summary-section derived-stats">
+      <h4>Derived Stats</h4>
+      <div class="stats-grid">
+        <p><strong>Pace:</strong> <span>{{derivedStats.pace}}</span></p>
+        <p><strong>Parry:</strong> <span>{{derivedStats.parry}}</span></p>
+        <p><strong>Toughness:</strong> <span>{{derivedStats.toughness}}</span></p>
+      </div>
+    </div>
+
+    <!-- Validation Summary -->
+    {{#if validationErrors}}
+    <div class="summary-section validation-errors">
+      <h4>⚠ Issues Found</h4>
+      <ul>
+        {{#each validationErrors}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    {{/if}}
+  </div>
+</div>

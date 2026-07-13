@@ -1,12 +1,45 @@
-# Character Manager v0.6.2 Implementation Roadmap
+# Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Design Locked | Ready for Implementation
+**Status:** Phase 1 In Progress | Concept & Ancestry Tabs Complete
 
 ## Overview
 
-Character Manager v0.6.2 is a unified character creation and advancement tool for SWADE (Savage Worlds Adventure Edition) in Foundry VTT v14. Unlike the previous tab-based creator, this version follows the official character creation sequence from the rulebook and supports mid-campaign editing/advancement in a single interface (similar to Pathbuilder for PF2e).
+Character Manager v0.6.0 is a unified character creation and advancement tool for SWADE (Savage Worlds Adventure Edition) in Foundry VTT v14. Unlike the previous tab-based creator, this version follows the official character creation sequence from the rulebook and supports mid-campaign editing/advancement in a single interface (similar to Pathbuilder for PF2e).
 
-**Key Distinction:** No separate "Create" vs "Edit" workflows. Users create a blank actor first, then open Character Manager from the actor sheet to populate/modify character data.
+**Key Distinction:** Character Manager always opens from an actor sheet. Phase 1 (MVP) accepts actors with no prepopulated data. Phase 2 detects existing character data and prepopulates fields for editing.
+
+---
+
+## Architecture & Implementation Notes
+
+### Component-Based Design
+To maintain scalability as more tabs are added, the Character Manager uses a modular architecture:
+
+- **Tab Handlers** (`handlers/AncestryTabHandler.js`, `handlers/ConceptTabHandler.js`): Each tab has a dedicated handler managing its specific logic (event binding, data updates, validation)
+- **Reusable Components** (`components/SearchableDropdown.js`, `DragDropManager.js`, `TabManager.js`): Common UI patterns extracted for reuse across tabs
+- **Collapsible Item Partial** (`_collapsible-item.hbs`): Template partial for displaying expandable items (ancestry, abilities, hindrances) consistently
+- **Constants** (`constants.js`): Centralized configuration (tab guidance, budgets, mappings, compendium pack IDs)
+- **Calculator Utilities** (`lib/calculator.js`): Pure functions for rule calculations without UI dependencies
+
+**Benefit:** Adding a new tab (e.g., Hindrances) only requires:
+1. Create `HindrancesTabHandler.js`
+2. Create tab partial `_hindrances.hbs` (or reuse collapsible items)
+3. Add handler to `CharacterManager.js` tab handlers list
+4. Update template to reference new tab
+
+### Text Enrichment
+Ancestry and item descriptions use Foundry's `TextEditor.enrichHTML()` to process embedded content links (`@UUID[...]` syntax), converting them to clickable links that open items in new windows.
+
+---
+
+### Phase 1: MVP Character Creation
+Opens from actor sheet, populates blank actors with character creation data. No prepopulation from existing character data.
+
+### Phase 2: Full Character Creation & Editing  
+Extends Phase 1 to detect and prepopulate existing character data from actor, enabling mid-campaign character editing.
+
+### Phase 3: Character Advances & Planning
+Add ability to plan and manage character advancement progression (same tool or separate, TBD).
 
 ---
 
@@ -44,10 +77,14 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 
 ---
 
-## Implementation Phases
+## Implementation Milestones
 
-### Phase 1: Foundation & Data Layer
-**Goal:** Update data structures and calculator for new mechanics
+**Note:** Milestones 1-5 build **Phase 1** (MVP). Milestone 6 adds **Phase 2** (Full Editing). Phase 3 (Advances) scope TBD.
+
+---
+
+### Milestone 1: Foundation & Data Layer
+**Applies to:** Phase 1
 
 - [ ] **calculator.js Updates**
   - [ ] Add hindrance trade-off calculation functions
@@ -66,23 +103,26 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - [ ] Character object schema (raw selections only)
   - [ ] Hindrances trade-off tracking structure
   - [ ] Ancestry bonus application rules
-  - [ ] Actor data mapping strategy
 
-**Estimated Lines of Code:** 200-300 (calculator), 150-200 (compendium-utils)
+**Estimated Scope:** 400+ lines (calculator/utils)
 
 ---
 
-### Phase 2: UI Foundation & Template Structure
-**Goal:** Build core UI scaffolding
+### Milestone 2: UI Scaffold (Main App & Templates)
+**Applies to:** Phase 1
 
 - [ ] **CharacterManager.js (Main FormApplication)**
   - [ ] Constructor: Accept actor, initialize from existing data
   - [ ] getData(): Fetch all compendium data, calculate budgets, prepare template context
   - [ ] activateListeners(): Setup tab system, auto-save handlers
   - [ ] _setupTabs(), _switchTab(): Tab navigation
-  - [ ] _loadCharacterFromActor(): Populate form from existing actor
   - [ ] _saveCharacterToActor(): Persist changes to actor
   - [ ] _validateCharacter(): Check for invalid states
+
+- [ ] **UI Templates & Styling**
+  - [ ] character-manager.hbs (main template with 8 tabs, footer, buttons)
+  - [ ] _concept.hbs through _summary.hbs (individual tab templates)
+  - [ ] character-manager.css (base layout, budget tracker, responsive design)
 
 - [ ] **character-manager.hbs (Main Template)**
   - [ ] Tab navigation bar
@@ -106,29 +146,27 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 
 ---
 
-### Phase 3: Tab-by-Tab Implementation
-**Goal:** Implement each tab with full interaction and validation
+### Milestone 3: Tab-by-Tab Implementation (All 8 Tabs)
+**Applies to:** Phase 1
 
 #### Tab 1: Concept
-- [ ] Archetype text input (freeform)
-- [ ] Concept textarea (freeform)
-- [ ] Auto-save on change
-- [ ] **New Player Guidance:**
-  > "What's your character's basic idea? Choose an archetype (like 'Rogue', 'Wizard', 'Ranger') and briefly describe them. This is just flavor—you'll define your actual abilities on the next tabs."
-- [ ] **Validation:** Optional (no blocking)
-
-**Estimated Lines:** 50 (template + handler)
+- [x] Archetype text input (freeform)
+- [x] Concept textarea (freeform)
+- [x] Auto-save on change
+- [x] **New Player Guidance:**
 
 #### Tab 2: Ancestry
-- [ ] Single select dropdown from compendiums
-- [ ] Display ancestry bonuses (attributes, edges, skills, etc.)
-- [ ] On selection: Auto-apply bonuses to Attributes tab
-- [ ] Show message: "Ancestry bonuses applied: ..."
-- [ ] **New Player Guidance:**
+- [x] Single select dropdown from compendiums
+- [x] Display ancestry bonuses (ancestral abilities) as collapsible items
+- [x] Collapsible display of selected ancestry with description
+- [x] Edit button to open ancestry item from source
+- [x] Show "Ancestral Abilities" section with granted items
+- [x] Each ability shows as collapsible item with image and description
+- [x] On selection: Auto-apply bonuses to Attributes tab
+- [x] Show message: "Ancestry bonuses applied: ..."
+- [x] **New Player Guidance:**
   > "Pick your character's ancestry (like Human, Dwarf, Elf). Each ancestry gives you starting bonuses to skills and stats. The bonuses automatically apply to later tabs—don't worry about adding them yourself."
-- [ ] **Validation:** Inform only if not selected
-
-**Estimated Lines:** 100 (template + handler) + calculator updates
+- [x] **Validation:** Inform only if not selected
 
 #### Tab 3: Hindrances
 - [ ] List of hindrances from compendium (Major/Minor labeled)
@@ -208,8 +246,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
 
 ---
 
-### Phase 4: Integration & Polish
-**Goal:** Connect to main module, add access points
+### Milestone 4: Integration & Polish
+**Applies to:** Phase 1
 
 - [ ] **main.js Integration**
   - [ ] Import CharacterManager
@@ -229,14 +267,14 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - [ ] CHARACTER_MANAGER_QUICKSTART.md
   - [ ] In-app tooltips (if time allows)
 
-**Estimated Lines:** 100-200 (main.js + macros)
+**Estimated Scope:** 100-200 lines (main.js + macros)
 
 ---
 
-### Phase 5: Testing & QA
-**Goal:** Comprehensive validation against SWADE rules
+### Milestone 5: Testing & QA (Phase 1)
+**Applies to:** Phase 1
 
-- [ ] **Functional Testing** (Per TESTING_CHECKLIST_v0.6.2.md, updated for new design)
+- [ ] **Functional Testing**
   - [ ] Tab navigation works
   - [ ] Data persists across tab switches
   - [ ] Budget calculations accurate
@@ -244,8 +282,8 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - [ ] Ancestry bonuses applied correctly
   - [ ] Hindrance trade-offs work
   - [ ] Gear drag-drop functional
-  - [ ] Save/load from actor works
-  - [ ] JSON export/import works
+  - [ ] Save to blank actor works
+  - [ ] No prepopulation issues (starting fresh)
 
 - [ ] **Rules Compliance Testing**
   - [ ] Attribute point budgets enforced (5 max)
@@ -259,10 +297,26 @@ Character Manager v0.6.2 is a unified character creation and advancement tool fo
   - [ ] Ancestry bonuses with multiple attributes
   - [ ] Human ancestry with bonus edges
   - [ ] Over-spec'd characters (handled gracefully)
-  - [ ] Characters with advances (warning shown)
   - [ ] Empty character state
+  - [ ] Multiple saves (no data loss)
 
-- [ ] **Cross-Browser Testing** (Foundry in Chrome, Firefox, Safari if available)
+---
+
+### Milestone 6: Phase 2 Extension (Full Editing & Prepopulation)
+**Applies to:** Phase 2
+
+- [ ] **CharacterManager.js Updates**
+  - [ ] Add _loadCharacterFromActor(): Detect existing character data and prepopulate all form fields
+  - [ ] Add change detection: Highlight which fields have been modified since open
+  - [ ] Add validation for mid-edit states (e.g., character with advances)
+
+- [ ] **Data Detection Logic**
+  - [ ] Ancestry detection from actor items
+  - [ ] Hindrances/edges detection from actor traits
+  - [ ] Skill/attribute values extraction from character data
+  - [ ] Gear detection from actor inventory
+
+**Estimated Scope:** 200-300 lines (detection + prepopulation logic)
 
 ---
 

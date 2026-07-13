@@ -1,3 +1,7 @@
+const MODULE_ID = "swade-fantasy-world-kit";
+
+console.log('[SWADE FWK] Module loading...');
+
 import { createWorldSetupToolsApi } from "./world-setup-tools/lib/index.js";
 import { exportPreset, importPreset } from "./world-setup-tools/lib/preset-utils.js";
 import { BaselineModulesManager } from "./world-setup-tools/apps/BaselineModulesManager.js";
@@ -8,8 +12,6 @@ import { setupUI } from "./ui.js";
 import { createIconRemapper } from "./lib/icon-remapper.js";
 import { pathMappings, nameMappings, fallbackIconMappings } from "./lib/icon-mappings.js";
 import { setupCharacterCreationTools, CharacterManager, AdvancementManager } from "./apps/character-creation/index.js";
-
-const MODULE_ID = "swade-fantasy-world-kit";
 
 // Expose icon remapping utilities immediately
 window.swadeFwkIconRemapper = createIconRemapper(pathMappings, nameMappings, fallbackIconMappings);
@@ -489,6 +491,28 @@ async function updateTitleCache(settingKey, ids) {
   await game.settings.set(MODULE_ID, settingKey, JSON.stringify(map));
 }
 
+function injectCharacterManagerButton(actor, form) {
+  const header = form.querySelector('header.window-header');
+  if (!header) return;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'header-control icon fa-solid fa-users';
+  button.setAttribute('data-tooltip', 'Character Manager');
+  button.setAttribute('aria-label', 'Character Manager');
+  button.title = 'Open Character Manager';
+
+  button.addEventListener('click', () => {
+    const charManager = new CharacterManager({ actor: actor });
+    charManager.render(true);
+  });
+
+  const closeButton = header.querySelector('[data-action="close"]');
+  if (closeButton) {
+    header.insertBefore(button, closeButton);
+  }
+}
+
 Hooks.once("init", () => {
   game.keybindings.register(MODULE_ID, "openBaselineManager", {
     name: "Open Preset Modules",
@@ -536,6 +560,12 @@ Hooks.once("init", () => {
     return args;
   });
   Handlebars.registerHelper('gte', (a, b) => a >= b);
+  Handlebars.registerHelper('gt', (a, b) => a > b);
+  Handlebars.registerHelper('subtract', (a, b) => a - b);
+  Handlebars.registerHelper('keys', (obj) => {
+    if (typeof obj !== 'object' || obj === null) return [];
+    return Object.keys(obj);
+  });
   Handlebars.registerHelper('lookup', (obj, key) => {
     if (typeof obj === 'object' && obj !== null) {
       return obj[key];
@@ -561,6 +591,46 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", async () => {
+  console.log('[SWADE FWK] Ready hook fired - testing hook system');
+
+  // Test that hook registration works
+  Hooks.once("test-swade-fwk", () => {
+    console.log('[SWADE FWK] Test hook fired!');
+  });
+  Hooks.call("test-swade-fwk");
+
+  // Watch for SWADE character sheets in the DOM and inject Character Manager button
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType === 1 && node.classList?.contains('swade-official') && node.classList?.contains('actor')) {
+          console.log('[SWADE FWK] Found SWADE character sheet in DOM');
+
+          // Try to get actor from the form ID (format: CharacterSheet-Actor-[DOCID])
+          const formId = node.id;
+          const docMatch = formId.match(/-([a-zA-Z0-9]+)$/);
+          const docId = docMatch?.[1];
+
+          if (docId) {
+            const actor = game.actors?.get(docId);
+            if (actor?.type === 'character' && !node.dataset.swadeFwkButtonAdded) {
+              console.log('[SWADE FWK] Found actor:', actor.name);
+              injectCharacterManagerButton(actor, node);
+              node.dataset.swadeFwkButtonAdded = 'true';
+            } else if (!actor) {
+              console.warn('[SWADE FWK] Could not find actor with ID:', docId);
+            }
+          } else {
+            console.warn('[SWADE FWK] Could not extract actor ID from form:', formId);
+          }
+        }
+      }
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  console.log('[SWADE FWK] DOM observer installed for character sheets');
+
   // TODO(next version): Remove migration call once legacy rename rollout is complete.
   await migrateLegacyModuleSettings();
   await sanitizeBaselineModules();
@@ -615,3 +685,4 @@ Hooks.on("renderSettings", (_app, html) => {
 Hooks.on("renderSidebar", (_app, html) => {
   injectSettingsQuickAccessButton(html);
 });
+
