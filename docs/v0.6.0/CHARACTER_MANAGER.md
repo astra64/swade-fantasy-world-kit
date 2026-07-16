@@ -182,31 +182,36 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Estimated Lines:** 200-300 (template + handler)
 
-#### Tab 4: Attributes
-- [ ] 5 attribute sections (Agility, Smarts, Spirit, Strength, Vigor)
-- [ ] Each attribute: Die button group [d4(?) d6 d8 d10 d12] with state indicators
-- [ ] Show ancestry bonus message if applied
-- [ ] Lock minimums if ancestry bonus (e.g., d6 Vigor locked to d6+)
-- [ ] Real-time point tracking: X/5 in footer
-- [ ] **New Player Guidance:**
-  > "You have 5 points to boost your core abilities. Start with d6 in each (your base), then pick which ones matter most to your character. A strong warrior bumps Strength and Vigor; a sneaky rogue boosts Agility and Smarts. Moving a die up one step (d6→d8) costs 1 point. Raising from d12 costs 2 points but has a limit—ask your GM if unsure."
-- [ ] **Validation:** Warn if over 5 points
+#### Tab 4: Attributes & Skills
 
-**Estimated Lines:** 150-200 (template + handler)
+**Layout:** Single unified view grouping skills under their linked attributes (Agility, Smarts, Spirit, Strength, Vigor).
 
-#### Tab 5: Skills
-- [ ] Grouped by linked attribute OR flat list (TBD based on testing)
+**Attributes Section:**
+- [ ] For each attribute: Die button group [d4 d6 d8 d10 d12] with active state
+- [ ] Show ancestry bonus message if applied (e.g., "Vigor +1 from ancestry")
+- [ ] Lock minimums if ancestry bonus present (e.g., d6 Vigor locked to d6+)
+
+**Skills Section (grouped under each attribute):**
 - [ ] Each skill: Name, die buttons [d4 d6 d8 d10 d12], modifier display (+X text)
-- [ ] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): ★ or bold, free at d4
-- [ ] Search/filter box (optional, add if list gets long)
-- [ ] Real-time point tracking: Y/12 in footer (+ hindrance bonus)
-- [ ] **New Player Guidance:**
-  > "Pick what your character is good at. You have 12 points to spend. Core skills (marked with ★) start free at d4—you just pay to boost them higher. Other skills cost points to use. Each die step up (d4→d6) costs 1 point. Pro tip: Pick 3–4 skills your character uses often; leave the rest. Your ancestry and edges might add free bonuses here too."
-- [ ] **Validation:** Warn if over budget
+- [ ] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): marked with star icon, free at d4
+- [ ] Non-core skills cost points to use
 
-**Estimated Lines:** 200-300 (template + handler)
+**Real-time Tracking:**
+- [ ] Integrate with pinned footer showing: Attributes: X/5 and Skills: Y/12
+- [ ] Warn if either exceeds budget
 
-#### Tab 6: Edges
+**New Player Guidance:**
+- **For Attributes:** "You have 5 points to boost your core abilities. Start with d6 in each (your base), then pick which ones matter most to your character. A strong warrior bumps Strength and Vigor; a sneaky rogue boosts Agility and Smarts. Moving a die up one step (d6→d8) costs 1 point. Raising from d12 costs 2 points but has a limit—ask your GM if unsure."
+- **For Skills:** "Pick what your character is good at. You have 12 points to spend. Core skills (marked FREE) start at d4—you just pay to boost them higher. Other skills cost points to use. Each die step up (d4→d6) costs 1 point. Pro tip: Pick 3–4 skills your character uses often; leave the rest. Your ancestry and edges might add free bonuses here too."
+
+**Validation:**
+- [ ] Warn if over 5 attribute points
+- [ ] Warn if over 12 skill points (excluding hindrance bonuses)
+- [ ] Lock changes if ancestry bonus locked a minimum
+
+**Estimated Lines:** 350-500 (template + handler)
+
+#### Tab 5: Edges
 - [ ] Edge cards from compendium
 - [ ] Multi-select (spends edge points from hindrances)
 - [ ] Show prerequisite info (non-blocking, info-only)
@@ -218,7 +223,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Estimated Lines:** 150-200 (template + handler)
 
-#### Tab 7: Gear
+#### Tab 6: Gear
 - [ ] Drag-drop zone for items from compendiums
 - [ ] List items with individual cost, quantity, running total
 - [ ] Show remaining budget (300 - used)
@@ -229,7 +234,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Estimated Lines:** 150-200 (template + handler)
 
-#### Tab 8: Summary
+#### Tab 7: Summary
 - [ ] Display all character selections in read-only format
 - [ ] Calculate and show:
   - Final Pace (base 6 + modifications from hindrances/ancestry)
