@@ -371,7 +371,7 @@ export function getRemainingAttributePoints(character) {
 
 /**
  * Get remaining skill points for character creation.
- * 
+ *
  * @param {Object} character - Character object
  * @param {Object} skillCompendiumData - Compendium data with skill metadata
  * @returns {number} Remaining points (0-12)
@@ -380,3 +380,123 @@ export function getRemainingSkillPoints(character, skillCompendiumData = {}) {
   const spent = calculateTotalSkillPoints(character, skillCompendiumData);
   return Math.max(0, 12 - spent);
 }
+
+/**
+ * Calculate total hindrance points spent.
+ * Sums points from all selected hindrances (Major = 2pts, Minor = 1pt).
+ *
+ * @param {Object} character - Character object with hindrances
+ * @returns {number} Total points spent on hindrances
+ */
+export function calculateTotalHindrancePoints(character) {
+  let totalSpent = 0;
+
+  if (!character.hindrances || typeof character.hindrances !== 'object') {
+    return 0;
+  }
+
+  for (const [uuid, hindranceData] of Object.entries(character.hindrances)) {
+    totalSpent += hindranceData.points ?? 0;
+  }
+
+  return totalSpent;
+}
+
+/**
+ * Get remaining hindrance points for character creation.
+ *
+ * @param {Object} character - Character object
+ * @returns {number} Remaining points (0-4)
+ */
+export function getRemainingHindrancePoints(character) {
+  const spent = calculateTotalHindrancePoints(character);
+  return Math.max(0, 4 - spent);
+}
+
+/**
+ * Validate that total hindrance points do not exceed budget.
+ *
+ * @param {Object} character - Character object
+ * @returns {boolean} True if valid (≤4 points)
+ */
+export function validateHindranceTotalPoints(character) {
+  const spent = calculateTotalHindrancePoints(character);
+  return spent <= 4;
+}
+
+/**
+ * Get available perk points from hindrances.
+ * Maximum of 4 perk points, regardless of total hindrance points.
+ *
+ * @param {Object} character - Character object
+ * @returns {number} Available perk points (0-4)
+ */
+export function getAvailablePerkPoints(character) {
+  const hindrancePoints = calculateTotalHindrancePoints(character);
+  return Math.min(hindrancePoints, 4);
+}
+
+/**
+ * Generate perk point allocation slots based on total hindrance points.
+ * Each slot can hold a 1-point or 2-point perk allocation.
+ * Capped at 4 maximum slots regardless of total hindrance points.
+ *
+ * @param {Object} character - Character object with hindrances and perkPointAllocations
+ * @returns {Array} Array of slot objects: { pointValue, selected }
+ */
+export function generatePerkSlots(character) {
+  const hindrancePoints = calculateTotalHindrancePoints(character);
+  const availablePerkPoints = Math.min(hindrancePoints, 4);  // Cap at 4
+  const existingSlots = character.perkPointAllocations || [];
+
+  const slots = [];
+  let pointsRemaining = availablePerkPoints;
+
+  while (pointsRemaining > 0) {
+    // Get existing slot data if available, or create new
+    const slotIndex = slots.length;
+    const existingSlot = existingSlots[slotIndex];
+
+    // Determine pointValue for this slot
+    let pointValue = 1;
+
+    // If previous slot selected a 2-point allocation, this slot is consumed (hidden)
+    const prevSlot = slots[slotIndex - 1];
+    if (prevSlot && ['attribute-boost', 'edge'].includes(prevSlot.selected)) {
+      // Previous slot used 2 points, skip this one
+      pointsRemaining -= 1;
+      continue;
+    }
+
+    // Otherwise, use as many points as available (cap at 2 for this slot)
+    pointValue = Math.min(2, pointsRemaining);
+    pointsRemaining -= pointValue;
+
+    slots.push({
+      pointValue,
+      selected: existingSlot?.selected || null,
+      index: slotIndex
+    });
+  }
+
+  return slots;
+}
+
+/**
+ * Check if a perk point allocation slot should be visible in the UI.
+ * Slots are hidden if the previous slot selected a 2-point allocation.
+ *
+ * @param {Array} slots - Array of slot objects
+ * @param {number} index - Slot index to check
+ * @returns {boolean} True if slot should be visible
+ */
+export function isPerkSlotVisible(slots, index) {
+  if (index === 0) return true;  // First slot always visible
+
+  const prevSlot = slots[index - 1];
+  if (!prevSlot) return false;
+
+  // If previous slot selected a 2-point allocation, this slot is consumed/hidden
+  return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
+}
+

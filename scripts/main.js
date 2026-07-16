@@ -590,8 +590,28 @@ Hooks.once("init", () => {
   window.AdvancementManager = AdvancementManager;
 });
 
+async function registerTemplatePartials() {
+  try {
+    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab'];
+    for (const partial of partials) {
+      const path = `modules/${MODULE_ID}/templates/character-creation/_components/${partial}.hbs`;
+      const html = await fetch(path).then(r => {
+        if (!r.ok) throw new Error(`Failed to fetch ${path}: ${r.statusText}`);
+        return r.text();
+      });
+      Handlebars.registerPartial(partial, html);
+    }
+    console.log('[SWADE FWK] Template partials registered:', partials);
+  } catch (error) {
+    console.error('[SWADE FWK] Failed to register template partials:', error);
+  }
+}
+
 Hooks.once("ready", async () => {
   console.log('[SWADE FWK] Ready hook fired - testing hook system');
+
+  // Register template partials
+  await registerTemplatePartials();
 
   // Test that hook registration works
   Hooks.once("test-swade-fwk", () => {

@@ -18,11 +18,16 @@ import {
   calculateDerivedStats,
   calculateTotalAttributePoints,
   calculateTotalSkillPoints,
+  calculateTotalHindrancePoints,
+  getRemainingHindrancePoints,
+  getAvailablePerkPoints,
+  generatePerkSlots,
   isFreeCoreSkill,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
 import { AncestryTabHandler } from './handlers/AncestryTabHandler.js';
+import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, SKILL_ATTRIBUTE_MAP, BUDGETS } from './constants.js';
 
 export class CharacterManager extends FormApplication {
@@ -47,6 +52,7 @@ export class CharacterManager extends FormApplication {
     this.tabHandlers = {
       concept: new ConceptTabHandler(this),
       ancestry: new AncestryTabHandler(this),
+      hindrances: new HindrancesTabHandler(this),
     };
 
     // Initialize tab manager
@@ -75,7 +81,17 @@ export class CharacterManager extends FormApplication {
   }
 
   async render(force = false, options = {}) {
-    return await super.render(force, options);
+    // Preserve scroll position
+    const scrollPos = this.element?.find('.form-tabs')?.scrollTop() || 0;
+
+    const result = await super.render(force, options);
+
+    // Restore scroll position after render
+    if (scrollPos > 0) {
+      this.element?.find('.form-tabs')?.scrollTop(scrollPos);
+    }
+
+    return result;
   }
 
   async getData(options = {}) {
@@ -165,6 +181,26 @@ export class CharacterManager extends FormApplication {
     const derivedStats = calculateDerivedStats(this.character);
     const attributePointsUsed = calculateTotalAttributePoints(this.character);
     const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
+    const availablePerkPoints = getAvailablePerkPoints(this.character);
+    const perkSlots = generatePerkSlots(this.character);
+
+    // Calculate perk points spent based on actual option costs
+    const perkOptionCosts = {
+      'attribute-boost': 2,
+      'edge': 2,
+      'skill-point': 1,
+      'extra-funds': 1,
+    };
+    const perkPointsSpent = perkSlots.reduce((sum, slot) => {
+      if (!slot.selected) return sum;
+      const cost = perkOptionCosts[slot.selected] || 0;
+      return sum + cost;
+    }, 0);
+
+    // Get currency settings from SWADE system
+    const currencyName = game.settings.get('swade', 'currencyName') || 'Silver';
+    const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
+    const currencyAmount = pcStartingCurrency * 2;
 
     return {
       character: this.character,
@@ -180,11 +216,16 @@ export class CharacterManager extends FormApplication {
       attributePointsRemaining: 5 - attributePointsUsed,
       skillPointsUsed: skillPointsUsed,
       skillPointsRemaining: 12 - skillPointsUsed,
+      availablePerkPoints: availablePerkPoints,
+      perkPointsSpent: perkPointsSpent,
       edgePointsMax: 0,
       currentTab: this.currentTab,
       expandedAncestry: this.character.expandedAncestry,
       expandedChildItems: this.character.expandedChildItems || {},
+      perkSlots: perkSlots,
       tabGuidance: this._getTabGuidance(),
+      currencyName: currencyName,
+      currencyAmount: currencyAmount,
     };
   }
 
@@ -355,5 +396,16 @@ export class CharacterManager extends FormApplication {
     }
   }
 }
+
+// Register Handlebars helpers
+Handlebars.registerHelper('isPerkSlotVisible', (slots, index) => {
+  if (index === 0) return true;  // First slot always visible
+  const prevSlot = slots[index - 1];
+  if (!prevSlot) return false;
+  // If previous slot selected a 2-point perk, this slot is hidden
+  return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
+});
+
+Handlebars.registerHelper('gte', (a, b) => a >= b);
 
 window.CharacterManager = CharacterManager;

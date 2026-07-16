@@ -12,18 +12,23 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 - **Character Manager v0.6.0 (Phase 1 In Progress)**:
   - **Concept Tab**: Archetype, concept description, and character name inputs with auto-save
   - **Ancestry Tab**: Searchable dropdown selection from Fantasy Companion ancestries with compendium browser integration
-  - **Drag-Drop Support**: Drag ancestries directly from compendium browser into ancestry tab
+  - **Hindrances Tab**: Major/Minor toggle, hindrance selection with compendium browser, perk point allocation system
+  - **Perk Allocation UI**: Dropdown system to allocate hindrance trade-off points (skill points, attribute boosts, edges, bonus currency)
+  - **Drag-Drop Support**: Drag ancestries and hindrances directly from compendium browser into tabs
   - **Ancestral Abilities Display**: Each ancestry shows granted abilities/items as collapsible expandable cards with descriptions
-  - **Edit Buttons**: Click edit icon on ancestry or abilities to open item sheets in new windows
-  - **Embedded Content Enrichment**: Ancestry and ability descriptions properly render Foundry UUID links as clickable items
+  - **Edit Buttons**: Click edit icon on ancestry, abilities, or hindrances to open item sheets in new windows
+  - **Embedded Content Enrichment**: Descriptions properly render Foundry UUID links as clickable items
   - **Tab Handler Architecture**: Modular handlers (TabHandler pattern) for each tab enable scalable multi-tab implementation
   - **Reusable Components**: SearchableDropdown, DragDropManager, TabManager, CollapsibleItem partial for consistent UI patterns
+  - **Template Modularization**: Character manager template split into reusable Handlebars partials for maintainability
   - **Centralized Configuration**: New `constants.js` with tab guidance text, budgets, skill mappings, compendium IDs
 
 ### Technical
 - New modular component structure: `handlers/`, `components/`, `constants.js`, `_collapsible-item.hbs` partial
-- Tab handlers pattern enables clean separation of concerns for future tabs (Hindrances, Attributes, Skills, Edges, Gear, Summary)
-- Character data model extended with collapsible expansion state tracking
+- Tab handlers pattern enables clean separation of concerns for future tabs (Attributes, Skills, Edges, Gear, Summary)
+- Character template modularized using Handlebars partials (`concept-tab.hbs`, `ancestry-tab.hbs`, `hindrances-tab.hbs`) for independent testing and maintenance
+- HindrancesTabHandler manages major/minor toggles, perk point allocation, and compendium integration
+- Character data model extended with collapsible expansion state tracking and hindrance severity tracking
 - Added `TextEditor.enrichHTML()` processing for embedded content links in descriptions
 
 ### Changed

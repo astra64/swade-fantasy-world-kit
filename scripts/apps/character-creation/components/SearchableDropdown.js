@@ -7,6 +7,9 @@ export class SearchableDropdown {
     this.items = options.items || [];
     this.onSelect = options.onSelect || (() => {});
     this.placeholder = options.placeholder || 'Search...';
+    this.inputSelector = options.inputSelector || '.ancestry-search';
+    this.menuSelector = options.menuSelector || '.ancestry-dropdown-menu';
+    this.optionClass = options.optionClass || 'ancestry-option';
     this.html = null;
     this.input = null;
     this.menu = null;
@@ -15,13 +18,13 @@ export class SearchableDropdown {
 
   /**
    * Initialize the dropdown in HTML element
-   * @param {jQuery} container - jQuery element with .ancestry-search-container
+   * @param {jQuery} container - jQuery element with search input and menu
    * @param {jQuery} addButton - jQuery element for add button
    */
   setup(container, addButton) {
     this.html = container;
-    this.input = container.find('.ancestry-search');
-    this.menu = container.find('.ancestry-dropdown-menu');
+    this.input = container.find(this.inputSelector);
+    this.menu = container.find(this.menuSelector);
     this.addBtn = addButton;
 
     this.input.attr('placeholder', this.placeholder);
@@ -49,12 +52,12 @@ export class SearchableDropdown {
 
     if (filtered.length === 0) {
       this.menu.html(
-        '<div class="ancestry-option" style="color: var(--color-text-dark-primary); opacity: 0.5;">No results</div>'
+        `<div class="${this.optionClass}" style="color: var(--color-text-dark-primary); opacity: 0.5;">No results</div>`
       );
     } else {
       filtered.forEach(item => {
         const option = document.createElement('div');
-        option.className = 'ancestry-option';
+        option.className = this.optionClass;
         option.textContent = item.name;
         option.addEventListener('click', () => {
           this.input.val(item.name);

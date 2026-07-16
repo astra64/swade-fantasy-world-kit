@@ -149,13 +149,42 @@ export async function getEdges() {
 /**
  * Get all hindrances from curated compendium.
  * Filters to type='hindrance'.
+ * Fetches full item data to include Major/Minor flag (system.major).
  * Respects curated visibility settings if enabled.
- * Read-only; returns plain objects.
- * 
- * @returns {Promise<Array>} Array of {name, uuid} objects
+ * Read-only; returns plain objects with metadata.
+ *
+ * @returns {Promise<Array>} Array of {name, uuid, major, description} objects sorted alphabetically
  */
 export async function getHindrances() {
-  return fetchPackItems(FANTASY_PACKS.hindrances, 'hindrance');
+  const basicItems = await fetchPackItems(FANTASY_PACKS.hindrances, 'hindrance');
+
+  // Fetch full item data in parallel to get system.major flag
+  const enriched = await Promise.all(basicItems.map(async (item) => {
+    try {
+      const fullItem = await getItemPreview(item.uuid);
+      if (fullItem) {
+        return {
+          name: fullItem.name,
+          uuid: fullItem.uuid,
+          major: fullItem.system?.major ?? false,
+          description: fullItem.system?.description ?? '',
+          img: fullItem.img || '',
+        };
+      }
+    } catch (error) {
+      console.warn(`[Character Creation] Failed to fetch hindrance ${item.uuid}:`, error);
+    }
+    // Fall back to basic info if full fetch fails
+    return {
+      name: item.name,
+      uuid: item.uuid,
+      major: false,
+      description: '',
+      img: '',
+    };
+  }));
+
+  return enriched;
 }
 
 /**

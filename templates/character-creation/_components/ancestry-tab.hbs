@@ -1,0 +1,79 @@
+<div class="tab {{#if (eq @root.currentTab 'ancestry')}}active{{/if}}" data-tab="ancestry">
+  <h3>Ancestry</h3>
+
+  <div class="tab-content">
+    <div class="guidance-box">
+      <p>{{@root.tabGuidance.ancestry}}</p>
+    </div>
+
+    <!-- Add Ancestry Section -->
+    <p class="hint-text">Search the dropdown, select an ancestry, and click Add. Or drag an ancestry from the compendium browser.</p>
+
+    <div class="form-group">
+      <div class="ancestry-input-inline">
+        <div class="ancestry-search-container">
+          <input type="text" class="ancestry-search" placeholder="Select Ancestry..." autocomplete="off">
+          <div class="ancestry-dropdown-menu"></div>
+        </div>
+        <button type="button" class="btn-add-ancestry" data-action="add-ancestry">Add</button>
+        <button type="button" class="btn-open-compendium" data-action="open-ancestry-compendium">Browse</button>
+      </div>
+    </div>
+
+    <!-- Selected Ancestry Display -->
+    {{#if @root.character.ancestry}}
+    <div class="selected-ancestry">
+      {{#if @root.selectedAncestryData}}
+      <div class="ancestry-item {{#if @root.expandedAncestry}}expanded{{/if}}" data-action="toggle-ancestry-expand" data-item-uuid="{{@root.selectedAncestryData.uuid}}">
+        <div class="ancestry-item-header">
+          {{#if @root.selectedAncestryData.img}}
+          <img src="{{@root.selectedAncestryData.img}}" alt="{{@root.selectedAncestryData.name}}" class="ancestry-item-image">
+          {{/if}}
+          <div class="ancestry-item-info">
+            <span class="ancestry-name">{{@root.selectedAncestryData.name}}</span>
+          </div>
+          <button type="button" class="btn-open-ancestry" data-action="open-ancestry-item" title="Open item"></button>
+          <button type="button" class="btn-remove-ancestry" data-action="remove-ancestry" title="Remove ancestry"></button>
+        </div>
+        {{#if @root.expandedAncestry}}
+        <div class="ancestry-item-description">
+          {{#if @root.selectedAncestryData.system.description}}
+          {{{@root.selectedAncestryData.system.description}}}
+          {{else}}
+          <p class="info-text">No description available.</p>
+          {{/if}}
+        </div>
+        {{/if}}
+      </div>
+      {{#if @root.selectedAncestryData.system.grants}}
+      <div class="ancestry-child-items">
+        <h4>Ancestral Abilities</h4>
+        {{#each @root.childItemsData}}
+        <div class="ancestry-item {{#if this.isExpanded}}expanded{{/if}}" data-action="toggle-child-expand" data-item-uuid="{{this.uuid}}">
+          <div class="ancestry-item-header">
+            {{#if this.img}}
+            <img src="{{this.img}}" alt="{{this.name}}" class="ancestry-item-image">
+            {{/if}}
+            <div class="ancestry-item-info">
+              <span class="ancestry-name">{{this.name}}</span>
+            </div>
+            <button type="button" class="btn-open-ancestry" data-action="open-child-item" data-uuid="{{this.uuid}}" title="Open item"></button>
+          </div>
+          {{#if this.isExpanded}}
+          <div class="ancestry-item-description">
+            {{#if this.system.description}}
+            {{{this.system.description}}}
+            {{else}}
+            <p class="info-text">No description available.</p>
+            {{/if}}
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+      {{/if}}
+    </div>
+    {{/if}}
+  </div>
+</div>

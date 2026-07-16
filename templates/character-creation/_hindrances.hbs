@@ -3,33 +3,74 @@
     <p>{{tabGuidance.hindrances}}</p>
   </div>
 
+  <!-- Add Hindrance Section -->
+  <p class="hint-text">Search the dropdown, select a hindrance, and click Add. Or drag hindrances from the compendium browser.</p>
+
   <div class="form-group">
-    <label>Available Hindrances (up to 4 points)</label>
-    <div class="hindrances-list">
-      {{#each hindrances}}
-      <div class="hindrance-item">
-        <input type="checkbox" id="hindrance-{{@index}}" class="hindrance-checkbox" value="{{this.uuid}}" data-action="toggle-hindrance">
-        <label for="hindrance-{{@index}}">
-          <span class="hindrance-name">{{this.name}}</span>
-          {{#if this.type}}<span class="hindrance-type">({{this.type}})</span>{{/if}}
-        </label>
+    <div class="hindrances-input-inline">
+      <div class="hindrances-search-container">
+        <input type="text" class="hindrances-search" placeholder="Select Hindrance..." autocomplete="off">
+        <div class="hindrances-dropdown-menu"></div>
       </div>
-      {{/each}}
+      <button type="button" class="btn-add-hindrance" data-action="add-hindrance">Add</button>
+      <button type="button" class="btn-open-compendium" data-action="open-hindrances-compendium">Browse</button>
     </div>
   </div>
 
+  <!-- Selected Hindrances Display -->
   {{#if (keys character.hindrances).length}}
-  <div class="selected-hindrances">
+  <div class="selected-hindrances-section">
     <h4>Selected Hindrances</h4>
-    <ul>
+    <div class="hindrances-list">
       {{#each character.hindrances}}
-      <li>{{this.name}}</li>
+      <div class="hindrance-item-card" data-uuid="{{this.uuid}}">
+        <div class="hindrance-item-header">
+          <div class="hindrance-item-info">
+            <span class="hindrance-name">{{this.name}}</span>
+            <span class="hindrance-type">{{#if this.major}}Major{{else}}Minor{{/if}}</span>
+            <span class="hindrance-points">{{this.points}}pts</span>
+          </div>
+          <button type="button" class="btn-remove-hindrance" data-action="remove-hindrance" title="Remove hindrance">×</button>
+        </div>
+
+        <!-- Trade-Off Selection -->
+        <div class="hindrance-tradeoff">
+          <label>Trade-Off:</label>
+          <select class="hindrance-tradeoff-select" data-action="set-hindrance-tradeoff">
+            <option value="attribute-boost" {{#if (eq this.tradeOff "attribute-boost")}}selected{{/if}}>
+              Raise Attribute (+2)
+            </option>
+            <option value="edge" {{#if (eq this.tradeOff "edge")}}selected{{/if}}>
+              Free Edge
+            </option>
+            <option value="skill-point" {{#if (eq this.tradeOff "skill-point")}}selected{{/if}}>
+              Extra Skill Point
+            </option>
+            <option value="extra-funds" {{#if (eq this.tradeOff "extra-funds")}}selected{{/if}}>
+              Extra 50 Silver
+            </option>
+          </select>
+        </div>
+      </div>
       {{/each}}
-    </ul>
+    </div>
+
+    <!-- Points Tracker -->
+    <div class="hindrance-points-tracker">
+      <p><strong>Total Hindrance Points:</strong> <span data-hindrance-points>{{hindrancePointsUsed}}</span>/4</p>
+      {{#if (gt hindrancePointsUsed 4)}}
+      <p class="warning-text">⚠ Over budget! Reduce hindrances to 4 points or less.</p>
+      {{/if}}
+    </div>
+  </div>
+  {{else}}
+  <div class="no-hindrances-info">
+    <p class="info-text">No hindrances selected yet. You can add up to 4 points' worth of hindrances to gain bonus points.</p>
   </div>
   {{/if}}
 
-  <div class="points-info">
-    <p><strong>Total Hindrance Points:</strong> <span data-hindrance-points>0</span>/4</p>
+  <!-- Drag-Drop Zone -->
+  <div class="hindrances-dropzone" data-action="hindrances-dropzone">
+    <p class="hint-text">You can also drag hindrances here from the compendium browser</p>
   </div>
 </div>
