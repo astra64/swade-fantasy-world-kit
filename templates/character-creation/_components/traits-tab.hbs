@@ -1,62 +1,30 @@
-{{!-- Character Traits Tab - Attributes and Skills on single page --}}
-<div class="swade-traits-container">
-  {{#each attributes as |attr attrName|}}
-    <div class="attribute-section">
-      <div class="attribute-header">
-        <h3>{{capitalize attrName}}</h3>
-        <div class="attribute-die-buttons">
-          {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
-            <button 
-              type="button" 
-              class="die-btn {{#if (eq ../character.attributes[attrName].die die)}}active{{/if}}"
-              data-action="set-attribute"
-              data-attribute="{{attrName}}"
-              data-die="{{die}}"
-            >
-              {{die}}
-            </button>
-          {{/each}}
+<div class="tab {{#if (eq @root.currentTab 'traits')}}active{{/if}}" data-tab="traits">
+  <h3>Attributes & Skills</h3>
+  <div class="tab-content">
+    <div class="guidance-box">
+      <p>{{@root.tabGuidance.traits}}</p>
+    </div>
+
+    <div class="swade-traits-container">
+      <!-- Agility Attribute -->
+      <div class="attribute-section">
+        <div class="attribute-header">
+          <h3>Agility</h3>
+          <div class="attribute-die-buttons">
+            {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+              <button
+                type="button"
+                class="die-btn {{#if (eq @root.character.attributes.agility.die die)}}active{{/if}}"
+                data-action="set-attribute"
+                data-attribute="agility"
+                data-die="{{die}}"
+              >
+                {{die}}
+              </button>
+            {{/each}}
+          </div>
         </div>
       </div>
-
-      {{!-- Skills for this attribute --}}
-      <div class="skills-for-attribute">
-        {{#each ../skillsByAttribute[attrName] as |skill|}}
-          <div class="skill-row {{#if skill.isCoreSkill}}core-skill{{/if}}">
-            <div class="skill-name">
-              <span class="skill-label">{{skill.name}}</span>
-              {{#if skill.isCoreSkill}}
-                <span class="core-badge" title="Free core skill">FREE</span>
-              {{/if}}
-            </div>
-            <div class="skill-die-buttons">
-              {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
-                <button 
-                  type="button" 
-                  class="die-btn {{#if (eq ../../character.skills[skill.uuid].die die)}}active{{/if}}"
-                  data-action="set-skill"
-                  data-skill-uuid="{{skill.uuid}}"
-                  data-die="{{die}}"
-                >
-                  {{die}}
-                </button>
-              {{/each}}
-            </div>
-          </div>
-        {{/each}}
-      </div>
-    </div>
-  {{/each}}
-
-  {{!-- Pinned footer with point counters --}}
-  <div class="traits-footer">
-    <div class="points-counter">
-      <span class="points {{#if (gte attributePointsUsed 5)}}over-limit{{/if}}">
-        Attributes: {{attributePointsUsed}}/5
-      </span>
-      <span class="points {{#if (gte skillPointsUsed 12)}}over-limit{{/if}}">
-        Skills: {{skillPointsUsed}}/12
-      </span>
     </div>
   </div>
 </div>

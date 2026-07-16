@@ -28,6 +28,7 @@ import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
 import { AncestryTabHandler } from './handlers/AncestryTabHandler.js';
 import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
+import { TraitsTabHandler } from './handlers/TraitsTabHandler.js';
 import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, SKILL_ATTRIBUTE_MAP, BUDGETS } from './constants.js';
 
 export class CharacterManager extends FormApplication {
@@ -35,6 +36,7 @@ export class CharacterManager extends FormApplication {
     concept: ConceptTabHandler,
     ancestry: AncestryTabHandler,
     hindrances: HindrancesTabHandler,
+    traits: TraitsTabHandler,
   };
 
   constructor(options = {}) {
@@ -93,183 +95,200 @@ export class CharacterManager extends FormApplication {
     const scrollPos = this.element?.find('.form-tabs')?.scrollTop() || 0;
     const tabScrollPos = this.element?.find('.tab.active')?.scrollTop() || 0;
 
-    const result = await super.render(force, options);
+    try {
+      const result = await super.render(force, options);
 
-    // Restore scroll position after render
-    if (scrollPos > 0) {
-      this.element?.find('.form-tabs')?.scrollTop(scrollPos);
+      // Restore scroll position after render
+      if (scrollPos > 0) {
+        this.element?.find('.form-tabs')?.scrollTop(scrollPos);
+      }
+
+      // If there's a pending scroll target, scroll to it; otherwise restore tab scroll
+      if (this.pendingScrollTarget) {
+        setTimeout(() => {
+          const target = this.element?.find(this.pendingScrollTarget)?.[0];
+          if (target) {
+            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+          }
+          this.pendingScrollTarget = null;
+        }, 0);
+      } else if (tabScrollPos > 0) {
+        this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[CharacterManager] render() failed:', error);
+      throw error;
     }
-
-    // If there's a pending scroll target, scroll to it; otherwise restore tab scroll
-    if (this.pendingScrollTarget) {
-      setTimeout(() => {
-        const target = this.element?.find(this.pendingScrollTarget)?.[0];
-        if (target) {
-          target.scrollIntoView({ behavior: 'auto', block: 'start' });
-        }
-        this.pendingScrollTarget = null;
-      }, 0);
-    } else if (tabScrollPos > 0) {
-      this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
-    }
-
-    return result;
   }
 
   async getData(options = {}) {
-    // Initialize character on first open
-    if (!this.character) {
-      if (this.actor) {
-        const ancestryItem = this.actor.items.find(item => item.type === 'ancestry');
-        let ancestryUuid = ancestryItem?.getFlag('swade-fantasy-world-kit', 'compendiumUuid') || null;
+    try {
+      // Initialize character on first open
+      if (!this.character) {
+        if (this.actor) {
+          const ancestryItem = this.actor.items.find(item => item.type === 'ancestry');
+          let ancestryUuid = ancestryItem?.getFlag('swade-fantasy-world-kit', 'compendiumUuid') || null;
 
-        if (ancestryItem && !ancestryUuid) {
-          try {
-            const ancestries = await getAncestries();
-            const matchedAncestry = ancestries.find(a => a.name === ancestryItem.name);
-            if (matchedAncestry) {
-              ancestryUuid = matchedAncestry.uuid;
-            }
-          } catch (e) {
-            console.warn('[Character Manager] Could not find matching ancestry in compendium');
-          }
-        }
-
-        this.character = {
-          name: this.actor.name,
-          description: this.actor.system?.description || '',
-          archetype: this.actor.system?.details?.archetype || '',
-          concept: this.actor.system?.details?.notes || '',
-          ancestry: ancestryUuid,
-          expandedAncestry: false,
-          expandedChildItems: {},
-          attributes: this.actor.system?.attributes || DEFAULT_ATTRIBUTES,
-          skills: this.actor.system?.skills || {},
-          edges: this.actor.system?.edges || {},
-          hindrances: this.actor.system?.hindrances || {},
-        };
-      } else {
-        this.character = initializeCharacter();
-      }
-      this._initializeFreeCoreSkills();
-    }
-
-    // Fetch compendium data if not cached
-    if (this.compendiumData.ancestries.length === 0) {
-      try {
-        this.compendiumData.ancestries = await getAncestries();
-        this.compendiumData.skills = await getSkills();
-        this.compendiumData.edges = await getEdges();
-        this.compendiumData.hindrances = await getHindrances();
-        this._buildSkillsByAttribute();
-      } catch (error) {
-        console.error('[Character Manager] Failed to load compendium data:', error);
-        ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
-      }
-    }
-
-    // Fetch ancestry preview if selected
-    let selectedAncestryData = null;
-    let childItemsData = [];
-    if (this.character.ancestry) {
-      selectedAncestryData = await getItemPreview(this.character.ancestry);
-
-      // Fetch full data for granted items
-      if (selectedAncestryData?.system?.grants && Array.isArray(selectedAncestryData.system.grants)) {
-        for (const grant of selectedAncestryData.system.grants) {
-          try {
-            const itemData = await getItemPreview(grant.uuid);
-            if (itemData) {
-              // Enrich the description to handle embedded items/links
-              if (itemData.system?.description) {
-                itemData.system.description = await TextEditor.enrichHTML(itemData.system.description, { async: true });
+          if (ancestryItem && !ancestryUuid) {
+            try {
+              const ancestries = await getAncestries();
+              const matchedAncestry = ancestries.find(a => a.name === ancestryItem.name);
+              if (matchedAncestry) {
+                ancestryUuid = matchedAncestry.uuid;
               }
-              // Add expanded state to each child item
-              itemData.isExpanded = this.character.expandedChildItems[itemData.uuid] || false;
-              childItemsData.push(itemData);
+            } catch (e) {
+              console.warn('[Character Manager] Could not find matching ancestry in compendium');
             }
-          } catch (e) {
-            console.warn('[Character Manager] Failed to load granted item:', grant.uuid);
           }
+
+          this.character = {
+            name: this.actor.name,
+            description: this.actor.system?.description || '',
+            archetype: this.actor.system?.details?.archetype || '',
+            concept: this.actor.system?.details?.notes || '',
+            ancestry: ancestryUuid,
+            expandedAncestry: false,
+            expandedChildItems: {},
+            attributes: this.actor.system?.attributes || DEFAULT_ATTRIBUTES,
+            skills: this.actor.system?.skills || {},
+            edges: this.actor.system?.edges || {},
+            hindrances: this.actor.system?.hindrances || {},
+          };
+        } else {
+          this.character = initializeCharacter();
+        }
+        this._initializeFreeCoreSkills();
+      }
+
+      // Fetch compendium data if not cached
+      if (this.compendiumData.ancestries.length === 0) {
+        try {
+          this.compendiumData.ancestries = await getAncestries();
+          this.compendiumData.skills = await getSkills();
+          this.compendiumData.edges = await getEdges();
+          this.compendiumData.hindrances = await getHindrances();
+          this._buildSkillsByAttribute();
+        } catch (error) {
+          console.error('[Character Manager] Failed to load compendium data:', error);
+          ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
         }
       }
 
-      // Enrich ancestry description as well
-      if (selectedAncestryData?.system?.description) {
-        selectedAncestryData.system.description = await TextEditor.enrichHTML(selectedAncestryData.system.description, { async: true });
+      // Fetch ancestry preview if selected
+      let selectedAncestryData = null;
+      let childItemsData = [];
+      if (this.character.ancestry) {
+        selectedAncestryData = await getItemPreview(this.character.ancestry);
+
+        // Fetch full data for granted items
+        if (selectedAncestryData?.system?.grants && Array.isArray(selectedAncestryData.system.grants)) {
+          for (const grant of selectedAncestryData.system.grants) {
+            try {
+              const itemData = await getItemPreview(grant.uuid);
+              if (itemData) {
+                // Enrich the description to handle embedded items/links
+                if (itemData.system?.description) {
+                  itemData.system.description = await TextEditor.enrichHTML(itemData.system.description, { async: true });
+                }
+                // Add expanded state to each child item
+                itemData.isExpanded = this.character.expandedChildItems[itemData.uuid] || false;
+                childItemsData.push(itemData);
+              }
+            } catch (e) {
+              console.warn('[Character Manager] Failed to load granted item:', grant.uuid);
+            }
+          }
+        }
+
+        // Enrich ancestry description as well
+        if (selectedAncestryData?.system?.description) {
+          selectedAncestryData.system.description = await TextEditor.enrichHTML(selectedAncestryData.system.description, { async: true });
+        }
       }
+
+      const derivedStats = calculateDerivedStats(this.character);
+      const attributePointsUsed = calculateTotalAttributePoints(this.character);
+      const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
+      const availablePerkPoints = getAvailablePerkPoints(this.character);
+      const perkSlots = generatePerkSlots(this.character);
+
+      // Calculate perk points spent based on actual option costs
+      const perkOptionCosts = {
+        'attribute-boost': 2,
+        'edge': 2,
+        'skill-point': 1,
+        'extra-funds': 1,
+      };
+      const perkPointsSpent = perkSlots.reduce((sum, slot) => {
+        if (!slot.selected) return sum;
+        const cost = perkOptionCosts[slot.selected] || 0;
+        return sum + cost;
+      }, 0);
+
+      // Get currency settings from SWADE system
+      const currencyName = game.settings.get('swade', 'currencyName') || 'Silver';
+      const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
+      const currencyAmount = pcStartingCurrency * 2;
+
+      const data = {
+        character: this.character,
+        selectedAncestryData: selectedAncestryData,
+        childItemsData: childItemsData,
+        ancestries: this.compendiumData.ancestries,
+        skills: this.compendiumData.skills,
+        edges: this.compendiumData.edges,
+        hindrances: this.compendiumData.hindrances,
+        skillsByAttribute: this.skillsByAttribute,
+        derivedStats: derivedStats,
+        attributePointsUsed: attributePointsUsed,
+        attributePointsRemaining: 5 - attributePointsUsed,
+        skillPointsUsed: skillPointsUsed,
+        skillPointsRemaining: 12 - skillPointsUsed,
+        availablePerkPoints: availablePerkPoints,
+        perkPointsSpent: perkPointsSpent,
+        edgePointsMax: 0,
+        currentTab: this.currentTab,
+        expandedAncestry: this.character.expandedAncestry,
+        expandedChildItems: this.character.expandedChildItems || {},
+        perkSlots: perkSlots,
+        tabGuidance: this._getTabGuidance(),
+        currencyName: currencyName,
+        currencyAmount: currencyAmount,
+        attributes: DEFAULT_ATTRIBUTES,
+      };
+
+      return data;
+    } catch (error) {
+      console.error('[CharacterManager] getData() failed:', error);
+      throw error;
     }
-
-    const derivedStats = calculateDerivedStats(this.character);
-    const attributePointsUsed = calculateTotalAttributePoints(this.character);
-    const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
-    const availablePerkPoints = getAvailablePerkPoints(this.character);
-    const perkSlots = generatePerkSlots(this.character);
-
-    // Calculate perk points spent based on actual option costs
-    const perkOptionCosts = {
-      'attribute-boost': 2,
-      'edge': 2,
-      'skill-point': 1,
-      'extra-funds': 1,
-    };
-    const perkPointsSpent = perkSlots.reduce((sum, slot) => {
-      if (!slot.selected) return sum;
-      const cost = perkOptionCosts[slot.selected] || 0;
-      return sum + cost;
-    }, 0);
-
-    // Get currency settings from SWADE system
-    const currencyName = game.settings.get('swade', 'currencyName') || 'Silver';
-    const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
-    const currencyAmount = pcStartingCurrency * 2;
-
-    return {
-      character: this.character,
-      selectedAncestryData: selectedAncestryData,
-      childItemsData: childItemsData,
-      ancestries: this.compendiumData.ancestries,
-      skills: this.compendiumData.skills,
-      edges: this.compendiumData.edges,
-      hindrances: this.compendiumData.hindrances,
-      skillsByAttribute: this.skillsByAttribute,
-      derivedStats: derivedStats,
-      attributePointsUsed: attributePointsUsed,
-      attributePointsRemaining: 5 - attributePointsUsed,
-      skillPointsUsed: skillPointsUsed,
-      skillPointsRemaining: 12 - skillPointsUsed,
-      availablePerkPoints: availablePerkPoints,
-      perkPointsSpent: perkPointsSpent,
-      edgePointsMax: 0,
-      currentTab: this.currentTab,
-      expandedAncestry: this.character.expandedAncestry,
-      expandedChildItems: this.character.expandedChildItems || {},
-      perkSlots: perkSlots,
-      tabGuidance: this._getTabGuidance(),
-      currencyName: currencyName,
-      currencyAmount: currencyAmount,
-    };
   }
 
   activateListeners(html) {
-    super.activateListeners(html);
+    try {
+      super.activateListeners(html);
 
-    // Setup tab navigation
-    this.tabManager.setup(html, (tabName) => {
-      this.currentTab = tabName;
-    });
+      // Setup tab navigation
+      this.tabManager.setup(html, (tabName) => {
+        this.currentTab = tabName;
+      });
 
-    // Setup all tab handlers
-    this._setupTabHandlers(html);
+      // Setup all tab handlers
+      this._setupTabHandlers(html);
 
-    // Form actions
-    html.find('button[data-action="save"]').on('click', async () => {
-      await this._createActor();
-    });
+      // Form actions
+      html.find('button[data-action="save"]').on('click', async () => {
+        await this._createActor();
+      });
 
-    html.find('button[data-action="cancel"]').on('click', () => {
-      this.close();
-    });
+      html.find('button[data-action="cancel"]').on('click', () => {
+        this.close();
+      });
+    } catch (error) {
+      console.error('[CharacterManager] activateListeners() error:', error);
+    }
   }
 
   _setupTabHandlers(html) {
@@ -277,7 +296,13 @@ export class CharacterManager extends FormApplication {
       if (handler && handler.setup) {
         const tabElement = html.find(`[data-tab="${tabName}"]`);
         if (tabElement.length) {
-          handler.setup(tabElement);
+          try {
+            handler.setup(tabElement);
+          } catch (error) {
+            console.error(`[CharacterManager] Error setting up ${tabName} handler:`, error);
+          }
+        } else {
+          console.warn(`[CharacterManager] Tab element not found for: ${tabName}`);
         }
       }
     });

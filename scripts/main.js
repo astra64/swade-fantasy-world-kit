@@ -592,7 +592,12 @@ Hooks.once("init", () => {
 
 async function registerTemplatePartials() {
   try {
-    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab'];
+    // IMPORTANT: When adding new tab partials (e.g., traits-tab, edges-tab, gear-tab, summary-tab):
+    // 1. Create the partial template file in templates/character-creation/_components/
+    // 2. Include it in templates/character-creation/character-manager.hbs with {{> partial-name}}
+    // 3. ADD THE PARTIAL NAME TO THIS ARRAY so it gets registered with Handlebars
+    // Without this registration step, the partial will not load and the template will fail silently
+    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab', 'traits-tab'];
     for (const partial of partials) {
       const path = `modules/${MODULE_ID}/templates/character-creation/_components/${partial}.hbs`;
       const html = await fetch(path).then(r => {
