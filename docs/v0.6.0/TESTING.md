@@ -149,6 +149,37 @@
 
 **Pass Criteria:** Both multi-selects work independently
 
+### ✅ Test 10a: Hindrance Dropdown Filtering
+1. Go to **Hindrances** tab
+2. Click the search/dropdown to see all available hindrances
+   - ✅ Dropdown shows all hindrances from compendium
+3. Select a hindrance (e.g., "Curious")
+   - ✅ Hindrance is added and appears in selected list
+4. Click the search/dropdown again
+   - ✅ "Curious" is NO LONGER in the dropdown options
+   - ✅ Only unselected hindrances appear
+5. Add another hindrance, verify it also disappears from dropdown
+   - ✅ Each added hindrance filters out of the available options
+
+### ✅ Test 10b: Major/Minor Radio Button Persistence
+1. Go to **Hindrances** tab
+2. Add a hindrance (e.g., "Curious")
+   - ✅ Shows in selected hindrances list
+   - ✅ Radio buttons appear: [Major] [Minor]
+3. Select "Major" radio button
+   - ✅ Major radio is checked
+   - ✅ Points show as 2 (major hindrance)
+4. Click "Minor" radio button
+   - ✅ Minor radio is now checked
+   - ✅ Points update to 1 (minor hindrance)
+5. Fill in character with all required info (name, ancestry, attributes, skills, hindrance set to Minor)
+6. Go to **Summary** tab and click **"Create Character"** button
+   - ✅ Character is created as actor
+7. Close the Character Creator and reopen it for the same actor (via macro or settings)
+   - ✅ Hindrance shows with Major: false and points: 1 (or verify in actor sheet)
+
+**Pass Criteria:** Major/minor flag saves correctly to actor when form is submitted
+
 ### ✅ Test 11: Summary Tab & Derived Stats
 1. Go to **Summary** tab
 2. Check the derived statistics:

@@ -1,117 +1,104 @@
-/**
- * Hindrances Tab Handler
- * Manages hindrance selection, trade-offs, and point tracking
- */
-import { SearchableDropdown } from '../components/SearchableDropdown.js';
-import { DragDropManager } from '../components/DragDropManager.js';
+import { BaseTabHandler } from './BaseTabHandler.js';
 import { getItemPreview } from '../lib/compendium-utils.js';
 import { calculateTotalHindrancePoints, getRemainingHindrancePoints, generatePerkSlots } from '../lib/calculator.js';
-import { COMPENDIUM_PACKS } from '../constants.js';
 
-export class HindrancesTabHandler {
-  constructor(characterManager) {
-    this.characterManager = characterManager;
-    this.dropdown = null;
-    this.dragDrop = null;
+export class HindrancesTabHandler extends BaseTabHandler {
+  getTabName() {
+    return 'hindrances';
   }
 
-  /**
-   * Setup hindrances tab UI and handlers
-   */
-  setup(html) {
-    // Setup searchable dropdown for adding hindrances
-    this.dropdown = new SearchableDropdown({
-      items: this.characterManager.compendiumData.hindrances,
+  getCompendiumPackKey() {
+    return 'hindrances';
+  }
+
+  getCompendiumPackLabel() {
+    return 'Hindrances';
+  }
+
+  getDropdownConfig() {
+    const availableHindrances = this.characterManager.compendiumData.hindrances.filter(
+      h => !this.characterManager.character.hindrances?.[h.uuid]
+    );
+    return {
+      items: availableHindrances,
       placeholder: 'Select Hindrance...',
       onSelect: (hindrance) => this._addHindrance(hindrance),
       inputSelector: '.hindrances-search',
       menuSelector: '.hindrances-dropdown-menu',
       optionClass: 'dropdown-option',
-    });
+    };
+  }
 
-    const container = html.find('.search-container');
-    const addBtn = html.find('button[data-action="add-hindrance"]');
-    this.dropdown.setup(container, addBtn);
+  getDropdownContainerSelector() {
+    return '.search-container';
+  }
 
-    // Setup compendium browser button
-    html.find('button[data-action="open-hindrances-compendium"]').on('click', (e) => {
-      e.preventDefault();
-      this._openCompendium();
-    });
+  getAddButtonSelector() {
+    return 'button[data-action="add-hindrance"]';
+  }
 
+  getCompendiumButtonSelector() {
+    return 'button[data-action="open-hindrances-compendium"]';
+  }
+
+  getClearSearchButtonSelector() {
+    return 'button[data-action="clear-hindrances-search"]';
+  }
+
+  getSearchInputSelector() {
+    return '.hindrances-search';
+  }
+
+  _handleDragDrop(uuid) {
+    this._addHindranceByUuid(uuid);
+  }
+
+  _setupCustomHandlers() {
     // Setup expand/collapse toggle
-    html.find('[data-action="toggle-hindrance-expand"]').on('click', (e) => {
-      e.preventDefault();
-      const uuid = $(e.currentTarget).attr('data-item-uuid');
-      this._toggleHindranceExpand(uuid);
-    });
+    this._setupExpandToggleHandler(
+      '[data-action="toggle-hindrance-expand"]',
+      () => {
+        const uuid = this.html.find('[data-action="toggle-hindrance-expand"]').attr('data-item-uuid');
+        return this.characterManager.character.hindrances?.[uuid]?.expanded || false;
+      },
+      (val) => {
+        const uuid = this.html.find('[data-action="toggle-hindrance-expand"]').attr('data-item-uuid');
+        if (this.characterManager.character.hindrances?.[uuid]) {
+          this.characterManager.character.hindrances[uuid].expanded = val;
+        }
+      }
+    );
 
     // Setup open item button
-    html.find('[data-action="open-hindrance-item"]').on('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const uuid = $(e.currentTarget).attr('data-uuid');
-      this._openHindranceItem(uuid);
-    });
+    this._setupOpenItemHandler('[data-action="open-hindrance-item"]');
 
     // Setup remove buttons
-    html.find('[data-action="remove-hindrance"]').on('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const uuid = $(e.currentTarget).closest('[data-item-uuid]')?.attr('data-item-uuid')
-                || $(e.currentTarget).closest('.hindrance-item').find('[data-item-uuid]').attr('data-item-uuid');
-      this._removeHindrance(uuid);
-    });
+    this._setupRemoveHandler(
+      '[data-action="remove-hindrance"]',
+      this._removeHindrance,
+      (e) => $(e.currentTarget).closest('[data-item-uuid]')?.attr('data-item-uuid')
+          || $(e.currentTarget).closest('.hindrance-item').find('[data-item-uuid]').attr('data-item-uuid')
+    );
 
     // Setup major/minor radio toggles
-    html.find('input[data-action="set-hindrance-major"]').on('change', (e) => {
+    this.html.find('input[data-action="set-hindrance-major"]').on('change', (e) => {
       const uuid = $(e.currentTarget).attr('data-item-uuid');
       this._setHindranceMajor(uuid, true);
     });
 
-    html.find('input[data-action="set-hindrance-minor"]').on('change', (e) => {
+    this.html.find('input[data-action="set-hindrance-minor"]').on('change', (e) => {
       const uuid = $(e.currentTarget).attr('data-item-uuid');
       this._setHindranceMajor(uuid, false);
     });
 
     // Setup perk point allocation dropdowns (multi-slot)
-    html.find('select[data-action="set-slot-tradeoff"]').on('change', (e) => {
+    this.html.find('select[data-action="set-slot-tradeoff"]').on('change', (e) => {
       const slotIndex = parseInt($(e.currentTarget).attr('data-slot-index'));
       const selectedValue = e.target.value;
       this._handlePerkChange(slotIndex, selectedValue);
     });
-
-    // Setup drag-drop
-    this.dragDrop = new DragDropManager({
-      tabName: 'hindrances',
-      onDrop: (uuid) => this._addHindranceByUuid(uuid),
-    });
-    this.dragDrop.setup(html);
   }
 
-  /**
-   * Toggle expand state for a hindrance
-   */
-  _toggleHindranceExpand(uuid) {
-    if (this.characterManager.character.hindrances?.[uuid]) {
-      this.characterManager.character.hindrances[uuid].expanded = !this.characterManager.character.hindrances[uuid].expanded;
-      this.characterManager.render();
-    }
-  }
-
-  /**
-   * Open hindrance item from compendium
-   */
-  async _openHindranceItem(uuid) {
-    const item = await fromUuid(uuid);
-    if (item) {
-      item.sheet.render(true);
-    }
-  }
-
-  /**
-   * Add hindrance to character via dropdown selection
-   */
   async _addHindrance(hindrance) {
     if (!hindrance || !hindrance.uuid) return;
 
@@ -149,9 +136,6 @@ export class HindrancesTabHandler {
     this.characterManager.render();
   }
 
-  /**
-   * Add hindrance by UUID (used for drag-drop)
-   */
   async _addHindranceByUuid(uuid) {
     // Find the hindrance in compendium data
     const hindrance = this.characterManager.compendiumData.hindrances.find(h => h.uuid === uuid);
@@ -162,9 +146,6 @@ export class HindrancesTabHandler {
     }
   }
 
-  /**
-   * Toggle hindrance between major and minor
-   */
   async _setHindranceMajor(uuid, isMajor) {
     if (!this.characterManager.character.hindrances?.[uuid]) return;
 
@@ -186,9 +167,6 @@ export class HindrancesTabHandler {
     this.characterManager.render();
   }
 
-  /**
-   * Remove hindrance from character
-   */
   _removeHindrance(uuid) {
     if (this.characterManager.character.hindrances?.[uuid]) {
       delete this.characterManager.character.hindrances[uuid];
@@ -196,10 +174,6 @@ export class HindrancesTabHandler {
     }
   }
 
-
-  /**
-   * Handle perk point allocation dropdown change for a specific slot
-   */
   _handlePerkChange(slotIndex, selectedValue) {
     if (!this.characterManager.character.perkPointAllocations) {
       this.characterManager.character.perkPointAllocations = [];
@@ -220,24 +194,7 @@ export class HindrancesTabHandler {
     this.characterManager.render();
   }
 
-  /**
-   * Get total hindrance points currently spent
-   */
   _getTotalPoints() {
     return calculateTotalHindrancePoints(this.characterManager.character);
-  }
-
-  /**
-   * Open hindrances compendium browser
-   */
-  _openCompendium() {
-    const packId = COMPENDIUM_PACKS.hindrances;
-    const pack = game.packs.get(packId);
-
-    if (pack) {
-      pack.sheet.render(true);
-    } else {
-      ui.notifications.error('[Character Manager] Hindrances compendium not found');
-    }
   }
 }

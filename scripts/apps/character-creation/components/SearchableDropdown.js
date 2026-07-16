@@ -74,7 +74,14 @@ export class SearchableDropdown {
    * Hide dropdown menu
    */
   _hideMenu() {
-    setTimeout(() => this.menu.removeClass('show'), 200);
+    setTimeout(() => this.menu.removeClass('show'), 100);
+  }
+
+  /**
+   * Public method to close the dropdown
+   */
+  close() {
+    this._hideMenu();
   }
 
   /**

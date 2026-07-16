@@ -31,6 +31,12 @@ import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, SKILL_ATTRIBUTE_MAP, BUDGETS } from './constants.js';
 
 export class CharacterManager extends FormApplication {
+  static TAB_HANDLERS = {
+    concept: ConceptTabHandler,
+    ancestry: AncestryTabHandler,
+    hindrances: HindrancesTabHandler,
+  };
+
   constructor(options = {}) {
     const formOptions = {
       ...options,
@@ -48,12 +54,14 @@ export class CharacterManager extends FormApplication {
     };
     this.skillsByAttribute = {};
 
-    // Initialize tab handlers
-    this.tabHandlers = {
-      concept: new ConceptTabHandler(this),
-      ancestry: new AncestryTabHandler(this),
-      hindrances: new HindrancesTabHandler(this),
-    };
+    // Initialize tab handlers from registry
+    this.tabHandlers = Object.entries(CharacterManager.TAB_HANDLERS).reduce(
+      (handlers, [tabName, HandlerClass]) => {
+        handlers[tabName] = new HandlerClass(this);
+        return handlers;
+      },
+      {}
+    );
 
     // Initialize tab manager
     this.tabManager = new TabManager({ currentTab: this.currentTab });
@@ -83,12 +91,26 @@ export class CharacterManager extends FormApplication {
   async render(force = false, options = {}) {
     // Preserve scroll position
     const scrollPos = this.element?.find('.form-tabs')?.scrollTop() || 0;
+    const tabScrollPos = this.element?.find('.tab.active')?.scrollTop() || 0;
 
     const result = await super.render(force, options);
 
     // Restore scroll position after render
     if (scrollPos > 0) {
       this.element?.find('.form-tabs')?.scrollTop(scrollPos);
+    }
+
+    // If there's a pending scroll target, scroll to it; otherwise restore tab scroll
+    if (this.pendingScrollTarget) {
+      setTimeout(() => {
+        const target = this.element?.find(this.pendingScrollTarget)?.[0];
+        if (target) {
+          target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+        this.pendingScrollTarget = null;
+      }, 0);
+    } else if (tabScrollPos > 0) {
+      this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
     }
 
     return result;
@@ -237,12 +259,8 @@ export class CharacterManager extends FormApplication {
       this.currentTab = tabName;
     });
 
-    // Setup tab handlers
-    Object.values(this.tabHandlers).forEach(handler => {
-      if (handler && handler.setup) {
-        handler.setup(html);
-      }
-    });
+    // Setup all tab handlers
+    this._setupTabHandlers(html);
 
     // Form actions
     html.find('button[data-action="save"]').on('click', async () => {
@@ -251,6 +269,17 @@ export class CharacterManager extends FormApplication {
 
     html.find('button[data-action="cancel"]').on('click', () => {
       this.close();
+    });
+  }
+
+  _setupTabHandlers(html) {
+    Object.entries(this.tabHandlers).forEach(([tabName, handler]) => {
+      if (handler && handler.setup) {
+        const tabElement = html.find(`[data-tab="${tabName}"]`);
+        if (tabElement.length) {
+          handler.setup(tabElement);
+        }
+      }
     });
   }
 
@@ -404,6 +433,11 @@ Handlebars.registerHelper('isPerkSlotVisible', (slots, index) => {
   if (!prevSlot) return false;
   // If previous slot selected a 2-point perk, this slot is hidden
   return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
+});
+
+Handlebars.registerHelper('objLength', (obj) => {
+  if (typeof obj !== 'object' || obj === null) return 0;
+  return Object.keys(obj).length;
 });
 
 Handlebars.registerHelper('gte', (a, b) => a >= b);

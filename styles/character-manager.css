@@ -62,7 +62,7 @@
   display: none;
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1rem 1rem 0 1rem;
   background: #ede5d9;
 }
 
@@ -78,23 +78,9 @@
   max-width: 900px;
 }
 
-/* ===== Guidance Box - Warm Colors ===== */
+/* ===== Guidance/Info Boxes - Consolidated ===== */
 
-.swade-character-manager .guidance-box {
-  background: #fffaf0;
-  border: 1px solid color-mix(in srgb, #d4a574 70%, var(--color-border-light-primary));
-  border-radius: 4px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  color: #c48b2b;
-  line-height: 1.5;
-}
-
-.swade-character-manager .guidance-box p {
-  margin: 0;
-  font-size: 11px;
-}
-
+.swade-character-manager .guidance-box,
 .swade-character-manager .info-box {
   background: #fffaf0;
   border: 1px solid color-mix(in srgb, #d4a574 70%, var(--color-border-light-primary));
@@ -105,6 +91,7 @@
   line-height: 1.5;
 }
 
+.swade-character-manager .guidance-box p,
 .swade-character-manager .info-box p {
   margin: 0;
   font-size: 11px;
@@ -256,7 +243,44 @@
   position: relative;
 }
 
-.swade-character-manager .search-input {
+.swade-character-manager .btn-clear-search {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
+  font-size: 16px;
+  line-height: 1;
+  transition: color 0.15s ease;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .btn-clear-search::before {
+  content: '×';
+}
+
+.swade-character-manager .btn-clear-search:hover {
+  color: var(--color-text-dark-primary);
+  box-shadow: none;
+  border: none;
+}
+
+.swade-character-manager .search-input:not(:placeholder-shown) ~ .btn-clear-search,
+.swade-character-manager .ancestry-search:not(:placeholder-shown) ~ .btn-clear-search {
+  display: flex;
+}
+
+.swade-character-manager .search-input,
+.swade-character-manager .ancestry-search {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid var(--color-border-light-primary);
@@ -267,7 +291,8 @@
   box-sizing: border-box;
 }
 
-.swade-character-manager .dropdown-menu {
+.swade-character-manager .dropdown-menu,
+.swade-character-manager .ancestry-dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
@@ -283,11 +308,13 @@
   box-shadow: 0 2px 4px color-mix(in srgb, black 10%, transparent);
 }
 
-.swade-character-manager .dropdown-menu.show {
+.swade-character-manager .dropdown-menu.show,
+.swade-character-manager .ancestry-dropdown-menu.show {
   display: block;
 }
 
-.swade-character-manager .dropdown-option {
+.swade-character-manager .dropdown-option,
+.swade-character-manager .ancestry-option {
   padding: 0.5rem;
   cursor: pointer;
   font-size: 11px;
@@ -295,15 +322,18 @@
   border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-primary) 50%, transparent);
 }
 
-.swade-character-manager .dropdown-option:last-child {
+.swade-character-manager .dropdown-option:last-child,
+.swade-character-manager .ancestry-option:last-child {
   border-bottom: none;
 }
 
-.swade-character-manager .dropdown-option:hover {
+.swade-character-manager .dropdown-option:hover,
+.swade-character-manager .ancestry-option:hover {
   background: color-mix(in srgb, var(--color-cool-2) 20%, transparent);
 }
 
-.swade-character-manager .dropdown-option.selected {
+.swade-character-manager .dropdown-option.selected,
+.swade-character-manager .ancestry-option.selected {
   background: color-mix(in srgb, #7a9928 20%, transparent);
   font-weight: 600;
 }
@@ -366,7 +396,9 @@
   white-space: nowrap;
 }
 
-.swade-character-manager .btn-remove-item {
+.swade-character-manager .btn-remove-item,
+.swade-character-manager .btn-remove-ancestry,
+.swade-character-manager .btn-remove-hindrance {
   background: none;
   border: none;
   padding: 0.2rem 0.4rem;
@@ -381,7 +413,14 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .btn-remove-item:hover {
+.swade-character-manager .btn-remove-item::before,
+.swade-character-manager .btn-remove-ancestry::before {
+  content: '×';
+}
+
+.swade-character-manager .btn-remove-item:hover,
+.swade-character-manager .btn-remove-ancestry:hover,
+.swade-character-manager .btn-remove-hindrance:hover {
   color: #c85050;
   border: none;
   box-shadow: none;
@@ -486,58 +525,6 @@
   position: relative;
 }
 
-.swade-character-manager .ancestry-search {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--color-border-light-primary);
-  border-radius: 4px;
-  font-size: 11px;
-  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
-  color: var(--color-text-dark-primary);
-  box-sizing: border-box;
-}
-
-.swade-character-manager .ancestry-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid var(--color-border-light-primary);
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  max-height: 200px;
-  overflow-y: auto;
-  display: none;
-  z-index: 1000;
-  box-shadow: 0 2px 4px color-mix(in srgb, black 10%, transparent);
-}
-
-.swade-character-manager .ancestry-dropdown-menu.show {
-  display: block;
-}
-
-.swade-character-manager .ancestry-option {
-  padding: 0.5rem;
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--color-text-dark-primary);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-primary) 50%, transparent);
-}
-
-.swade-character-manager .ancestry-option:last-child {
-  border-bottom: none;
-}
-
-.swade-character-manager .ancestry-option:hover {
-  background: color-mix(in srgb, var(--color-cool-2) 20%, transparent);
-}
-
-.swade-character-manager .ancestry-option.selected {
-  background: color-mix(in srgb, #7a9928 20%, transparent);
-  font-weight: 600;
-}
-
 .swade-character-manager .btn-add-ancestry,
 .swade-character-manager .btn-add-hindrance,
 .swade-character-manager .btn-open-compendium {
@@ -619,7 +606,8 @@
   display: none;
 }
 
-.swade-character-manager .btn-open-ancestry {
+.swade-character-manager .btn-open-ancestry,
+.swade-character-manager .btn-open-hindrance {
   background: none;
   border: none;
   padding: 0;
@@ -636,13 +624,15 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .btn-open-ancestry::before {
+.swade-character-manager .btn-open-ancestry::before,
+.swade-character-manager .btn-open-hindrance::before {
   content: '\f044';
   font-family: FontAwesome;
   font-size: 12px;
 }
 
-.swade-character-manager .btn-open-ancestry:hover {
+.swade-character-manager .btn-open-ancestry:hover,
+.swade-character-manager .btn-open-hindrance:hover {
   color: color-mix(in srgb, #7a9928 85%, black 15%);
   box-shadow: none;
   border: none;
@@ -661,48 +651,30 @@
   color: var(--color-text-dark-primary);
 }
 
-.swade-character-manager .btn-remove-ancestry {
-  background: none;
-  border: none;
-  padding: 0.2rem 0.4rem;
-  cursor: pointer;
-  color: color-mix(in srgb, #c85050 70%, transparent);
-  font-size: 18px;
-  font-weight: bold;
-  line-height: 1;
-  transition: color 0.15s ease;
-  display: inline-block;
-  width: auto;
-}
-
-.swade-character-manager .btn-remove-ancestry::before {
-  content: '×';
-}
-
-.swade-character-manager .btn-remove-ancestry:hover {
-  color: #c85050;
-  border: none;
-  box-shadow: none;
-}
-
-.swade-character-manager .ancestry-item-description {
+.swade-character-manager .ancestry-item-description,
+.swade-character-manager .hindrance-item-description {
   padding: 1rem;
-  border-top: 1px solid var(--color-border-light-primary);
   background: white;
   font-size: 11px;
   line-height: 1.6;
   color: var(--color-text-dark-primary);
 }
 
+.swade-character-manager .ancestry-item-description {
+  border-top: 1px solid var(--color-border-light-primary);
+}
+
 .swade-character-manager .ancestry-item-description img {
   display: none;
 }
 
-.swade-character-manager .ancestry-item-description p {
+.swade-character-manager .ancestry-item-description p,
+.swade-character-manager .hindrance-item-description p {
   margin: 0 0 0.75rem 0;
 }
 
-.swade-character-manager .ancestry-item-description p:last-child {
+.swade-character-manager .ancestry-item-description p:last-child,
+.swade-character-manager .hindrance-item-description p:last-child {
   margin-bottom: 0;
 }
 
@@ -731,7 +703,21 @@
   outline-offset: -2px;
 }
 
-/* ===== Hindrances Tab Specific (Reuse Ancestry Collapsible Pattern) ===== */
+/* Hindrances Tab Specific (Reuse Ancestry Collapsible Pattern) ===== */
+
+.swade-character-manager .hindrances-tab-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.swade-character-manager .hindrances-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 1rem;
+}
 
 .swade-character-manager .selected-hindrances-section {
   margin-top: 1.5rem;
@@ -761,7 +747,6 @@
   flex: 0 0 auto;
   position: relative;
   background: color-mix(in srgb, var(--color-cool-2) 10%, transparent);
-  border-bottom: 1px solid var(--color-border-light-primary);
   transition: all 0.15s ease;
 }
 
@@ -868,56 +853,6 @@
   color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
 }
 
-.swade-character-manager .btn-open-hindrance {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--color-text-dark-primary);
-  font-size: 14px;
-  line-height: 1;
-  transition: color 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.swade-character-manager .btn-open-hindrance::before {
-  content: '\f044';
-  font-family: FontAwesome;
-  font-size: 12px;
-}
-
-.swade-character-manager .btn-open-hindrance:hover {
-  color: color-mix(in srgb, #7a9928 85%, black 15%);
-  box-shadow: none;
-  border: none;
-}
-
-.swade-character-manager .btn-remove-hindrance {
-  background: none;
-  border: none;
-  padding: 0.2rem 0.4rem;
-  cursor: pointer;
-  color: color-mix(in srgb, #c85050 70%, transparent);
-  font-size: 18px;
-  font-weight: bold;
-  line-height: 1;
-  transition: color 0.15s ease;
-  display: inline-block;
-  width: auto;
-  flex-shrink: 0;
-}
-
-.swade-character-manager .btn-remove-hindrance:hover {
-  color: #c85050;
-  border: none;
-  box-shadow: none;
-}
-
 /* Trade-off section (always visible, not expandable) */
 .swade-character-manager .hindrance-tradeoff-inline {
   display: flex;
@@ -929,12 +864,10 @@
 /* Hindrances tab footer */
 .swade-character-manager .hindrances-tab-footer {
   padding: 0.75rem;
-  background: white;
+  background: #ede5d9;
   border-top: 1px solid var(--color-border-light-primary);
   border-bottom: 1px solid var(--color-border-light-primary);
-  margin-top: 0.5rem;
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   z-index: 10;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -983,22 +916,6 @@
 .swade-character-manager .hindrance-tradeoff-select:focus {
   outline: none;
   border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
-}
-
-.swade-character-manager .hindrance-item-description {
-  padding: 1rem;
-  background: white;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--color-text-dark-primary);
-}
-
-.swade-character-manager .hindrance-item-description p {
-  margin: 0 0 0.75rem 0;
-}
-
-.swade-character-manager .hindrance-item-description p:last-child {
-  margin-bottom: 0;
 }
 
 /* ===== Hindrances Tab Drag-Over ===== */
