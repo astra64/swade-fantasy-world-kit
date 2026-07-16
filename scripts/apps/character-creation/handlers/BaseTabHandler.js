@@ -66,7 +66,7 @@ export class BaseTabHandler {
     const pack = game.packs.get(packId);
 
     if (pack) {
-      pack.sheet.render(true);
+      pack.render(true);
     } else {
       ui.notifications.error(`[Character Manager] ${this.getCompendiumPackLabel()} compendium not found`);
     }
