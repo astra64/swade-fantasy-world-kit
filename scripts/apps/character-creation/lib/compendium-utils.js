@@ -167,6 +167,7 @@ export async function getHindrances() {
           name: fullItem.name,
           uuid: fullItem.uuid,
           major: fullItem.system?.major ?? false,
+          severity: fullItem.system?.severity ?? 'either',
           description: fullItem.system?.description ?? '',
           img: fullItem.img || '',
         };

@@ -58,7 +58,16 @@ export class SearchableDropdown {
       filtered.forEach(item => {
         const option = document.createElement('div');
         option.className = this.optionClass;
-        option.textContent = item.name;
+        let displayText = item.name;
+        if (item.severity) {
+          const severityLabel = {
+            minor: '(Minor)',
+            major: '(Major)',
+            either: '(Minor or Major)'
+          }[item.severity];
+          if (severityLabel) displayText += ` ${severityLabel}`;
+        }
+        option.textContent = displayText;
         option.addEventListener('click', () => {
           this.input.val(item.name);
           this._hideMenu();

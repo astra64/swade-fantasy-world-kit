@@ -169,16 +169,16 @@ Add ability to plan and manage character advancement progression (same tool or s
 - [x] **Validation:** Inform only if not selected
 
 #### Tab 3: Hindrances
-- [ ] List of hindrances from compendium (Major/Minor labeled)
-- [ ] Multi-select checkboxes (up to 4 points)
-- [ ] For each hindrance: Dropdown for trade-off
+- [x] List of hindrances from compendium (Major/Minor labeled)
+- [x] Multi-select checkboxes (up to 4 points)
+- [x] For each hindrance: Dropdown for trade-off
   - Options: Raise Attribute (2 pts), Edge (2 pts), Skill Point (1 pt), Extra Funds (1 pt)
   - Major hindrances can show 2 dropdowns if using 1-point trade-offs
-- [ ] Points tracking: Show X/4 total
-- [ ] On dropdown change: Auto-undo previous, recalculate budgets
-- [ ] **New Player Guidance:**
+- [x] Points tracking: Show X/4 total
+- [x] On dropdown change: Auto-undo previous, recalculate budgets
+- [x] **New Player Guidance:**
   > "Hindrances are flaws or quirks that give you bonus points. Major hindrances are worth 2 points, minor ones worth 1. Pick up to 4 points' worth. For each, choose what bonus you want: a +2 to an attribute, a free edge, extra skill point, or extra money. First-timers should pick 2–3 hindrances to keep things simple."
-- [ ] **Validation:** Warn if over 4 points, inform of unused points
+- [x] **Validation:** None
 
 **Estimated Lines:** 200-300 (template + handler)
 
