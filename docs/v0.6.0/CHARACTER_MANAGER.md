@@ -186,28 +186,30 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Layout:** Single unified view grouping skills under their linked attributes (Agility, Smarts, Spirit, Strength, Vigor).
 
+- [x] Investigate adding trait info - either in collapsable or hover text
+
 **Attributes Section:**
-- [ ] For each attribute: Die button group [d4 d6 d8 d10 d12] with active state
-- [ ] Show ancestry bonus message if applied (e.g., "Vigor +1 from ancestry")
-- [ ] Lock minimums if ancestry bonus present (e.g., d6 Vigor locked to d6+)
+- [x] For each attribute: Die button group [d4 d6 d8 d10 d12] with active state
+- [x] Show ancestry bonus message if applied (e.g., "Vigor +1 from ancestry")
+- [x] Lock minimums if ancestry bonus present (e.g., d6 Vigor locked to d6+)
 
 **Skills Section (grouped under each attribute):**
 - [ ] Each skill: Name, die buttons [d4 d6 d8 d10 d12], modifier display (+X text)
-- [ ] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): marked with star icon, free at d4
-- [ ] Non-core skills cost points to use
+- [x] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): marked with star icon, free at d4
+- [x] Non-core skills cost points to use
 
 **Real-time Tracking:**
-- [ ] Integrate with pinned footer showing: Attributes: X/5 and Skills: Y/12
-- [ ] Warn if either exceeds budget
+- [x] Integrate with pinned footer showing: Attributes: X/5 and Skills: Y/12
+- [x] Warn if either exceeds budget
 
 **New Player Guidance:**
 - **For Attributes:** "You have 5 points to boost your core abilities. Start with d6 in each (your base), then pick which ones matter most to your character. A strong warrior bumps Strength and Vigor; a sneaky rogue boosts Agility and Smarts. Moving a die up one step (d6→d8) costs 1 point. Raising from d12 costs 2 points but has a limit—ask your GM if unsure."
 - **For Skills:** "Pick what your character is good at. You have 12 points to spend. Core skills (marked FREE) start at d4—you just pay to boost them higher. Other skills cost points to use. Each die step up (d4→d6) costs 1 point. Pro tip: Pick 3–4 skills your character uses often; leave the rest. Your ancestry and edges might add free bonuses here too."
 
 **Validation:**
-- [ ] Warn if over 5 attribute points
-- [ ] Warn if over 12 skill points (excluding hindrance bonuses)
-- [ ] Lock changes if ancestry bonus locked a minimum
+- [x] Warn if over 5 attribute points
+- [x] Warn if over 12 skill points (excluding hindrance bonuses)
+- [x] Lock changes if ancestry bonus locked a minimum
 
 **Estimated Lines:** 350-500 (template + handler)
 

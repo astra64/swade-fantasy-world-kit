@@ -7,38 +7,52 @@
 
     {{#if (gt @root.attributePointsUsed 5)}}
     <div class="info-box warning">
-      <p><strong>⚠ Over Budget:</strong> You've spent {{@root.attributePointsUsed}} attribute points, but only have 5. Reduce some attributes to d6 or lower.</p>
+      <p>You have used too many attribute allocations.</p>
     </div>
     {{/if}}
 
     {{#if (gt @root.skillPointsUsed 12)}}
     <div class="info-box warning">
-      <p><strong>⚠ Over Budget:</strong> You've spent {{@root.skillPointsUsed}} skill points, but only have 12. Reduce or remove some skills.</p>
+      <p>You have used too many skill allocations.</p>
     </div>
     {{/if}}
 
     <div class="swade-traits-container">
-      <!-- Left Column: Agility, Spirit, Strength, Vigor -->
+      <!-- Left Column: Strength, Agility, Spirit -->
       <div class="traits-column traits-column-left">
-        {{#each (array "agility" "spirit" "strength" "vigor") as |attr|}}
+        {{#each (array "strength" "agility" "spirit") as |attr|}}
+          {{#with (lookup @root.character.attributes attr) as |attrData|}}
           <div class="attribute-section">
+            {{#if (lookup @root.ancestryBonuses attr)}}
+              <div style="font-size: 0.85em; color: #7a9928; margin-bottom: 0.5em;">{{capitalize attr}} bonus from ancestry</div>
+            {{/if}}
             <!-- Attribute Header -->
             <div class="attribute-header">
-              <h3>{{capitalize attr}}</h3>
+              <h3 title="{{lookup @root.attributeDescriptions attr}}">{{capitalize attr}}</h3>
               <div class="attribute-die-buttons">
                 {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
-                  <div class="die-btn-group">
-                    <button
-                      type="button"
-                      class="die-btn die-btn-{{die}} {{#if (eq @root.character.attributes.[attr].die die)}}active{{/if}}"
-                      data-action="set-attribute"
-                      data-attribute="{{attr}}"
-                      data-die="{{die}}"
-                      title="{{die}}"
-                    >
-                    </button>
-                    <span class="die-label">{{die}}</span>
-                  </div>
+                  {{#with (lookup @root.ancestryBonuses attr) as |bonus|}}
+                  <button
+                    type="button"
+                    class="die-btn {{#if (eq attrData.die die)}}active{{/if}}"
+                    data-action="set-attribute"
+                    data-attribute="{{attr}}"
+                    data-die="{{die}}"
+                    {{#if (and bonus (lt die bonus.die))}}disabled title="Minimum {{bonus.die}} from ancestry"{{/if}}
+                  >
+                    {{die}}
+                  </button>
+                  {{else}}
+                  <button
+                    type="button"
+                    class="die-btn {{#if (eq attrData.die die)}}active{{/if}}"
+                    data-action="set-attribute"
+                    data-attribute="{{attr}}"
+                    data-die="{{die}}"
+                  >
+                    {{die}}
+                  </button>
+                  {{/with}}
                 {{/each}}
               </div>
             </div>
@@ -52,7 +66,7 @@
                       {{#if skill.isCoreSkill}}
                         <span class="skill-core-marker" title="Core skill - starts free at d4">★</span>
                       {{/if}}
-                      <span class="skill-name">{{skill.name}}</span>
+                      <span class="skill-name" title="{{stripHtml skill.description}}">{{skill.name}}</span>
                     </div>
                     <div class="skill-controls">
                       {{#if skill.die}}
@@ -93,44 +107,59 @@
               </div>
             {{/if}}
           </div>
+          {{/with}}
         {{/each}}
       </div>
 
-      <!-- Right Column: Smarts -->
+      <!-- Right Column: Vigor, Smarts -->
       <div class="traits-column traits-column-right">
-        {{#with (lookup @root.character.attributes "smarts") as |smartsAttr|}}
+        {{#each (array "vigor" "smarts") as |attr|}}
+          {{#with (lookup @root.character.attributes attr) as |attrData|}}
           <div class="attribute-section">
+            {{#if (lookup @root.ancestryBonuses attr)}}
+              <div style="font-size: 0.85em; color: #7a9928; margin-bottom: 0.5em;">{{capitalize attr}} bonus from ancestry</div>
+            {{/if}}
             <!-- Attribute Header -->
             <div class="attribute-header">
-              <h3>Smarts</h3>
+              <h3 title="{{lookup @root.attributeDescriptions attr}}">{{capitalize attr}}</h3>
               <div class="attribute-die-buttons">
                 {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
-                  <div class="die-btn-group">
-                    <button
-                      type="button"
-                      class="die-btn die-btn-{{die}} {{#if (eq smartsAttr.die die)}}active{{/if}}"
-                      data-action="set-attribute"
-                      data-attribute="smarts"
-                      data-die="{{die}}"
-                      title="{{die}}"
-                    >
-                    </button>
-                    <span class="die-label">{{die}}</span>
-                  </div>
+                  {{#with (lookup @root.ancestryBonuses attr) as |bonus|}}
+                  <button
+                    type="button"
+                    class="die-btn {{#if (eq attrData.die die)}}active{{/if}}"
+                    data-action="set-attribute"
+                    data-attribute="{{attr}}"
+                    data-die="{{die}}"
+                    {{#if (and bonus (lt die bonus.die))}}disabled title="Minimum {{bonus.die}} from ancestry"{{/if}}
+                  >
+                    {{die}}
+                  </button>
+                  {{else}}
+                  <button
+                    type="button"
+                    class="die-btn {{#if (eq attrData.die die)}}active{{/if}}"
+                    data-action="set-attribute"
+                    data-attribute="{{attr}}"
+                    data-die="{{die}}"
+                  >
+                    {{die}}
+                  </button>
+                  {{/with}}
                 {{/each}}
               </div>
             </div>
 
-            <!-- Skills under Smarts -->
-            {{#if (lookup @root.skillsByAttribute "smarts")}}
+            <!-- Skills under this attribute -->
+            {{#if (lookup @root.skillsByAttribute attr)}}
               <div class="attribute-skills-group">
-                {{#each (lookup @root.skillsByAttribute "smarts") as |skill|}}
+                {{#each (lookup @root.skillsByAttribute attr) as |skill|}}
                   <div class="skill-item">
                     <div class="skill-name-wrapper">
                       {{#if skill.isCoreSkill}}
                         <span class="skill-core-marker" title="Core skill - starts free at d4">★</span>
                       {{/if}}
-                      <span class="skill-name">{{skill.name}}</span>
+                      <span class="skill-name" title="{{stripHtml skill.description}}">{{skill.name}}</span>
                     </div>
                     <div class="skill-controls">
                       {{#if skill.die}}
@@ -171,7 +200,8 @@
               </div>
             {{/if}}
           </div>
-        {{/with}}
+          {{/with}}
+        {{/each}}
       </div>
     </div>
   </div>

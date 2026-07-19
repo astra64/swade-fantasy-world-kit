@@ -13,11 +13,14 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
   - **Concept Tab**: Archetype, concept description, and character name inputs with auto-save
   - **Ancestry Tab**: Searchable dropdown selection from Fantasy Companion ancestries with compendium browser integration
   - **Hindrances Tab**: Major/Minor toggle, hindrance selection with compendium browser, perk point allocation system
+  - **Traits Tab (Attributes & Skills)**: Full attribute and skill selection with die-based progression, free core skills, ancestry attribute bonuses with lock minimums, and hover tooltips for skill descriptions
   - **Perk Allocation UI**: Dropdown system to allocate hindrance trade-off points (skill points, attribute boosts, edges, bonus currency)
   - **Drag-Drop Support**: Drag ancestries and hindrances directly from compendium browser into tabs
   - **Ancestral Abilities Display**: Each ancestry shows granted abilities/items as collapsible expandable cards with descriptions
   - **Edit Buttons**: Click edit icon on ancestry, abilities, or hindrances to open item sheets in new windows
   - **Embedded Content Enrichment**: Descriptions properly render Foundry UUID links as clickable items
+  - **Item Descriptions on Hover**: Attributes and skills display rich descriptions in browser tooltips when hovering over names
+  - **Ancestry Bonuses**: Automatically detects and displays attribute bonuses from ancestry abilities with visual indicator and lock minimums
   - **Tab Handler Architecture**: Modular handlers (TabHandler pattern) for each tab enable scalable multi-tab implementation
   - **Reusable Components**: SearchableDropdown, DragDropManager, TabManager, CollapsibleItem partial for consistent UI patterns
   - **Template Modularization**: Character manager template split into reusable Handlebars partials for maintainability
@@ -25,14 +28,18 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ### Technical
 - New modular component structure: `handlers/`, `components/`, `constants.js`, `_collapsible-item.hbs` partial
-- Tab handlers pattern enables clean separation of concerns for future tabs (Attributes, Skills, Edges, Gear, Summary)
-- Character template modularized using Handlebars partials (`concept-tab.hbs`, `ancestry-tab.hbs`, `hindrances-tab.hbs`) for independent testing and maintenance
+- Tab handlers pattern enables clean separation of concerns for future tabs (Edges, Gear, Summary)
+- Character template modularized using Handlebars partials (`concept-tab.hbs`, `ancestry-tab.hbs`, `hindrances-tab.hbs`, `traits-tab.hbs`) for independent testing and maintenance
 - HindrancesTabHandler manages major/minor toggles, perk point allocation, and compendium integration
+- TraitsTabHandler manages attribute and skill die selection with real-time budget tracking
 - Character data model extended with collapsible expansion state tracking and hindrance severity tracking
 - Added `TextEditor.enrichHTML()` processing for embedded content links in descriptions
+- **Ancestry Bonus Extraction**: `convertValueToDie()` helper handles string format ("d6"), numeric absolute sides (6), and relative modifiers (+2) from ancestry ability effects
+- **Compendium Data**: Updated `getSkills()` to extract and pass skill descriptions for hover tooltips
+- **HTML Stripping**: Added `stripHtml()` Handlebars helper to safely decode HTML entities and remove tags from descriptions for display in title attributes
 
 ### Changed
-- **Roadmap: Per-Item Fallback Override (v0.6.0)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.
+- **Roadmap: Per-Item Fallback Override (v0.6.1)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.
 - **Future Direction**: Shift from manually-maintained setting-specific compendium packs to on-demand automated compendium generation approach.
 
 ---

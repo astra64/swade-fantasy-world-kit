@@ -561,6 +561,11 @@ Hooks.once("init", () => {
   });
   Handlebars.registerHelper('gte', (a, b) => a >= b);
   Handlebars.registerHelper('gt', (a, b) => a > b);
+  Handlebars.registerHelper('lt', (a, b) => a < b);
+  Handlebars.registerHelper('and', (...args) => {
+    args.pop(); // Remove Handlebars context object
+    return args.every(arg => arg);
+  });
   Handlebars.registerHelper('subtract', (a, b) => a - b);
   Handlebars.registerHelper('keys', (obj) => {
     if (typeof obj !== 'object' || obj === null) return [];
@@ -571,6 +576,24 @@ Hooks.once("init", () => {
       return obj[key];
     }
     return undefined;
+  });
+  Handlebars.registerHelper('stripHtml', (html) => {
+    if (typeof html !== 'string') return html;
+
+    // Remove HTML tags
+    let text = html.replace(/<[^>]*>/g, '');
+
+    // Decode HTML entities using a temporary DOM element
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    text = div.textContent || div.innerText || text;
+
+    // Truncate long descriptions for tooltips
+    if (text.length > 200) {
+      text = text.substring(0, 200) + '...';
+    }
+
+    return text.trim();
   });
 
   // Expose APIs and functions to window for app classes

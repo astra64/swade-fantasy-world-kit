@@ -24,6 +24,7 @@ import {
   generatePerkSlots,
   isFreeCoreSkill,
   FREE_CORE_SKILLS,
+  getAncestryAttributeBonuses,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
@@ -151,7 +152,7 @@ export class CharacterManager extends FormApplication {
             ancestry: ancestryUuid,
             expandedAncestry: false,
             expandedChildItems: {},
-            attributes: this.actor.system?.attributes || DEFAULT_ATTRIBUTES,
+            attributes: { ...DEFAULT_ATTRIBUTES, ...(this.actor.system?.attributes || {}) },
             skills: this.actor.system?.skills || {},
             edges: this.actor.system?.edges || {},
             hindrances: this.actor.system?.hindrances || {},
@@ -159,6 +160,30 @@ export class CharacterManager extends FormApplication {
         } else {
           this.character = initializeCharacter();
         }
+
+        // Convert actor attribute format (die.sides) to our format (die: "d4")
+        const sidesToDie = { 4: 'd4', 6: 'd6', 8: 'd8', 10: 'd10', 12: 'd12' };
+        if (this.character.attributes) {
+          for (const [attr, data] of Object.entries(this.character.attributes)) {
+            if (data.die && typeof data.die === 'object' && data.die.sides) {
+              data.die = sidesToDie[data.die.sides] || 'd4';
+            } else if (typeof data.die !== 'string') {
+              data.die = 'd4';
+            }
+          }
+        }
+
+        // Ensure all attributes have die values
+        if (!this.character.attributes) {
+          this.character.attributes = { ...DEFAULT_ATTRIBUTES };
+        } else {
+          for (const attr of Object.keys(DEFAULT_ATTRIBUTES)) {
+            if (!this.character.attributes[attr]) {
+              this.character.attributes[attr] = DEFAULT_ATTRIBUTES[attr];
+            }
+          }
+        }
+
         this._initializeFreeCoreSkills();
       }
 
@@ -219,6 +244,7 @@ export class CharacterManager extends FormApplication {
       const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
       const availablePerkPoints = getAvailablePerkPoints(this.character);
       const perkSlots = generatePerkSlots(this.character);
+      const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
 
       // Calculate perk points spent based on actual option costs
       const perkOptionCosts = {
@@ -264,9 +290,15 @@ export class CharacterManager extends FormApplication {
         currencyAmount: currencyAmount,
         attributes: DEFAULT_ATTRIBUTES,
         FREE_CORE_SKILLS: FREE_CORE_SKILLS,
+        ancestryBonuses: ancestryBonuses,
+        attributeDescriptions: {
+          strength: 'Strength is physical power and fitness. It’s also used as the basis of a warrior’s damage in hand-to-hand combat, and to determine the equipment he can use or carry.',
+          agility: 'Agility is a measure of a character’s nimbleness, dexterity, and general coordination',
+          vigor: 'Vigor represents an individual’s endurance, resistance to disease, poison, or toxins, and how much physical damage she can take before she can’t go on. It is most often used to resist Fatigue effects, and as the basis for the derived stat of Toughness.',
+          smarts: 'Smarts measures raw intelligence, mental acuity, and how fast a heroine thinks on her feet. It’s used to resist certain types of mental and social attacks.',
+          spirit: 'Spirit is self-confidence, backbone, and willpower. It’s used to resist social and supernatural attacks as well as fear.',
+        },
       };
-
-      console.log('[CharacterManager] getData() context:', { skillsByAttribute: this.skillsByAttribute, totalSkills: this.compendiumData.skills.length });
 
       return data;
     } catch (error) {
@@ -336,8 +368,6 @@ export class CharacterManager extends FormApplication {
       vigor: [],
     };
 
-    console.log('[TraitsTab] Building skills by attribute. Total skills:', this.compendiumData.skills.length);
-
     for (const skill of this.compendiumData.skills) {
       // Skip Unskilled Attempt (fallback skill, added separately at end)
       if (skill.name.toLowerCase() === 'unskilled attempt') {
@@ -352,11 +382,10 @@ export class CharacterManager extends FormApplication {
           name: skill.name,
           isCoreSkill: isCoreSkill,
           die: this.character.skills[skill.uuid]?.die ?? (isCoreSkill ? 'd4' : null),
+          description: skill.description || '',
         });
       }
     }
-
-    console.log('[TraitsTab] skillsByAttribute:', this.skillsByAttribute);
   }
 
   _getSkillCompendiumMap() {

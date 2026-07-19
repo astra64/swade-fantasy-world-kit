@@ -133,16 +133,16 @@ export async function getAncestries() {
 /**
  * Get all skills from curated compendium.
  * Filters to type='skill'.
- * Fetches full item data to include linked attribute (system.attribute).
+ * Fetches full item data to include linked attribute (system.attribute) and description.
  * Respects curated visibility settings if enabled.
  * Read-only; returns plain objects with metadata.
  *
- * @returns {Promise<Array>} Array of {name, uuid, attribute} objects sorted alphabetically
+ * @returns {Promise<Array>} Array of {name, uuid, attribute, description} objects sorted alphabetically
  */
 export async function getSkills() {
   const basicItems = await fetchPackItems(FANTASY_PACKS.skills, 'skill');
 
-  // Fetch full item data in parallel to get system.attribute
+  // Fetch full item data in parallel to get system.attribute and description
   const enriched = await Promise.all(basicItems.map(async (item) => {
     try {
       const fullItem = await getItemPreview(item.uuid);
@@ -150,7 +150,8 @@ export async function getSkills() {
         return {
           name: fullItem.name,
           uuid: fullItem.uuid,
-          attribute: fullItem.system?.attribute ?? 'smarts', // Default to smarts if not set
+          attribute: fullItem.system?.attribute ?? 'smarts',
+          description: fullItem.system?.description ?? '',
         };
       }
       return item;
@@ -160,7 +161,7 @@ export async function getSkills() {
     }
   }));
 
-  return enriched.filter(skill => skill); // Remove nulls
+  return enriched.filter(skill => skill);
 }
 
 /**

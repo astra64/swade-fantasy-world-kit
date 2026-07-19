@@ -1,5 +1,3 @@
-@import "dice-shapes.css";
-
 /* Character Manager - FWK Aligned Styling */
 
 .swade-character-manager {
@@ -101,9 +99,9 @@
 }
 
 .swade-character-manager .info-box.warning {
-  background: #fff3cd;
-  border-color: #ffc107;
-  color: #856404;
+  background: #ffebee;
+  border-color: #ef5350;
+  color: #c62828;
 }
 
 /* ===== Form Groups - More Spacious ===== */
@@ -193,6 +191,10 @@
   color: color-mix(in srgb, #7a9928 85%, black 15%);
   min-width: 35px;
   text-align: right;
+}
+
+.swade-character-manager .budget-value.over-budget {
+  color: #ef5350;
 }
 
 /* ===== Action Buttons - FWK Style ===== */
@@ -975,10 +977,31 @@
 }
 
 .swade-character-manager .attribute-die-buttons .die-btn {
-  padding: 0;
-  font-size: 9px;
+  padding: 0.25rem;
+  font-size: 10px;
+  font-weight: 600;
   height: 28px;
   width: 28px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swade-character-manager .attribute-die-buttons .die-btn:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 50%, white 50%);
+}
+
+.swade-character-manager .attribute-die-buttons .die-btn.active {
+  background: color-mix(in srgb, #4a90e2 35%, #d6d2c8 65%);
+  border-color: color-mix(in srgb, #4a90e2 60%, var(--color-border-light-primary));
+  color: var(--color-text-dark-primary);
+  font-weight: 700;
 }
 
 .swade-character-manager .attribute-skills-group {
@@ -1034,7 +1057,6 @@
 }
 
 .swade-character-manager .skill-die-select {
-  padding: 0.25rem 0.35rem;
   border: 1px solid var(--color-border-light-primary);
   border-radius: 3px;
   font-size: 9px;

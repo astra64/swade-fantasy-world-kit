@@ -24,11 +24,11 @@
       <div class="budget-tracker">
         <span class="budget-item">
           <span class="budget-label">Attributes:</span>
-          <span class="budget-value">{{attributePointsUsed}}/5</span>
+          <span class="budget-value {{#if (gt attributePointsUsed 5)}}over-budget{{/if}}">{{attributePointsUsed}}/5</span>
         </span>
         <span class="budget-item">
           <span class="budget-label">Skills:</span>
-          <span class="budget-value">{{skillPointsUsed}}/12</span>
+          <span class="budget-value {{#if (gt skillPointsUsed 12)}}over-budget{{/if}}">{{skillPointsUsed}}/12</span>
         </span>
         <span class="budget-item">
           <span class="budget-label">Edges:</span>

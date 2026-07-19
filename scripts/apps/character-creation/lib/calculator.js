@@ -252,12 +252,12 @@ export function filterSkillsByAttribute(allSkills, linkedAttribute = null) {
 
 /**
  * Calculate the point cost to increase a skill to a given die value.
- * 
+ *
  * SWADE Creation Rules:
  * - Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth) start free at d4
+ * - Non-core skills cost 1 point to add at d4
  * - Cost to increase a skill: 1pt per die step up to linked attribute, 2pts per step above
- * - Non-core skills cost 1pt to reach d4 (same as raising to d6 if attribute is d4)
- * 
+ *
  * @param {string} skillName - Skill name (for checking if core skill)
  * @param {string} targetDie - Target die value (d4, d6, etc.)
  * @param {string} linkedAttributeDie - Linked attribute die value
@@ -268,93 +268,103 @@ export function calculateSkillCost(skillName, targetDie, linkedAttributeDie, cur
   const targetValue = DIE_VALUES[targetDie] ?? 4;
   const currentValue = DIE_VALUES[currentSkillDie] ?? 4;
   const attributeValue = DIE_VALUES[linkedAttributeDie] ?? 4;
-  
+  const isCore = isFreeCoreSkill(skillName);
+
   // Core skills free at d4 - only cost if raised above d4
-  if (isFreeCoreSkill(skillName) && targetValue === 4) {
+  if (isCore && targetValue === 4) {
     return 0; // Free at d4
   }
-  
+
+  // Non-core skills cost 1 point to add at d4
+  if (!isCore && targetValue === 4) {
+    return 1; // Cost to add the skill
+  }
+
   // If already at target value, no cost
   if (currentValue === targetValue) {
     return 0;
   }
-  
+
   let totalCost = 0;
-  
+
+  // Non-core skills cost 1 point to add (when raising above d4)
+  if (!isCore && currentValue === 4 && targetValue > 4) {
+    totalCost += 1;
+  }
+
   // Sum cost for each step from current to target
   let stepValue = currentValue;
   while (stepValue < targetValue) {
     const nextValue = stepValue + 2; // Each step is +2 on die values (d4→d6→d8, etc.)
-    
+
     // Cost per step: 1pt if next die ≤ attribute, 2pts if next die > attribute
-    if (nextValue <= attributeValue) {
-      totalCost += 1;
-    } else {
-      totalCost += 2;
-    }
-    
+    const stepCost = nextValue <= attributeValue ? 1 : 2;
+    totalCost += stepCost;
+
     stepValue = nextValue;
   }
-  
+
   return totalCost;
 }
 
 /**
  * Calculate total skill points spent in character creation.
- * 
+ *
  * @param {Object} character - Character object with skills
  * @param {Object} skillCompendiumData - Compendium data with skill metadata (for linked attributes)
  * @returns {number} Total points spent on skills
  */
 export function calculateTotalSkillPoints(character, skillCompendiumData = {}) {
   let totalSpent = 0;
-  
+
   if (!character.skills || typeof character.skills !== 'object') {
     return 0;
   }
-  
+
   // For each skill, calculate cost from d4 to selected die
   for (const [skillUuid, skillData] of Object.entries(character.skills)) {
     if (!skillData.die) continue;
-    
+
     // Find skill metadata to get linked attribute
     const skillMeta = skillCompendiumData[skillUuid];
-    const linkedAttrDie = skillMeta?.linkedAttribute 
-      ? character.attributes?.[skillMeta.linkedAttribute]?.die 
+    const linkedAttrDie = skillMeta?.linkedAttribute
+      ? character.attributes?.[skillMeta.linkedAttribute]?.die
       : "d4";
-    
+
     // Get skill name for core skill check
     const skillName = skillData.name || "";
-    
+
     // Calculate cost from d4 to current die
     const cost = calculateSkillCost(skillName, skillData.die, linkedAttrDie, "d4");
     totalSpent += cost;
   }
-  
+
   return totalSpent;
 }
 
 /**
  * Calculate total attribute points spent.
- * 
+ *
  * @param {Object} character - Character object with attributes
  * @returns {number} Total points spent on attributes (each step above d4 = 1pt)
  */
 export function calculateTotalAttributePoints(character) {
   let totalSpent = 0;
-  
+
   if (!character.attributes || typeof character.attributes !== 'object') {
     return 0;
   }
-  
+
   for (const [attrName, attrData] of Object.entries(character.attributes)) {
     const attrValue = DIE_VALUES[attrData.die] ?? 4;
-    // Each step above d4 costs 1 point
+    // Each step above d4 costs 1 point (d6=1, d8=2, d10=3, d12=4)
+    // Dice values increase by 2: d4(4), d6(6), d8(8), d10(10), d12(12)
     if (attrValue > 4) {
-      totalSpent += attrValue - 4;
+      const steps = (attrValue - 4) / 2;
+      totalSpent += steps;
     }
   }
-  
+
   return totalSpent;
 }
 
@@ -498,5 +508,124 @@ export function isPerkSlotVisible(slots, index) {
 
   // If previous slot selected a 2-point allocation, this slot is consumed/hidden
   return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
+}
+
+/**
+ * Convert a value to a die notation string.
+ * Handles string format ("d6"), numeric absolute sides (4, 6, 8, etc.),
+ * and numeric relative modifiers (+2 sides to add to base d4).
+ *
+ * @param {string|number} value - Value to convert
+ * @returns {string|null} Die notation like "d4", "d6", etc., or null if invalid
+ */
+export function convertValueToDie(value) {
+  const sidesToDie = { 4: 'd4', 6: 'd6', 8: 'd8', 10: 'd10', 12: 'd12' };
+
+  if (typeof value === 'string' && value.match(/^d\d+$/)) {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    // Check if this looks like an absolute value (4, 6, 8, 10, 12)
+    if ([4, 6, 8, 10, 12].includes(value)) {
+      return sidesToDie[value];
+    }
+    // Relative modifier - add to base d4 (4 sides)
+    if (value > 0 && value < 12) {
+      const resultSides = 4 + value;
+      return sidesToDie[resultSides] || null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract attribute bonuses from an ancestry item and its child items.
+ * Looks for bonuses in effects on both the ancestry and granted items.
+ *
+ * @param {Object} ancestryItem - Ancestry item object
+ * @param {Array} [childItems] - Optional array of child items (ancestral abilities) with effects
+ * @returns {Object} Map of attribute names to bonus information {vigor: {die: 'd6'}, etc.}
+ */
+export function getAncestryAttributeBonuses(ancestryItem, childItems = []) {
+  const bonuses = {};
+
+  if (!ancestryItem) {
+    return bonuses;
+  }
+
+  try {
+    // Check for bonuses in effects on the ancestry item itself
+    if (ancestryItem.effects && Array.isArray(ancestryItem.effects)) {
+      for (const effect of ancestryItem.effects) {
+        if (effect.changes && Array.isArray(effect.changes)) {
+          for (const change of effect.changes) {
+            const match = change.key?.match(/system\.attributes\.(\w+)\.die(?:\.sides)?/);
+            if (match) {
+              const attrName = match[1].toLowerCase();
+              const bonusDie = convertValueToDie(change.value);
+              if (bonusDie) {
+                bonuses[attrName] = { die: bonusDie, source: 'effect' };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check for bonuses in child items (ancestral abilities, etc.)
+    if (childItems && Array.isArray(childItems)) {
+      for (const item of childItems) {
+        // Handle both Array and EmbeddedCollection
+        let effectsArray = [];
+        if (item.effects) {
+          if (Array.isArray(item.effects)) {
+            effectsArray = item.effects;
+          } else if (item.effects instanceof Map || item.effects[Symbol.iterator]) {
+            try {
+              effectsArray = Array.from(item.effects);
+            } catch (e) {
+              // Continue if conversion fails
+            }
+          }
+        }
+
+        for (const effect of effectsArray) {
+          if (effect.changes && Array.isArray(effect.changes)) {
+            for (const change of effect.changes) {
+              const match = change.key?.match(/system\.attributes\.(\w+)\.die(?:\.sides)?/);
+              if (match) {
+                const attrName = match[1].toLowerCase();
+                const bonusDie = convertValueToDie(change.value);
+
+                // Only set bonus if not already set by ancestry effect
+                if (bonusDie && !bonuses[attrName]) {
+                  bonuses[attrName] = { die: bonusDie, source: 'child-item' };
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check for bonuses in child items embedded on ancestry item
+    if (ancestryItem.items && Array.isArray(ancestryItem.items)) {
+      for (const item of ancestryItem.items) {
+        if (item.type === 'modification' || item.system?.category === 'attribute-bonus') {
+          const attrName = item.system?.linkedAttribute?.toLowerCase() || item.name?.toLowerCase();
+          const dieBonusValue = item.system?.dieBonusValue;
+          if (attrName && dieBonusValue && !bonuses[attrName]) {
+            bonuses[attrName] = { die: dieBonusValue, source: 'embedded-item' };
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[Calculator] Failed to extract ancestry bonuses:', error);
+  }
+
+  return bonuses;
 }
 
