@@ -23,13 +23,14 @@ import {
   getAvailablePerkPoints,
   generatePerkSlots,
   isFreeCoreSkill,
+  FREE_CORE_SKILLS,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
 import { AncestryTabHandler } from './handlers/AncestryTabHandler.js';
 import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TraitsTabHandler } from './handlers/TraitsTabHandler.js';
-import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, SKILL_ATTRIBUTE_MAP, BUDGETS } from './constants.js';
+import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, BUDGETS } from './constants.js';
 
 export class CharacterManager extends FormApplication {
   static TAB_HANDLERS = {
@@ -98,23 +99,22 @@ export class CharacterManager extends FormApplication {
     try {
       const result = await super.render(force, options);
 
-      // Restore scroll position after render
-      if (scrollPos > 0) {
-        this.element?.find('.form-tabs')?.scrollTop(scrollPos);
-      }
+      // Use setTimeout to ensure scroll happens after DOM paint
+      setTimeout(() => {
+        // Restore tab scroll position
+        if (tabScrollPos > 0) {
+          this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
+        }
 
-      // If there's a pending scroll target, scroll to it; otherwise restore tab scroll
-      if (this.pendingScrollTarget) {
-        setTimeout(() => {
+        // If there's a pending scroll target, scroll to it
+        if (this.pendingScrollTarget) {
           const target = this.element?.find(this.pendingScrollTarget)?.[0];
           if (target) {
             target.scrollIntoView({ behavior: 'auto', block: 'start' });
           }
           this.pendingScrollTarget = null;
-        }, 0);
-      } else if (tabScrollPos > 0) {
-        this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
-      }
+        }
+      }, 0);
 
       return result;
     } catch (error) {
@@ -164,17 +164,23 @@ export class CharacterManager extends FormApplication {
 
       // Fetch compendium data if not cached
       if (this.compendiumData.ancestries.length === 0) {
+        console.log('[CharacterManager] Loading compendium data...');
         try {
           this.compendiumData.ancestries = await getAncestries();
           this.compendiumData.skills = await getSkills();
           this.compendiumData.edges = await getEdges();
           this.compendiumData.hindrances = await getHindrances();
-          this._buildSkillsByAttribute();
+          console.log('[CharacterManager] Compendium loaded. Skills count:', this.compendiumData.skills.length);
         } catch (error) {
           console.error('[Character Manager] Failed to load compendium data:', error);
           ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
         }
+      } else {
+        console.log('[CharacterManager] Using cached compendium data. Skills count:', this.compendiumData.skills.length);
       }
+
+      // Always rebuild skills by attribute (needed for renders after character changes)
+      this._buildSkillsByAttribute();
 
       // Fetch ancestry preview if selected
       let selectedAncestryData = null;
@@ -257,7 +263,10 @@ export class CharacterManager extends FormApplication {
         currencyName: currencyName,
         currencyAmount: currencyAmount,
         attributes: DEFAULT_ATTRIBUTES,
+        FREE_CORE_SKILLS: FREE_CORE_SKILLS,
       };
+
+      console.log('[CharacterManager] getData() context:', { skillsByAttribute: this.skillsByAttribute, totalSkills: this.compendiumData.skills.length });
 
       return data;
     } catch (error) {
@@ -327,22 +336,27 @@ export class CharacterManager extends FormApplication {
       vigor: [],
     };
 
+    console.log('[TraitsTab] Building skills by attribute. Total skills:', this.compendiumData.skills.length);
+
     for (const skill of this.compendiumData.skills) {
-      const attrLink = this._inferAttributeForSkill(skill.name);
+      // Skip Unskilled Attempt (fallback skill, added separately at end)
+      if (skill.name.toLowerCase() === 'unskilled attempt') {
+        continue;
+      }
+
+      const attrLink = skill.attribute || 'smarts';
       if (this.skillsByAttribute[attrLink]) {
+        const isCoreSkill = isFreeCoreSkill(skill.name);
         this.skillsByAttribute[attrLink].push({
           uuid: skill.uuid,
           name: skill.name,
-          isCoreSkill: isFreeCoreSkill(skill.name),
-          die: this.character.skills[skill.uuid]?.die ?? 'd4',
+          isCoreSkill: isCoreSkill,
+          die: this.character.skills[skill.uuid]?.die ?? (isCoreSkill ? 'd4' : null),
         });
       }
     }
-  }
 
-  _inferAttributeForSkill(skillName) {
-    const normalizedName = skillName.toLowerCase().replace(/\s+/g, '-');
-    return SKILL_ATTRIBUTE_MAP[normalizedName] || 'smarts';
+    console.log('[TraitsTab] skillsByAttribute:', this.skillsByAttribute);
   }
 
   _getSkillCompendiumMap() {
@@ -350,7 +364,7 @@ export class CharacterManager extends FormApplication {
     for (const skill of this.compendiumData.skills) {
       map[skill.uuid] = {
         name: skill.name,
-        linkedAttribute: this._inferAttributeForSkill(skill.name),
+        linkedAttribute: skill.attribute || 'smarts',
       };
     }
     return map;
@@ -366,6 +380,12 @@ export class CharacterManager extends FormApplication {
       if (!this.character.name) {
         ui.notifications.warn('[Character Creation] Please enter a character name');
         return;
+      }
+
+      // Add Unskilled Attempt skill (fallback for untrained skills)
+      const unskilleddSkill = this.compendiumData.skills.find(s => s.name.toLowerCase() === 'unskilled attempt');
+      if (unskilleddSkill && !this.character.skills[unskilleddSkill.uuid]) {
+        this.character.skills[unskilleddSkill.uuid] = { die: 'd4', advances: 0 };
       }
 
       if (this.actor) {
@@ -466,5 +486,10 @@ Handlebars.registerHelper('objLength', (obj) => {
 });
 
 Handlebars.registerHelper('gte', (a, b) => a >= b);
+
+Handlebars.registerHelper('capitalize', (str) => {
+  if (typeof str !== 'string') return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+});
 
 window.CharacterManager = CharacterManager;

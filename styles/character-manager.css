@@ -1,3 +1,5 @@
+@import "dice-shapes.css";
+
 /* Character Manager - FWK Aligned Styling */
 
 .swade-character-manager {
@@ -72,6 +74,7 @@
 
 .swade-character-manager .tab h3 {
   display: none;
+  border-bottom: none;
 }
 
 .swade-character-manager .tab-content {
@@ -926,6 +929,196 @@
   outline-offset: -2px;
 }
 
+/* ===== Traits Tab - Attributes & Skills ===== */
+
+.swade-character-manager .swade-traits-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.swade-character-manager .traits-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 482px;
+}
+
+.swade-character-manager .attribute-section {
+  padding: 0.35rem 0;
+  border-bottom: none;
+}
+
+.swade-character-manager .attribute-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.swade-character-manager .attribute-header h3 {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .attribute-die-buttons {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  padding-right: 26px;
+}
+
+.swade-character-manager .attribute-die-buttons .die-btn {
+  padding: 0;
+  font-size: 9px;
+  height: 28px;
+  width: 28px;
+}
+
+.swade-character-manager .attribute-skills-group {
+  padding-left: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.swade-character-manager .skill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.1rem;
+  border-bottom: none;
+  position: relative;
+  padding-right: 26px;
+}
+
+.swade-character-manager .skill-item:last-child {
+  border-bottom: none;
+}
+
+.swade-character-manager .skill-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 120px;
+}
+
+.swade-character-manager .skill-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .skill-core-marker {
+  color: #d4a574;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .skill-name {
+  font-size: 11px;
+  color: var(--color-text-dark-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+
+.swade-character-manager .skill-die-select {
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  font-size: 9px;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+  box-sizing: border-box;
+  width: 46px;
+  flex-shrink: 0;
+  cursor: pointer;
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.swade-character-manager .skill-die-select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
+}
+
+.swade-character-manager .btn-remove-skill {
+  background: none;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  color: color-mix(in srgb, #c85050 70%, transparent);
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  transition: color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 22px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.swade-character-manager .btn-add-skill {
+  background: none;
+  border: 1px solid color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  color: #7a9928;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  transition: all 0.15s ease;
+  display: inline-block;
+  width: auto;
+  flex-shrink: 0;
+  min-width: 24px;
+  border-radius: 3px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swade-character-manager .btn-add-skill:hover {
+  background: color-mix(in srgb, #7a9928 10%, transparent);
+  border-color: #7a9928;
+}
+
+.swade-character-manager .btn-remove-skill:hover {
+  color: #c85050;
+  border: none;
+  box-shadow: none;
+}
+
+.swade-character-manager .btn-remove-skill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: color-mix(in srgb, #c85050 50%, transparent);
+}
+
+.swade-character-manager .btn-remove-skill:disabled:hover {
+  color: color-mix(in srgb, #c85050 50%, transparent);
+}
+
 @media (max-width: 900px) {
   .swade-character-manager .tab {
     padding: 0.75rem;
@@ -976,3 +1169,5 @@
     gap: 0.35rem;
   }
 }
+
+/* ===== Die Icon Styling ===== */

@@ -3,36 +3,6 @@
  * Centralized configuration and mappings
  */
 
-// Skill to attribute mappings
-export const SKILL_ATTRIBUTE_MAP = {
-  'athletics': 'strength',
-  'common-knowledge': 'smarts',
-  'notice': 'smarts',
-  'persuasion': 'spirit',
-  'stealth': 'agility',
-  'fighting': 'agility',
-  'shooting': 'agility',
-  'riding': 'agility',
-  'academics': 'smarts',
-  'arcane': 'smarts',
-  'battle': 'smarts',
-  'boating': 'agility',
-  'healing': 'smarts',
-  'occultism': 'smarts',
-  'investigation': 'smarts',
-  'lockpicking': 'agility',
-  'piloting': 'agility',
-  'repair': 'smarts',
-  'survival': 'smarts',
-  'taunt': 'spirit',
-  'faith': 'spirit',
-  'intimidation': 'spirit',
-  'performance': 'spirit',
-  'psionics': 'smarts',
-  'swimming': 'strength',
-  'throwing': 'strength',
-};
-
 // Default attribute structure
 export const DEFAULT_ATTRIBUTES = {
   agility: { die: 'd4', advances: 0 },

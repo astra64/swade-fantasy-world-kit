@@ -130,8 +130,37 @@ export async function getAncestries() {
  * 
  * @returns {Promise<Array>} Array of {name, uuid} objects
  */
+/**
+ * Get all skills from curated compendium.
+ * Filters to type='skill'.
+ * Fetches full item data to include linked attribute (system.attribute).
+ * Respects curated visibility settings if enabled.
+ * Read-only; returns plain objects with metadata.
+ *
+ * @returns {Promise<Array>} Array of {name, uuid, attribute} objects sorted alphabetically
+ */
 export async function getSkills() {
-  return fetchPackItems(FANTASY_PACKS.skills, 'skill');
+  const basicItems = await fetchPackItems(FANTASY_PACKS.skills, 'skill');
+
+  // Fetch full item data in parallel to get system.attribute
+  const enriched = await Promise.all(basicItems.map(async (item) => {
+    try {
+      const fullItem = await getItemPreview(item.uuid);
+      if (fullItem) {
+        return {
+          name: fullItem.name,
+          uuid: fullItem.uuid,
+          attribute: fullItem.system?.attribute ?? 'smarts', // Default to smarts if not set
+        };
+      }
+      return item;
+    } catch (error) {
+      console.warn(`[Character Creation] Failed to fetch skill ${item.name}:`, error);
+      return item;
+    }
+  }));
+
+  return enriched.filter(skill => skill); // Remove nulls
 }
 
 /**

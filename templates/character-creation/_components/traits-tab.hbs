@@ -5,25 +5,173 @@
       <p>{{@root.tabGuidance.traits}}</p>
     </div>
 
+    {{#if (gt @root.attributePointsUsed 5)}}
+    <div class="info-box warning">
+      <p><strong>⚠ Over Budget:</strong> You've spent {{@root.attributePointsUsed}} attribute points, but only have 5. Reduce some attributes to d6 or lower.</p>
+    </div>
+    {{/if}}
+
+    {{#if (gt @root.skillPointsUsed 12)}}
+    <div class="info-box warning">
+      <p><strong>⚠ Over Budget:</strong> You've spent {{@root.skillPointsUsed}} skill points, but only have 12. Reduce or remove some skills.</p>
+    </div>
+    {{/if}}
+
     <div class="swade-traits-container">
-      <!-- Agility Attribute -->
-      <div class="attribute-section">
-        <div class="attribute-header">
-          <h3>Agility</h3>
-          <div class="attribute-die-buttons">
-            {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
-              <button
-                type="button"
-                class="die-btn {{#if (eq @root.character.attributes.agility.die die)}}active{{/if}}"
-                data-action="set-attribute"
-                data-attribute="agility"
-                data-die="{{die}}"
-              >
-                {{die}}
-              </button>
-            {{/each}}
+      <!-- Left Column: Agility, Spirit, Strength, Vigor -->
+      <div class="traits-column traits-column-left">
+        {{#each (array "agility" "spirit" "strength" "vigor") as |attr|}}
+          <div class="attribute-section">
+            <!-- Attribute Header -->
+            <div class="attribute-header">
+              <h3>{{capitalize attr}}</h3>
+              <div class="attribute-die-buttons">
+                {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                  <div class="die-btn-group">
+                    <button
+                      type="button"
+                      class="die-btn die-btn-{{die}} {{#if (eq @root.character.attributes.[attr].die die)}}active{{/if}}"
+                      data-action="set-attribute"
+                      data-attribute="{{attr}}"
+                      data-die="{{die}}"
+                      title="{{die}}"
+                    >
+                    </button>
+                    <span class="die-label">{{die}}</span>
+                  </div>
+                {{/each}}
+              </div>
+            </div>
+
+            <!-- Skills under this attribute -->
+            {{#if (lookup @root.skillsByAttribute attr)}}
+              <div class="attribute-skills-group">
+                {{#each (lookup @root.skillsByAttribute attr) as |skill|}}
+                  <div class="skill-item">
+                    <div class="skill-name-wrapper">
+                      {{#if skill.isCoreSkill}}
+                        <span class="skill-core-marker" title="Core skill - starts free at d4">★</span>
+                      {{/if}}
+                      <span class="skill-name">{{skill.name}}</span>
+                    </div>
+                    <div class="skill-controls">
+                      {{#if skill.die}}
+                        <select
+                          class="skill-die-select"
+                          data-action="set-skill"
+                          data-skill-uuid="{{skill.uuid}}"
+                        >
+                          {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                            <option value="{{die}}" {{#if (eq skill.die die)}}selected{{/if}}>{{die}}</option>
+                          {{/each}}
+                        </select>
+                      {{else}}
+                        <button
+                          type="button"
+                          class="btn-add-skill"
+                          data-action="add-skill"
+                          data-skill-uuid="{{skill.uuid}}"
+                          title="Add skill"
+                        >
+                          +
+                        </button>
+                      {{/if}}
+                      <button
+                        type="button"
+                        class="btn-remove-skill"
+                        data-action="remove-skill"
+                        data-skill-uuid="{{skill.uuid}}"
+                        title="{{#if skill.isCoreSkill}}Core skill—cannot be removed{{else}}Remove skill{{/if}}"
+                        {{#if skill.isCoreSkill}}disabled{{/if}}
+                        {{#unless skill.die}}disabled style="visibility: hidden;"{{/unless}}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                {{/each}}
+              </div>
+            {{/if}}
           </div>
-        </div>
+        {{/each}}
+      </div>
+
+      <!-- Right Column: Smarts -->
+      <div class="traits-column traits-column-right">
+        {{#with (lookup @root.character.attributes "smarts") as |smartsAttr|}}
+          <div class="attribute-section">
+            <!-- Attribute Header -->
+            <div class="attribute-header">
+              <h3>Smarts</h3>
+              <div class="attribute-die-buttons">
+                {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                  <div class="die-btn-group">
+                    <button
+                      type="button"
+                      class="die-btn die-btn-{{die}} {{#if (eq smartsAttr.die die)}}active{{/if}}"
+                      data-action="set-attribute"
+                      data-attribute="smarts"
+                      data-die="{{die}}"
+                      title="{{die}}"
+                    >
+                    </button>
+                    <span class="die-label">{{die}}</span>
+                  </div>
+                {{/each}}
+              </div>
+            </div>
+
+            <!-- Skills under Smarts -->
+            {{#if (lookup @root.skillsByAttribute "smarts")}}
+              <div class="attribute-skills-group">
+                {{#each (lookup @root.skillsByAttribute "smarts") as |skill|}}
+                  <div class="skill-item">
+                    <div class="skill-name-wrapper">
+                      {{#if skill.isCoreSkill}}
+                        <span class="skill-core-marker" title="Core skill - starts free at d4">★</span>
+                      {{/if}}
+                      <span class="skill-name">{{skill.name}}</span>
+                    </div>
+                    <div class="skill-controls">
+                      {{#if skill.die}}
+                        <select
+                          class="skill-die-select"
+                          data-action="set-skill"
+                          data-skill-uuid="{{skill.uuid}}"
+                        >
+                          {{#each (array "d4" "d6" "d8" "d10" "d12") as |die|}}
+                            <option value="{{die}}" {{#if (eq skill.die die)}}selected{{/if}}>{{die}}</option>
+                          {{/each}}
+                        </select>
+                      {{else}}
+                        <button
+                          type="button"
+                          class="btn-add-skill"
+                          data-action="add-skill"
+                          data-skill-uuid="{{skill.uuid}}"
+                          title="Add skill"
+                        >
+                          +
+                        </button>
+                      {{/if}}
+                      <button
+                        type="button"
+                        class="btn-remove-skill"
+                        data-action="remove-skill"
+                        data-skill-uuid="{{skill.uuid}}"
+                        title="{{#if skill.isCoreSkill}}Core skill—cannot be removed{{else}}Remove skill{{/if}}"
+                        {{#if skill.isCoreSkill}}disabled{{/if}}
+                        {{#unless skill.die}}disabled style="visibility: hidden;"{{/unless}}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                {{/each}}
+              </div>
+            {{/if}}
+          </div>
+        {{/with}}
       </div>
     </div>
   </div>
