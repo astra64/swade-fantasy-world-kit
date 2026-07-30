@@ -25,6 +25,7 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
   - **Reusable Components**: SearchableDropdown, DragDropManager, TabManager, CollapsibleItem partial for consistent UI patterns
   - **Template Modularization**: Character manager template split into reusable Handlebars partials for maintainability
   - **Centralized Configuration**: New `constants.js` with tab guidance text, budgets, skill mappings, compendium IDs
+- **Actions Compendium Rework**: Added missing SWADE action items (Attack, Aim, Called Shot, Defend, Desperate Attack, Disarm, Grapple, Move, Multi-Action, Not Sure, Push, Run/Sprint, Support, Take Cover, Test, Wild Attack, and more) and recategorized every item in `actions-fantasy` into Common Actions, Free Actions, Attack Options, Maneuvers, Edges, Misc, and Reference using the system's built-in `system.category` field.
 
 ### Technical
 - New modular component structure: `handlers/`, `components/`, `constants.js`, `_collapsible-item.hbs` partial
@@ -37,6 +38,7 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 - **Ancestry Bonus Extraction**: `convertValueToDie()` helper handles string format ("d6"), numeric absolute sides (6), and relative modifiers (+2) from ancestry ability effects
 - **Compendium Data**: Updated `getSkills()` to extract and pass skill descriptions for hover tooltips
 - **HTML Stripping**: Added `stripHtml()` Handlebars helper to safely decode HTML entities and remove tags from descriptions for display in title attributes
+- **Actions Compendium Dev Macros**: New one-off macros in `source/macros/` for populating/recategorizing the actions-fantasy compendium (`REORGANIZE_ACTIONS_COMPENDIUM_MACRO.js`, `SET_ACTION_CATEGORIES_MACRO.js`, `UPDATE_ACTION_ICONS_MACRO.js`) and for pushing a standard action set onto actor sheets (`APPLY_ACTIONS_TO_SELECTED_MACRO.js`, `APPLY_ACTIONS_TO_ALL_ACTORS_MACRO.js`)
 
 ### Changed
 - **Roadmap: Per-Item Fallback Override (v0.6.1)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.

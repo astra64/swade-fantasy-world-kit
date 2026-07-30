@@ -212,6 +212,13 @@ None currently planned. May add items here based on v0.7.0 workflow review findi
    - Evaluate first: Does this solve a real pain point? Is the manual workflow fast enough to defer indefinitely?
    - Defer indefinitely if: Manual process remains fast and error-free in practice.
 
+5. **Foundry-default-icon variants of existing compendiums/functions/macros** — Add a parallel option to use Foundry's bundled default icon library (`icons/skills`, `icons/magic`, `icons/weapons`, etc.) as an alternative to the game-icons.net SVG set the module's compendiums, icon remapping, and macros currently use everywhere else.
+   - Addresses: The actions-fantasy compendium rework (v0.7.x actions reorganization) proved the default Foundry webp art looks great and needs no external asset licensing, but the rest of the module (ancestries, gear, weapons, edges, hindrances, etc. and the icon remapping/mapping-generation tooling) is built entirely around game-icons.net SVGs. This is additive, not a replacement — existing game-icons.net work should not be undone.
+   - Approach: TBD — likely needs a per-item alternate-icon mapping (similar in spirit to `scripts/lib/icon-mappings.js`) plus a toggle/setting or separate preset so GMs can pick which icon set they want, rather than forking every compendium outright.
+   - Files (likely): `scripts/lib/icon-mappings.js` (or a new sibling mapping file), icon remapping FormApplication/macro, relevant compendium source/build steps once a JSON-source pipeline exists for packs.
+   - Prerequisite: None strictly, but easier once there's a real JSON-source-of-truth pipeline for compendium packs (see Compendium Generation Tool item above) rather than hand-editing LevelDB via macros.
+   - Output: GMs can choose between game-icons.net SVG styling and Foundry's default bundled art across the whole module, not just the actions compendium.
+
 ### Cleanup and Maintenance
 
 - **v0.7.0+: Cleanup Release** — Remove legacy migration function and flags, legacy constants, and old setting compatibility scaffolding. Scheduled after stabilization window.
