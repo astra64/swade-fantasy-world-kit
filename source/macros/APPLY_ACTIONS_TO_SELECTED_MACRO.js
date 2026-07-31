@@ -1,10 +1,11 @@
 /**
  * DEVELOPMENT TOOL (Foundry Macro - not part of module runtime)
  *
- * Apply Standard Actions to Selected Token(s)
+ * Apply Standard Actions to Selected Player Character Token(s)
  *
  * What it does:
- *   For each currently selected/controlled token's actor:
+ *   For each currently selected/controlled token whose actor is a Character
+ *   (NPC tokens are skipped):
  *     1. Deletes every existing owned Item of type "action".
  *     2. Adds a fresh copy of the standard action list (below) pulled live
  *        from the actions-fantasy compendium.
@@ -104,15 +105,21 @@ async function applyToSelected() {
   }
 
   let processed = 0;
+  let skipped = 0;
   for (const token of tokens) {
     const actor = token.actor;
     if (!actor) continue;
+    if (actor.type !== "character") {
+      console.log(`${actor.name}: skipped (not a player character).`);
+      skipped++;
+      continue;
+    }
     const removed = await applyActionsToActor(actor, itemsData);
     console.log(`${actor.name}: removed ${removed} existing action item(s), added ${itemsData.length}.`);
     processed++;
   }
 
-  ui.notifications.success(`Standard actions applied to ${processed} actor(s).`);
+  ui.notifications.success(`Standard actions applied to ${processed} actor(s).${skipped ? ` Skipped ${skipped} non-player-character(s).` : ""}`);
 }
 
 await applyToSelected();

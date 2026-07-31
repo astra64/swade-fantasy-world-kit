@@ -1,10 +1,10 @@
 /**
  * DEVELOPMENT TOOL (Foundry Macro - not part of module runtime)
  *
- * Apply Standard Actions to All Actors (Bulk)
+ * Apply Standard Actions to All Player Characters (Bulk)
  *
  * What it does:
- *   For every Character and NPC actor in the world (game.actors):
+ *   For every Character-type actor in the world (game.actors), skipping NPCs:
  *     1. Deletes every existing owned Item of type "action".
  *     2. Adds a fresh copy of the standard action list (below) pulled live
  *        from the actions-fantasy compendium.
@@ -22,8 +22,9 @@
  *   3. Check the console/notifications for a per-actor summary.
  *
  * DESTRUCTIVE and WORLD-WIDE: this deletes existing action items on every
- * Character/NPC actor in the world before adding the fresh set. There is no
- * undo. For a single actor, use APPLY_ACTIONS_TO_SELECTED_MACRO.js instead.
+ * Character-type actor in the world before adding the fresh set. NPCs are
+ * skipped entirely. There is no undo. For a single actor, use
+ * APPLY_ACTIONS_TO_SELECTED_MACRO.js instead.
  */
 
 const PACK_ID = "swade-fantasy-world-kit.actions-fantasy";
@@ -91,15 +92,15 @@ async function applyActionsToActor(actor, itemsData) {
 }
 
 async function applyToAllActors() {
-  const actors = game.actors.filter(a => ["character", "npc"].includes(a.type));
+  const actors = game.actors.filter(a => a.type === "character");
   if (!actors.length) {
-    ui.notifications.warn("No Character or NPC actors found in the world.");
+    ui.notifications.warn("No Character actors found in the world.");
     return;
   }
 
   const confirmed = await Dialog.confirm({
-    title: "Apply Standard Actions to All Actors",
-    content: `<p>This will delete existing action items and add the standard ${STANDARD_ACTION_NAMES.length}-item set on <strong>${actors.length}</strong> actor(s) in this world.</p><p>This cannot be undone. Continue?</p>`,
+    title: "Apply Standard Actions to All Player Characters",
+    content: `<p>This will delete existing action items and add the standard ${STANDARD_ACTION_NAMES.length}-item set on <strong>${actors.length}</strong> player character actor(s) in this world (NPCs are skipped).</p><p>This cannot be undone. Continue?</p>`,
     defaultYes: false
   });
   if (!confirmed) {
