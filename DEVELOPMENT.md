@@ -360,6 +360,27 @@ Once Phase 1 is complete and validated in a few releases:
 
 ---
 
+## Known Quirks
+
+### LevelDB compendium edits can silently fail to commit
+
+Compendium packs (`packs/*/`) are LevelDB databases. Foundry buffers new/edited items in a numbered write-ahead-log file (e.g. `000876.log`) and only periodically compacts that data into a numbered `.ldb` SST file. `.gitignore` excludes `packs/**/*.log` (intended for Foundry's transient `LOG`/`LOG.old` debug logs), but the glob also matches these numbered WAL files.
+
+If you `git add`/commit a pack before Foundry has compacted your edits into a `.ldb` file, the commit only captures metadata churn (`CURRENT`, `MANIFEST-*`) — the actual item data sitting in the ignored `.log` file is silently dropped and never reaches GitHub. `git show <commit> --stat -- packs/<pack-name>` will look "successful" (files changed) while containing zero real content changes.
+
+**Before committing pack changes:**
+1. Fully close the local Foundry instance (forces LevelDB to flush/compact pending writes).
+2. Reopen and close again if a `.log` file for that pack is still non-zero.
+3. Check `git status` — you want to see the `.ldb` file itself listed as modified/untracked, not just `CURRENT`/`MANIFEST-*`.
+4. Optionally sanity-check item counts before pushing, e.g.:
+   ```bash
+   grep -a -o '"name":"[^"]*"' packs/<pack>/<tracked-ldb> | sort -u | wc -l
+   ```
+   and compare against the current on-disk `.ldb`.
+5. Bump `module.json` version after confirming the real diff, so hosted instances (e.g. Molten) pick up the update.
+
+---
+
 ## Notes for Contributors
 
 - Prefer small, behavior-preserving edits.
