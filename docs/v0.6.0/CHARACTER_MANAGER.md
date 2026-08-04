@@ -1,12 +1,12 @@
 # Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Phase 1 In Progress | Concept, Ancestry, Hindrances, Traits, Edges Tabs Complete and tested in-Foundry
+**Status:** Character Creation & Editing In Progress | Concept, Ancestry, Hindrances, Traits, Edges Tabs Complete and tested in-Foundry
 
 ## Overview
 
 Character Manager v0.6.0 is a unified character creation and advancement tool for SWADE (Savage Worlds Adventure Edition) in Foundry VTT v14. Unlike the previous tab-based creator, this version follows the official character creation sequence from the rulebook and supports mid-campaign editing/advancement in a single interface (similar to Pathbuilder for PF2e).
 
-**Key Distinction:** Character Manager always opens from an actor sheet. Phase 1 (MVP) works whether the actor is blank or already has data — Concept, Ancestry, and Attributes already prepopulate from an existing actor. Phase 2 closes the remaining gap: detecting and prepopulating Skills, Edges, and Hindrances the same way.
+**Key Distinction:** Character Manager always opens from an actor sheet and works whether that actor is blank or already has data. Creation and editing were originally planned as two phases (MVP first, then a later pass to detect/prepopulate from an existing actor), but that split didn't hold up in practice: prepopulation for each field was built as part of building that field's tab, not deferred to a separate pass afterward. Every tab now prepopulates from an existing actor (Concept, Ancestry, Attributes, Skills, Edges, Hindrances). The only piece still genuinely deferred is **Save** (writing changes back to the actor), which is scoped to the Summary tab regardless of phase — see Known Blockers and Milestone 6 below. Advancement (post-creation XP spend) remains a distinct second phase, since it's mechanically different work, not just "the same detection logic applied later."
 
 ---
 
@@ -32,13 +32,10 @@ Ancestry and item descriptions use Foundry's `TextEditor.enrichHTML()` to proces
 
 ---
 
-### Phase 1: MVP Character Creation
-Opens from actor sheet, populates blank actors with character creation data. **Update (stale as originally written):** `getData()` already reads Name, Archetype, Concept (`system.details.notes`), Ancestry (detected from `actor.items`), and Attributes off an existing actor on open — Phase 1 does prepopulate those fields today. Skills/Edges/Hindrances currently read from `actor.system.skills/edges/hindrances`, which isn't where SWADE actually stores them, so those three don't reliably round-trip — expected for now, since real persistence (read and write) isn't built until the Summary tab (see below).
+### Phase 1: Character Creation & Editing
+Opens from actor sheet; works identically whether the actor is blank (creation) or already has data (editing). `getData()` reads Name, Archetype, Concept (`system.details.notes`), Ancestry, Attributes, Skills, Edges, and Hindrances off an existing actor on open — Skills/Edges/Hindrances are detected from `actor.itemTypes.skill/edge/hindrance` (embedded Items, matched to compendium entries by name), not from `actor.system.skills/edges/hindrances` (a schema SWADE doesn't actually use for these). **Save is still a scaffold**: `_createActor()`'s Save button exists so individual tabs are testable in isolation as they're built, but real persistence for all fields is intentionally deferred to the Summary tab (Milestone 3, Tab 8), not something to patch mid-tab-development. See Milestone 6 for the remaining prepopulation/detection gaps and the Save follow-up.
 
-### Phase 2: Full Character Creation & Editing  
-Extends Phase 1 to detect and prepopulate the remaining existing character data (Skills, Edges, Hindrances) from actor Items, enabling mid-campaign character editing. Concept/Ancestry/Attributes detection described here already shipped as part of Phase 1's `getData()`; this phase now scopes down to just closing the Skills/Edges/Hindrances gap. **Note:** `_createActor()`'s Save button is currently a scaffold only (not real persistence) — it exists so individual tabs are testable in isolation as they're built, but the actual save/prepopulate implementation for all fields is intentionally deferred to the Summary tab (Milestone 3, Tab 8), not something to patch mid-tab-development.
-
-### Phase 3: Character Advances & Planning
+### Phase 2: Character Advances & Planning
 Add ability to plan and manage character advancement progression (same tool or separate, TBD).
 
 ---
@@ -79,12 +76,12 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 ## Implementation Milestones
 
-**Note:** Milestones 1-5 build **Phase 1** (MVP). Milestone 6 adds **Phase 2** (Full Editing). Phase 3 (Advances) scope TBD.
+**Note:** Milestones 1-6 all build **Phase 1** (Character Creation & Editing) — prepopulation/detection (originally planned as a separate later pass in Milestone 6) shipped incrementally as each tab was built instead, so Milestone 6 now just tracks the remaining detection gaps (Gear) and the Save follow-up. **Phase 2** (Advances) scope TBD.
 
 ---
 
 ### Milestone 1: Foundation & Data Layer
-**Applies to:** Phase 1
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 - [ ] **calculator.js Updates**
   - [ ] Add hindrance trade-off calculation functions
@@ -109,7 +106,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 ---
 
 ### Milestone 2: UI Scaffold (Main App & Templates)
-**Applies to:** Phase 1
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 - [ ] **CharacterManager.js (Main FormApplication)**
   - [ ] Constructor: Accept actor, initialize from existing data
@@ -131,7 +128,7 @@ Add ability to plan and manage character advancement progression (same tool or s
   - [ ] Action buttons (Save, Export JSON, Cancel)
 
 - [ ] **Individual Tab Templates (_concept.hbs through _summary.hbs)**
-  - [ ] Each tab template includes new player-friendly guidance text (see Phase 3 tab specs)
+  - [ ] Each tab template includes new player-friendly guidance text (see per-tab specs in Milestone 3 below)
   - [ ] Guidance is shown prominently at top of each tab
   - [ ] Clear, conversational tone explaining what the tab does and what choices matter
 
@@ -147,7 +144,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 ---
 
 ### Milestone 3: Tab-by-Tab Implementation (All 8 Tabs)
-**Applies to:** Phase 1
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 #### Tab 1: Concept
 - [x] Archetype text input (freeform)
@@ -250,12 +247,12 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Estimated Lines:** 100-150 (template + handler)
 
-**Total Phase 3:** ~1600-1900 lines of code
+**Total Milestone 3:** ~1600-1900 lines of code
 
 ---
 
 ### Milestone 4: Integration & Polish
-**Applies to:** Phase 1
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 - [ ] **main.js Integration**
   - [ ] Import CharacterManager
@@ -279,8 +276,8 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 ---
 
-### Milestone 5: Testing & QA (Phase 1)
-**Applies to:** Phase 1
+### Milestone 5: Testing & QA
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 - [ ] **Functional Testing**
   - [ ] Tab navigation works
@@ -304,14 +301,15 @@ Add ability to plan and manage character advancement progression (same tool or s
 - [ ] **Edge Case Testing**
   - [ ] Ancestry bonuses with multiple attributes
   - [x] Human ancestry with bonus edges (name-matched via `bonusEdgePointAbilityNames`, tested with "Humans-Adaptable")
+  - [ ] Configure bonus edge string in settings
   - [ ] Over-spec'd characters (handled gracefully)
   - [ ] Empty character state
   - [ ] Multiple saves (no data loss)
 
 ---
 
-### Milestone 6: Phase 2 Extension (Full Editing & Prepopulation)
-**Applies to:** Phase 2
+### Milestone 6: Full Editing & Prepopulation
+**Applies to:** Phase 1 (Character Creation & Editing)
 
 - [ ] **CharacterManager.js Updates**
   - [x] `getData()` detects and prepopulates Name, Archetype, Concept, Ancestry, and Attributes from an existing actor
@@ -421,13 +419,13 @@ Root:
 
 ## Estimated Timeline
 
-| Phase | Estimate | Status |
+| Build Stage | Estimate | Status |
 |-------|----------|--------|
-| Phase 1: Foundation | 4-6 hours | Pending |
-| Phase 2: UI Foundation | 4-6 hours | Pending |
-| Phase 3: Tabs (8 tabs) | 8-12 hours | Pending |
-| Phase 4: Integration | 2-3 hours | Pending |
-| Phase 5: Testing | 3-5 hours | Pending |
+| Foundation | 4-6 hours | Pending |
+| UI Foundation | 4-6 hours | Pending |
+| Tabs (8 tabs) | 8-12 hours | Pending |
+| Integration | 2-3 hours | Pending |
+| Testing | 3-5 hours | Pending |
 | **Total** | **21-32 hours** | Pending |
 
 ---
