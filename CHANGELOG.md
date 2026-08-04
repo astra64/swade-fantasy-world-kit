@@ -14,10 +14,16 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
   - **Ancestry Tab**: Searchable dropdown selection from Fantasy Companion ancestries with compendium browser integration
   - **Hindrances Tab**: Major/Minor toggle, hindrance selection with compendium browser, perk point allocation system
   - **Traits Tab (Attributes & Skills)**: Full attribute and skill selection with die-based progression, free core skills, ancestry attribute bonuses with lock minimums, and hover tooltips for skill descriptions
-  - **Perk Allocation UI**: Dropdown system to allocate hindrance trade-off points (skill points, attribute boosts, edges, bonus currency)
-  - **Drag-Drop Support**: Drag ancestries and hindrances directly from compendium browser into tabs
+  - **Edges Tab**: Search/add or drag-drop edges from the compendium, expandable descriptions with prerequisite text, edge points tracked from hindrance perk allocations plus ancestry-granted bonus edges (see below)
+  - **Perk Allocation UI**: Dropdown system to allocate hindrance trade-off points (skill points, attribute boosts, edges, bonus currency) — all four options now actually affect their respective budgets (previously only the Edge option did anything)
+  - **Ancestry-Granted Bonus Edges**: Ancestral abilities that grant a free Edge (e.g. Humans' "Adaptable") now add to the available edge point budget, detected by matching the ability's name against a configurable, comma-separated world setting ("Free-Edge Ancestral Ability Names", defaults to "Adaptable") — deliberately name-based rather than compendium-tagged so it works with any Human (or similar) ancestry from any installed setting/compendium, not just this module's own
+  - **Attribute Tips**: Small, unobtrusive one-line tips under each attribute header surfacing non-obvious SWADE rules (e.g. Agility's Evasion roll, Smarts' known-language count), sourced from `constants.js`
+  - **Debug Skill Point Breakdown**: Collapsible per-skill cost breakdown panel on the Traits tab for diagnosing skill-point budget discrepancies
+  - **Drag-Drop Support (All Tabs)**: Drag any item — from a compendium, sidebar, or actor sheet — onto the Ancestry, Hindrances, Edges, or Traits (Skills) tab to add it, whether or not it exists in the module's configured compendium
+  - **Any-Item Display Fallback**: Ancestries, edges, hindrances, and skills that exist on an actor but aren't in the module's configured compendium now still display correctly on their tab — the compendium/dropdown is only a suggestion source, never a filter
+  - **Granted Child Items on Edges/Hindrances**: Edges and hindrances that grant other items (e.g. Arcane Background edges granting further edges/hindrances) now show a collapsible "Granted by X" section, mirroring the Ancestry tab's ancestral abilities display
   - **Ancestral Abilities Display**: Each ancestry shows granted abilities/items as collapsible expandable cards with descriptions
-  - **Edit Buttons**: Click edit icon on ancestry, abilities, or hindrances to open item sheets in new windows
+  - **Edit Buttons**: Click edit icon on ancestry, abilities, edges, or hindrances to open item sheets in new windows
   - **Embedded Content Enrichment**: Descriptions properly render Foundry UUID links as clickable items
   - **Item Descriptions on Hover**: Attributes and skills display rich descriptions in browser tooltips when hovering over names
   - **Ancestry Bonuses**: Automatically detects and displays attribute bonuses from ancestry abilities with visual indicator and lock minimums

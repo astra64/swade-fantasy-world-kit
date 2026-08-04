@@ -3,10 +3,13 @@
  * Manages attributes and skills die selection
  */
 import { calculateTotalAttributePoints, calculateTotalSkillPoints } from '../lib/calculator.js';
+import { getItemPreview } from '../lib/compendium-utils.js';
+import { DragDropManager } from '../components/DragDropManager.js';
 
 export class TraitsTabHandler {
   constructor(characterManager) {
     this.characterManager = characterManager;
+    this.dragDrop = null;
   }
 
   /**
@@ -42,6 +45,14 @@ export class TraitsTabHandler {
         const skillUuid = $(e.currentTarget).attr('data-skill-uuid');
         this._removeSkill(skillUuid);
       });
+
+      // Allow dragging a skill item (from a compendium, sidebar, or actor sheet)
+      // anywhere onto this tab to add it, same as Ancestry/Hindrances/Edges.
+      this.dragDrop = new DragDropManager({
+        tabName: 'traits',
+        onDrop: (uuid) => this._addSkillByUuid(uuid),
+      });
+      this.dragDrop.setup(html);
     } catch (error) {
       console.error('[TraitsTabHandler] setup() failed:', error);
     }
@@ -97,10 +108,65 @@ export class TraitsTabHandler {
     this.characterManager.render();
   }
 
-  _removeSkill(skillUuid) {
-    if (this.characterManager.character.skills?.[skillUuid]) {
-      delete this.characterManager.character.skills[skillUuid];
-      this.characterManager.render();
+  /**
+   * Add a skill dropped onto the tab, whether or not it's in the configured compendium —
+   * matches an existing compendium skill by name if possible (so it displays/costs the
+   * same as picking it via the compendium), otherwise adds it as a standalone entry.
+   */
+  async _addSkillByUuid(uuid) {
+    let item = null;
+    try {
+      item = await getItemPreview(uuid);
+    } catch (e) {
+      console.warn('[TraitsTabHandler] Failed to fetch dropped item:', e);
     }
+
+    if (!item || item.type !== 'skill') {
+      ui.notifications.warn('Only skill items can be dropped on the Traits tab');
+      return;
+    }
+
+    if (item.name.toLowerCase() === 'unskilled attempt') {
+      ui.notifications.info('Unskilled Attempt is added automatically and can’t be picked directly');
+      return;
+    }
+
+    if (!this.characterManager.character.skills) {
+      this.characterManager.character.skills = {};
+    }
+
+    const compendiumSkill = this.characterManager.compendiumData.skills.find(
+      (s) => s.name.toLowerCase() === item.name.toLowerCase()
+    );
+    const key = compendiumSkill?.uuid || uuid;
+
+    if (this.characterManager.character.skills[key]) {
+      ui.notifications.warn('This skill is already added');
+      return;
+    }
+
+    this.characterManager.character.skills[key] = {
+      die: 'd4',
+      advances: 0,
+      // Only needed as a display/cost fallback when this skill isn't in the compendium
+      name: compendiumSkill ? undefined : item.name,
+      attribute: compendiumSkill ? undefined : (item.system?.attribute || 'smarts'),
+      description: compendiumSkill ? undefined : (item.system?.description || ''),
+    };
+
+    this.characterManager.render();
+  }
+
+  _removeSkill(skillUuid) {
+    const skill = this.characterManager.character.skills?.[skillUuid];
+    if (!skill) return;
+
+    if (skill.fromAncestry) {
+      ui.notifications.warn('This skill was granted by your ancestry and cannot be removed');
+      return;
+    }
+
+    delete this.characterManager.character.skills[skillUuid];
+    this.characterManager.render();
   }
 }

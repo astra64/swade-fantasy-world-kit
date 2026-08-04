@@ -88,7 +88,7 @@
   border-radius: 4px;
   padding: 0.75rem;
   margin-bottom: 1rem;
-  color: #c48b2b;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 90%, transparent);
   line-height: 1.5;
 }
 
@@ -402,8 +402,7 @@
 }
 
 .swade-character-manager .btn-remove-item,
-.swade-character-manager .btn-remove-ancestry,
-.swade-character-manager .btn-remove-hindrance {
+.swade-character-manager .btn-remove-ancestry {
   background: none;
   border: none;
   padding: 0.2rem 0.4rem;
@@ -424,8 +423,7 @@
 }
 
 .swade-character-manager .btn-remove-item:hover,
-.swade-character-manager .btn-remove-ancestry:hover,
-.swade-character-manager .btn-remove-hindrance:hover {
+.swade-character-manager .btn-remove-ancestry:hover {
   color: #c85050;
   border: none;
   box-shadow: none;
@@ -531,7 +529,7 @@
 }
 
 .swade-character-manager .btn-add-ancestry,
-.swade-character-manager .btn-add-hindrance,
+.swade-character-manager .btn-add-item,
 .swade-character-manager .btn-open-compendium {
   padding: 0 8px;
   border: 1px solid var(--color-border-light-primary);
@@ -547,7 +545,7 @@
 }
 
 .swade-character-manager .btn-add-ancestry:hover,
-.swade-character-manager .btn-add-hindrance:hover,
+.swade-character-manager .btn-add-item:hover,
 .swade-character-manager .btn-open-compendium:hover {
   background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
 }
@@ -567,11 +565,11 @@
   margin-bottom: 0;
 }
 
-.swade-character-manager .ancestry-item {
+.swade-character-manager .expandable-item {
   width: fit-content;
 }
 
-.swade-character-manager .ancestry-item-header {
+.swade-character-manager .expandable-item-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -582,7 +580,7 @@
   position: relative;
 }
 
-.swade-character-manager .ancestry-item-header::before {
+.swade-character-manager .expandable-item-header::before {
   content: '▶';
   font-size: 10px;
   color: var(--color-text-dark-primary);
@@ -593,11 +591,11 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .ancestry-item.expanded .ancestry-item-header::before {
+.swade-character-manager .expandable-item.expanded .expandable-item-header::before {
   transform: rotate(90deg);
 }
 
-.swade-character-manager .ancestry-item-image {
+.swade-character-manager .expandable-item-image {
   width: 28px;
   height: 28px;
   border-radius: 3px;
@@ -611,8 +609,7 @@
   display: none;
 }
 
-.swade-character-manager .btn-open-ancestry,
-.swade-character-manager .btn-open-hindrance {
+.swade-character-manager .btn-open-item {
   background: none;
   border: none;
   padding: 0;
@@ -629,35 +626,33 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .btn-open-ancestry::before,
-.swade-character-manager .btn-open-hindrance::before {
+.swade-character-manager .btn-open-item::before {
   content: '\f044';
   font-family: FontAwesome;
   font-size: 12px;
 }
 
-.swade-character-manager .btn-open-ancestry:hover,
-.swade-character-manager .btn-open-hindrance:hover {
+.swade-character-manager .btn-open-item:hover {
   color: color-mix(in srgb, #7a9928 85%, black 15%);
   box-shadow: none;
   border: none;
 }
 
 
-.swade-character-manager .ancestry-item-info {
+.swade-character-manager .expandable-item-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.swade-character-manager .ancestry-name {
+.swade-character-manager .expandable-item-name {
   font-weight: 600;
   font-size: 13px;
   color: var(--color-text-dark-primary);
 }
 
-.swade-character-manager .ancestry-item-description,
-.swade-character-manager .hindrance-item-description {
+.swade-character-manager .expandable-item-description,
+.swade-character-manager .item-card-description {
   padding: 1rem;
   background: white;
   font-size: 11px;
@@ -665,33 +660,32 @@
   color: var(--color-text-dark-primary);
 }
 
-.swade-character-manager .ancestry-item-description {
+.swade-character-manager .expandable-item-description {
   border-top: 1px solid var(--color-border-light-primary);
 }
 
-.swade-character-manager .ancestry-item-description img {
+.swade-character-manager .expandable-item-description img {
   display: none;
 }
 
-.swade-character-manager .ancestry-item-description p,
-.swade-character-manager .hindrance-item-description p {
+.swade-character-manager .expandable-item-description p,
+.swade-character-manager .item-card-description p {
   margin: 0 0 0.75rem 0;
 }
 
-.swade-character-manager .ancestry-item-description p:last-child,
-.swade-character-manager .hindrance-item-description p:last-child {
+.swade-character-manager .expandable-item-description p:last-child,
+.swade-character-manager .item-card-description p:last-child {
   margin-bottom: 0;
 }
 
-.swade-character-manager .ancestry-child-items {
-  padding: 0.75rem 0.75rem 0.75rem 0;
-  border-top: 1px solid var(--color-border-light-primary);
+.swade-character-manager .granted-items-list {
+  margin: 0.75rem 0.75rem 0.75rem 0;
   background: color-mix(in srgb, var(--color-cool-2) 10%, transparent);
   display: flex;
   flex-direction: column;
 }
 
-.swade-character-manager .ancestry-child-items h4 {
+.swade-character-manager .granted-items-list h4 {
   margin: 0 0 0.5rem 0;
   font-size: 10px;
   font-weight: 600;
@@ -700,12 +694,30 @@
   letter-spacing: 0.5px;
 }
 
-/* ===== Ancestry Tab Drag-Over ===== */
+.swade-character-manager .granted-items-list h4[data-action="toggle-granted-section"] {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
 
-.swade-character-manager .tab[data-tab="ancestry"].dragover {
-  background: color-mix(in srgb, #7a9928 8%, transparent);
-  outline: 2px dashed #7a9928;
-  outline-offset: -2px;
+.swade-character-manager .granted-items-list.expanded h4[data-action="toggle-granted-section"] {
+  margin-bottom: 0.5rem;
+}
+
+.swade-character-manager .granted-items-list h4[data-action="toggle-granted-section"]::before {
+  content: '▶';
+  display: inline-block;
+  width: 12px;
+  font-size: 9px;
+  transition: transform 0.15s ease;
+}
+
+.swade-character-manager .granted-items-list.expanded h4[data-action="toggle-granted-section"]::before {
+  transform: rotate(90deg);
 }
 
 /* Hindrances Tab Specific (Reuse Ancestry Collapsible Pattern) ===== */
@@ -724,18 +736,18 @@
   padding-bottom: 1rem;
 }
 
-.swade-character-manager .selected-hindrances-section {
+.swade-character-manager .selected-items-section {
   margin-top: 1.5rem;
 }
 
-.swade-character-manager .selected-hindrances-section h4 {
+.swade-character-manager .selected-items-section h4 {
   margin: 0 0 0.75rem 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-dark-primary);
 }
 
-.swade-character-manager .hindrance-item {
+.swade-character-manager .item-card {
   width: 100%;
   margin-bottom: 1rem;
   border: 1px solid var(--color-border-light-primary);
@@ -743,7 +755,7 @@
   overflow: hidden;
 }
 
-.swade-character-manager .hindrance-item-header {
+.swade-character-manager .item-card-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -755,11 +767,11 @@
   transition: all 0.15s ease;
 }
 
-.swade-character-manager .hindrance-item-header:hover {
+.swade-character-manager .item-card-header:hover {
   background: color-mix(in srgb, var(--color-cool-2) 15%, transparent);
 }
 
-.swade-character-manager .hindrance-expand-trigger {
+.swade-character-manager .item-card-expand-trigger {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -771,11 +783,11 @@
   transition: background-color 0.15s ease;
 }
 
-.swade-character-manager .hindrance-expand-trigger:hover {
+.swade-character-manager .item-card-expand-trigger:hover {
   background-color: color-mix(in srgb, var(--color-cool-2) 20%, transparent);
 }
 
-.swade-character-manager .hindrance-expand-trigger::before {
+.swade-character-manager .item-card-expand-trigger::before {
   content: '▶';
   font-size: 10px;
   color: var(--color-text-dark-primary);
@@ -786,11 +798,11 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .hindrance-item.expanded .hindrance-expand-trigger::before {
+.swade-character-manager .item-card.expanded .item-card-expand-trigger::before {
   transform: rotate(90deg);
 }
 
-.swade-character-manager .hindrance-controls {
+.swade-character-manager .item-card-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -798,11 +810,11 @@
   flex-shrink: 0;
 }
 
-.swade-character-manager .hindrance-item-image-wrapper {
+.swade-character-manager .item-card-image-wrapper {
   flex-shrink: 0;
 }
 
-.swade-character-manager .hindrance-item-image {
+.swade-character-manager .item-card-image {
   width: 32px;
   height: 32px;
   border-radius: 3px;
@@ -811,14 +823,14 @@
   display: block;
 }
 
-.swade-character-manager .hindrance-item-info {
+.swade-character-manager .item-card-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
 }
 
-.swade-character-manager .hindrance-name {
+.swade-character-manager .item-card-name {
   font-weight: 600;
   font-size: 12px;
   color: var(--color-text-dark-primary);
@@ -923,14 +935,6 @@
   border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
 }
 
-/* ===== Hindrances Tab Drag-Over ===== */
-
-.swade-character-manager .tab[data-tab="hindrances"].dragover {
-  background: color-mix(in srgb, #7a9928 8%, transparent);
-  outline: 2px dashed #7a9928;
-  outline-offset: -2px;
-}
-
 /* ===== Traits Tab - Attributes & Skills ===== */
 
 .swade-character-manager .swade-traits-container {
@@ -1006,7 +1010,7 @@
 
 .swade-character-manager .attribute-skills-group {
   padding-left: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .swade-character-manager .skill-item {
@@ -1045,6 +1049,29 @@
   font-weight: bold;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.swade-character-manager .skill-ancestry-marker {
+  color: #7a9928;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .skill-external-marker {
+  color: #9a6b3a;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .attribute-tip {
+  margin: 0.4rem 0.4rem 0 0.4rem;
+  font-size: 10px;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
 }
 
 .swade-character-manager .skill-name {

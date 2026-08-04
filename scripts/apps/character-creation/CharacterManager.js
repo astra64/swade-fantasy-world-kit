@@ -20,18 +20,27 @@ import {
   calculateTotalSkillPoints,
   calculateTotalHindrancePoints,
   getRemainingHindrancePoints,
+  getSkillPointBreakdown,
   getAvailablePerkPoints,
   generatePerkSlots,
   isFreeCoreSkill,
   FREE_CORE_SKILLS,
   getAncestryAttributeBonuses,
+  calculateAvailableEdgePoints,
+  calculateUsedEdgePoints,
+  calculateBonusAttributePoints,
+  calculateBonusSkillPoints,
+  calculateAncestryBonusEdgePoints,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
 import { AncestryTabHandler } from './handlers/AncestryTabHandler.js';
 import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TraitsTabHandler } from './handlers/TraitsTabHandler.js';
-import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, BUDGETS } from './constants.js';
+import { EdgesTabHandler } from './handlers/EdgesTabHandler.js';
+import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, BUDGETS, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIPS } from './constants.js';
+
+const MODULE_ID = 'swade-fantasy-world-kit';
 
 export class CharacterManager extends FormApplication {
   static TAB_HANDLERS = {
@@ -39,6 +48,7 @@ export class CharacterManager extends FormApplication {
     ancestry: AncestryTabHandler,
     hindrances: HindrancesTabHandler,
     traits: TraitsTabHandler,
+    edges: EdgesTabHandler,
   };
 
   constructor(options = {}) {
@@ -100,8 +110,15 @@ export class CharacterManager extends FormApplication {
     try {
       const result = await super.render(force, options);
 
-      // Use setTimeout to ensure scroll happens after DOM paint
-      setTimeout(() => {
+      // Use requestAnimationFrame (not setTimeout) so the restore lands before the
+      // browser's next paint — setTimeout(0) is a macrotask and lets the reset-to-top
+      // frame paint first, causing a visible flicker.
+      requestAnimationFrame(() => {
+        // Restore outer form scroll position
+        if (scrollPos > 0) {
+          this.element?.find('.form-tabs')?.scrollTop(scrollPos);
+        }
+
         // Restore tab scroll position
         if (tabScrollPos > 0) {
           this.element?.find('.tab.active')?.scrollTop(tabScrollPos);
@@ -115,7 +132,7 @@ export class CharacterManager extends FormApplication {
           }
           this.pendingScrollTarget = null;
         }
-      }, 0);
+      });
 
       return result;
     } catch (error) {
@@ -126,22 +143,36 @@ export class CharacterManager extends FormApplication {
 
   async getData(options = {}) {
     try {
-      // Initialize character on first open
+      // Fetch compendium data if not cached (needed before character detection below)
+      if (this.compendiumData.ancestries.length === 0) {
+        console.log('[CharacterManager] Loading compendium data...');
+        try {
+          this.compendiumData.ancestries = await getAncestries();
+          this.compendiumData.skills = await getSkills();
+          this.compendiumData.edges = await getEdges();
+          this.compendiumData.hindrances = await getHindrances();
+          console.log('[CharacterManager] Compendium loaded. Skills count:', this.compendiumData.skills.length);
+        } catch (error) {
+          console.error('[Character Manager] Failed to load compendium data:', error);
+          ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
+        }
+      } else {
+        console.log('[CharacterManager] Using cached compendium data. Skills count:', this.compendiumData.skills.length);
+      }
+
+      // Initialize character on first open (after compendium data is available, so
+      // existing actor Skills/Edges/Hindrances can be matched to compendium entries)
       if (!this.character) {
         if (this.actor) {
           const ancestryItem = this.actor.items.find(item => item.type === 'ancestry');
           let ancestryUuid = ancestryItem?.getFlag('swade-fantasy-world-kit', 'compendiumUuid') || null;
 
           if (ancestryItem && !ancestryUuid) {
-            try {
-              const ancestries = await getAncestries();
-              const matchedAncestry = ancestries.find(a => a.name === ancestryItem.name);
-              if (matchedAncestry) {
-                ancestryUuid = matchedAncestry.uuid;
-              }
-            } catch (e) {
-              console.warn('[Character Manager] Could not find matching ancestry in compendium');
-            }
+            const matchedAncestry = this.compendiumData.ancestries.find(a => a.name === ancestryItem.name);
+            // Fall back to the actor's own embedded item when the ancestry isn't from the
+            // configured compendium (e.g. added from elsewhere, or homebrew) — the compendium
+            // is only a suggestion source, any ancestry actually on the actor should display.
+            ancestryUuid = matchedAncestry ? matchedAncestry.uuid : ancestryItem.uuid;
           }
 
           this.character = {
@@ -152,10 +183,11 @@ export class CharacterManager extends FormApplication {
             ancestry: ancestryUuid,
             expandedAncestry: false,
             expandedChildItems: {},
+            expandedGrantedSections: {},
             attributes: { ...DEFAULT_ATTRIBUTES, ...(this.actor.system?.attributes || {}) },
-            skills: this.actor.system?.skills || {},
-            edges: this.actor.system?.edges || {},
-            hindrances: this.actor.system?.hindrances || {},
+            skills: await this._detectSkillsFromActor(this.actor),
+            edges: await this._detectEdgesFromActor(this.actor),
+            hindrances: await this._detectHindrancesFromActor(this.actor),
           };
         } else {
           this.character = initializeCharacter();
@@ -187,23 +219,6 @@ export class CharacterManager extends FormApplication {
         this._initializeFreeCoreSkills();
       }
 
-      // Fetch compendium data if not cached
-      if (this.compendiumData.ancestries.length === 0) {
-        console.log('[CharacterManager] Loading compendium data...');
-        try {
-          this.compendiumData.ancestries = await getAncestries();
-          this.compendiumData.skills = await getSkills();
-          this.compendiumData.edges = await getEdges();
-          this.compendiumData.hindrances = await getHindrances();
-          console.log('[CharacterManager] Compendium loaded. Skills count:', this.compendiumData.skills.length);
-        } catch (error) {
-          console.error('[Character Manager] Failed to load compendium data:', error);
-          ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
-        }
-      } else {
-        console.log('[CharacterManager] Using cached compendium data. Skills count:', this.compendiumData.skills.length);
-      }
-
       // Always rebuild skills by attribute (needed for renders after character changes)
       this._buildSkillsByAttribute();
 
@@ -212,26 +227,7 @@ export class CharacterManager extends FormApplication {
       let childItemsData = [];
       if (this.character.ancestry) {
         selectedAncestryData = await getItemPreview(this.character.ancestry);
-
-        // Fetch full data for granted items
-        if (selectedAncestryData?.system?.grants && Array.isArray(selectedAncestryData.system.grants)) {
-          for (const grant of selectedAncestryData.system.grants) {
-            try {
-              const itemData = await getItemPreview(grant.uuid);
-              if (itemData) {
-                // Enrich the description to handle embedded items/links
-                if (itemData.system?.description) {
-                  itemData.system.description = await TextEditor.enrichHTML(itemData.system.description, { async: true });
-                }
-                // Add expanded state to each child item
-                itemData.isExpanded = this.character.expandedChildItems[itemData.uuid] || false;
-                childItemsData.push(itemData);
-              }
-            } catch (e) {
-              console.warn('[Character Manager] Failed to load granted item:', grant.uuid);
-            }
-          }
-        }
+        childItemsData = await this._getGrantedChildItems(this.character.ancestry, selectedAncestryData);
 
         // Enrich ancestry description as well
         if (selectedAncestryData?.system?.description) {
@@ -239,12 +235,35 @@ export class CharacterManager extends FormApplication {
         }
       }
 
+      // Some edges (e.g. Arcane Backgrounds) and hindrances grant other edges/hindrances as
+      // child items, the same way an ancestry grants ancestral abilities. Build the same kind
+      // of nested display data for each selected edge/hindrance, keyed by its own uuid.
+      const edgeChildItems = {};
+      for (const uuid of Object.keys(this.character.edges || {})) {
+        const children = await this._getGrantedChildItems(uuid);
+        if (children.length) edgeChildItems[uuid] = children;
+      }
+
+      const hindranceChildItems = {};
+      for (const uuid of Object.keys(this.character.hindrances || {})) {
+        const children = await this._getGrantedChildItems(uuid);
+        if (children.length) hindranceChildItems[uuid] = children;
+      }
+
       const derivedStats = calculateDerivedStats(this.character);
       const attributePointsUsed = calculateTotalAttributePoints(this.character);
       const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
+      const skillPointBreakdown = getSkillPointBreakdown(this.character, this._getSkillCompendiumMap());
       const availablePerkPoints = getAvailablePerkPoints(this.character);
       const perkSlots = generatePerkSlots(this.character);
       const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
+      const bonusEdgePointAbilityNames = (game.settings.get(MODULE_ID, 'bonusEdgePointAbilityNames') || '')
+        .split(',');
+      const ancestryBonusEdgePoints = calculateAncestryBonusEdgePoints(childItemsData, bonusEdgePointAbilityNames);
+      const edgePointsAvailable = calculateAvailableEdgePoints(this.character) + ancestryBonusEdgePoints;
+      const edgePointsUsed = calculateUsedEdgePoints(this.character);
+      const bonusAttributePoints = calculateBonusAttributePoints(this.character);
+      const bonusSkillPoints = calculateBonusSkillPoints(this.character);
 
       // Calculate perk points spent based on actual option costs
       const perkOptionCosts = {
@@ -268,6 +287,8 @@ export class CharacterManager extends FormApplication {
         character: this.character,
         selectedAncestryData: selectedAncestryData,
         childItemsData: childItemsData,
+        edgeChildItems: edgeChildItems,
+        hindranceChildItems: hindranceChildItems,
         ancestries: this.compendiumData.ancestries,
         skills: this.compendiumData.skills,
         edges: this.compendiumData.edges,
@@ -275,12 +296,16 @@ export class CharacterManager extends FormApplication {
         skillsByAttribute: this.skillsByAttribute,
         derivedStats: derivedStats,
         attributePointsUsed: attributePointsUsed,
-        attributePointsRemaining: 5 - attributePointsUsed,
+        attributePointsRemaining: (5 + bonusAttributePoints) - attributePointsUsed,
+        bonusAttributePoints: bonusAttributePoints,
         skillPointsUsed: skillPointsUsed,
-        skillPointsRemaining: 12 - skillPointsUsed,
+        skillPointsRemaining: (12 + bonusSkillPoints) - skillPointsUsed,
+        bonusSkillPoints: bonusSkillPoints,
+        skillPointBreakdown: skillPointBreakdown,
         availablePerkPoints: availablePerkPoints,
         perkPointsSpent: perkPointsSpent,
-        edgePointsMax: 0,
+        edgePointsAvailable: edgePointsAvailable,
+        edgePointsUsed: edgePointsUsed,
         currentTab: this.currentTab,
         expandedAncestry: this.character.expandedAncestry,
         expandedChildItems: this.character.expandedChildItems || {},
@@ -291,13 +316,8 @@ export class CharacterManager extends FormApplication {
         attributes: DEFAULT_ATTRIBUTES,
         FREE_CORE_SKILLS: FREE_CORE_SKILLS,
         ancestryBonuses: ancestryBonuses,
-        attributeDescriptions: {
-          strength: 'Strength is physical power and fitness. It’s also used as the basis of a warrior’s damage in hand-to-hand combat, and to determine the equipment he can use or carry.',
-          agility: 'Agility is a measure of a character’s nimbleness, dexterity, and general coordination',
-          vigor: 'Vigor represents an individual’s endurance, resistance to disease, poison, or toxins, and how much physical damage she can take before she can’t go on. It is most often used to resist Fatigue effects, and as the basis for the derived stat of Toughness.',
-          smarts: 'Smarts measures raw intelligence, mental acuity, and how fast a heroine thinks on her feet. It’s used to resist certain types of mental and social attacks.',
-          spirit: 'Spirit is self-confidence, backbone, and willpower. It’s used to resist social and supernatural attacks as well as fear.',
-        },
+        attributeDescriptions: ATTRIBUTE_DESCRIPTIONS,
+        attributeTips: ATTRIBUTE_TIPS,
       };
 
       return data;
@@ -368,6 +388,8 @@ export class CharacterManager extends FormApplication {
       vigor: [],
     };
 
+    const seenUuids = new Set();
+
     for (const skill of this.compendiumData.skills) {
       // Skip Unskilled Attempt (fallback skill, added separately at end)
       if (skill.name.toLowerCase() === 'unskilled attempt') {
@@ -382,9 +404,31 @@ export class CharacterManager extends FormApplication {
           name: skill.name,
           isCoreSkill: isCoreSkill,
           die: this.character.skills[skill.uuid]?.die ?? (isCoreSkill ? 'd4' : null),
+          fromAncestry: this.character.skills[skill.uuid]?.fromAncestry || false,
           description: skill.description || '',
         });
+        seenUuids.add(skill.uuid);
       }
+    }
+
+    // Include skills the actor has that aren't in the configured compendium (e.g. added
+    // from another source) so they still display — the compendium is only a suggestion
+    // list, not a filter on what can show up here.
+    for (const [uuid, skillData] of Object.entries(this.character.skills || {})) {
+      if (seenUuids.has(uuid) || !skillData.die) continue;
+
+      const attrLink = skillData.attribute || 'smarts';
+      if (!this.skillsByAttribute[attrLink]) continue;
+
+      this.skillsByAttribute[attrLink].push({
+        uuid,
+        name: skillData.name || '(unknown skill)',
+        isCoreSkill: isFreeCoreSkill(skillData.name),
+        die: skillData.die,
+        fromAncestry: skillData.fromAncestry || false,
+        description: skillData.description || '',
+        external: true,
+      });
     }
   }
 
@@ -397,6 +441,161 @@ export class CharacterManager extends FormApplication {
       };
     }
     return map;
+  }
+
+  /**
+   * Fetch the full item data for anything an item grants via `system.grants` (ancestral
+   * abilities from an Ancestry, or edges/hindrances granted by things like Arcane Background
+   * edges), enriched and with per-item expand state — the same shape used for the Ancestry
+   * tab's "Ancestral Abilities" list, reused here for Edges/Hindrances child items.
+   *
+   * @param {string} itemUuid - uuid of the granting item (used to fetch it if not preloaded)
+   * @param {Object} [itemData] - already-fetched item data, to avoid a redundant fetch
+   * @returns {Promise<Array>} Array of granted item data, each with an `isExpanded` flag
+   */
+  async _getGrantedChildItems(itemUuid, itemData = null) {
+    const parentData = itemData || await getItemPreview(itemUuid);
+    const children = [];
+
+    if (!Array.isArray(parentData?.system?.grants)) {
+      return children;
+    }
+
+    for (const grant of parentData.system.grants) {
+      try {
+        const childData = await getItemPreview(grant.uuid);
+        if (childData) {
+          if (childData.system?.description) {
+            childData.system.description = await TextEditor.enrichHTML(childData.system.description, { async: true });
+          }
+          childData.isExpanded = this.character.expandedChildItems[childData.uuid] || false;
+          children.push(childData);
+        }
+      } catch (e) {
+        console.warn('[Character Manager] Failed to load granted item:', grant.uuid);
+      }
+    }
+
+    return children;
+  }
+
+  /**
+   * Detect skills already on the actor (embedded Items, not system.skills) and map them to
+   * matching compendium skill entries by name. Skills that aren't in the configured
+   * compendium are still included, keyed by their own item uuid, with enough of their own
+   * data (name/attribute/description) to display standalone — the compendium is only a
+   * suggestion source, not a filter on what's allowed to appear.
+   */
+  async _detectSkillsFromActor(actor) {
+    const skills = {};
+    const sidesToDie = { 4: 'd4', 6: 'd6', 8: 'd8', 10: 'd10', 12: 'd12' };
+
+    for (const skillItem of actor.items.filter(item => item.type === 'skill')) {
+      // Unskilled Attempt is a catch-all every actor has; it's never player-selected
+      // or changed, so it's excluded from detection entirely (added back at save time).
+      if (skillItem.name.toLowerCase() === 'unskilled attempt') continue;
+
+      const compendiumSkill = this.compendiumData.skills.find(
+        s => s.name.toLowerCase() === skillItem.name.toLowerCase()
+      );
+
+      let die = 'd4';
+      const dieValue = skillItem.system?.die;
+      if (dieValue && typeof dieValue === 'object' && dieValue.sides) {
+        die = sidesToDie[dieValue.sides] || 'd4';
+      } else if (typeof dieValue === 'string') {
+        die = dieValue;
+      }
+
+      const grantedByAncestry = !!skillItem.grantedBy;
+      const key = compendiumSkill?.uuid || skillItem.uuid;
+      skills[key] = {
+        die,
+        advances: skillItem.system?.advances ?? 0,
+        fromAncestry: grantedByAncestry,
+        // Baseline die granted for free; increases above this still cost points
+        grantedDie: grantedByAncestry ? die : undefined,
+        // Only needed as a display/cost fallback when this skill isn't in the compendium
+        name: compendiumSkill ? undefined : skillItem.name,
+        attribute: compendiumSkill ? undefined : (skillItem.system?.attribute || 'smarts'),
+        description: compendiumSkill ? undefined : (skillItem.system?.description || ''),
+      };
+    }
+
+    return skills;
+  }
+
+  /**
+   * Detect edges already on the actor (embedded Items, not system.edges) and map them to
+   * matching compendium edge entries by name. Edges that aren't in the configured compendium
+   * are still included, keyed by their own item uuid and built entirely from the actor's own
+   * item data — the compendium is only a suggestion source, not a filter on what can display.
+   * Excludes edges granted by another item (e.g. ancestral abilities) via `item.grantedBy`,
+   * since those are automatic bonuses, not player choices made on this tab.
+   */
+  async _detectEdgesFromActor(actor) {
+    const edges = {};
+
+    for (const edgeItem of actor.items.filter(item => item.type === 'edge' && !item.grantedBy)) {
+      const compendiumEdge = this.compendiumData.edges.find(
+        e => e.name.toLowerCase() === edgeItem.name.toLowerCase()
+      );
+
+      const key = compendiumEdge?.uuid || edgeItem.uuid;
+      const requirements = Array.isArray(edgeItem.system?.requirements)
+        ? edgeItem.system.requirements.map(r => (typeof r?.toString === 'function' ? r.toString() : '')).filter(Boolean)
+        : compendiumEdge?.requirements || [];
+
+      edges[key] = {
+        uuid: key,
+        name: compendiumEdge?.name || edgeItem.name,
+        expanded: false,
+        img: edgeItem.img || compendiumEdge?.img || '',
+        requirements,
+        description: edgeItem.system?.description
+          ? await TextEditor.enrichHTML(edgeItem.system.description, { async: true })
+          : '',
+      };
+    }
+
+    return edges;
+  }
+
+  /**
+   * Detect hindrances already on the actor (embedded Items, not system.hindrances) and map
+   * them to matching compendium hindrance entries by name. Hindrances that aren't in the
+   * configured compendium are still included, keyed by their own item uuid and built
+   * entirely from the actor's own item data — the compendium is only a suggestion source,
+   * not a filter on what can display.
+   * Excludes hindrances granted by another item (e.g. ancestral abilities) via `item.grantedBy`,
+   * since those are automatic bonuses, not player choices made on this tab.
+   */
+  async _detectHindrancesFromActor(actor) {
+    const hindrances = {};
+
+    for (const hindranceItem of actor.items.filter(item => item.type === 'hindrance' && !item.grantedBy)) {
+      const compendiumHindrance = this.compendiumData.hindrances.find(
+        h => h.name.toLowerCase() === hindranceItem.name.toLowerCase()
+      );
+
+      const key = compendiumHindrance?.uuid || hindranceItem.uuid;
+      const major = hindranceItem.system?.major ?? compendiumHindrance?.major ?? false;
+
+      hindrances[key] = {
+        uuid: key,
+        name: compendiumHindrance?.name || hindranceItem.name,
+        major,
+        severity: hindranceItem.system?.severity ?? compendiumHindrance?.severity ?? 'either',
+        points: major ? 2 : 1,
+        expanded: false,
+        img: hindranceItem.img || compendiumHindrance?.img || '',
+        description: hindranceItem.system?.description
+          ? await TextEditor.enrichHTML(hindranceItem.system.description, { async: true })
+          : '',
+      };
+    }
+
+    return hindrances;
   }
 
   async _updateObject(event, formData) {

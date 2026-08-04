@@ -167,13 +167,42 @@ export async function getSkills() {
 /**
  * Get all edges from curated compendium.
  * Filters to type='edge'.
+ * Fetches full item data to include description, image, and requirements.
  * Respects curated visibility settings if enabled.
- * Read-only; returns plain objects.
- * 
- * @returns {Promise<Array>} Array of {name, uuid} objects
+ * Read-only; returns plain objects with metadata.
+ *
+ * @returns {Promise<Array>} Array of {name, uuid, description, img, requirements} objects sorted alphabetically
  */
 export async function getEdges() {
-  return fetchPackItems(FANTASY_PACKS.edges, 'edge');
+  const basicItems = await fetchPackItems(FANTASY_PACKS.edges, 'edge');
+
+  const enriched = await Promise.all(basicItems.map(async (item) => {
+    try {
+      const fullItem = await getItemPreview(item.uuid);
+      if (fullItem) {
+        return {
+          name: fullItem.name,
+          uuid: fullItem.uuid,
+          description: fullItem.system?.description ?? '',
+          img: fullItem.img || '',
+          requirements: Array.isArray(fullItem.system?.requirements)
+            ? fullItem.system.requirements.map((r) => (typeof r?.toString === 'function' ? r.toString() : '')).filter(Boolean)
+            : [],
+        };
+      }
+    } catch (error) {
+      console.warn(`[Character Creation] Failed to fetch edge ${item.uuid}:`, error);
+    }
+    return {
+      name: item.name,
+      uuid: item.uuid,
+      description: '',
+      img: '',
+      requirements: [],
+    };
+  }));
+
+  return enriched;
 }
 
 /**

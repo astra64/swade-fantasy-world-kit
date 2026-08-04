@@ -1,12 +1,12 @@
 # Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Phase 1 In Progress | Concept & Ancestry Tabs Complete
+**Status:** Phase 1 In Progress | Concept, Ancestry, Hindrances, Traits, Edges Tabs Complete and tested in-Foundry
 
 ## Overview
 
 Character Manager v0.6.0 is a unified character creation and advancement tool for SWADE (Savage Worlds Adventure Edition) in Foundry VTT v14. Unlike the previous tab-based creator, this version follows the official character creation sequence from the rulebook and supports mid-campaign editing/advancement in a single interface (similar to Pathbuilder for PF2e).
 
-**Key Distinction:** Character Manager always opens from an actor sheet. Phase 1 (MVP) accepts actors with no prepopulated data. Phase 2 detects existing character data and prepopulates fields for editing.
+**Key Distinction:** Character Manager always opens from an actor sheet. Phase 1 (MVP) works whether the actor is blank or already has data — Concept, Ancestry, and Attributes already prepopulate from an existing actor. Phase 2 closes the remaining gap: detecting and prepopulating Skills, Edges, and Hindrances the same way.
 
 ---
 
@@ -33,10 +33,10 @@ Ancestry and item descriptions use Foundry's `TextEditor.enrichHTML()` to proces
 ---
 
 ### Phase 1: MVP Character Creation
-Opens from actor sheet, populates blank actors with character creation data. No prepopulation from existing character data.
+Opens from actor sheet, populates blank actors with character creation data. **Update (stale as originally written):** `getData()` already reads Name, Archetype, Concept (`system.details.notes`), Ancestry (detected from `actor.items`), and Attributes off an existing actor on open — Phase 1 does prepopulate those fields today. Skills/Edges/Hindrances currently read from `actor.system.skills/edges/hindrances`, which isn't where SWADE actually stores them, so those three don't reliably round-trip — expected for now, since real persistence (read and write) isn't built until the Summary tab (see below).
 
 ### Phase 2: Full Character Creation & Editing  
-Extends Phase 1 to detect and prepopulate existing character data from actor, enabling mid-campaign character editing.
+Extends Phase 1 to detect and prepopulate the remaining existing character data (Skills, Edges, Hindrances) from actor Items, enabling mid-campaign character editing. Concept/Ancestry/Attributes detection described here already shipped as part of Phase 1's `getData()`; this phase now scopes down to just closing the Skills/Edges/Hindrances gap. **Note:** `_createActor()`'s Save button is currently a scaffold only (not real persistence) — it exists so individual tabs are testable in isolation as they're built, but the actual save/prepopulate implementation for all fields is intentionally deferred to the Summary tab (Milestone 3, Tab 8), not something to patch mid-tab-development.
 
 ### Phase 3: Character Advances & Planning
 Add ability to plan and manage character advancement progression (same tool or separate, TBD).
@@ -214,14 +214,15 @@ Add ability to plan and manage character advancement progression (same tool or s
 **Estimated Lines:** 350-500 (template + handler)
 
 #### Tab 5: Edges
-- [ ] Edge cards from compendium
-- [ ] Multi-select (spends edge points from hindrances)
-- [ ] Show prerequisite info (non-blocking, info-only)
-- [ ] Show edge cost if available
-- [ ] Real-time edge point tracking: Z/? in footer
-- [ ] **New Player Guidance:**
-  > "Edges are cool special abilities and perks. You get edge points from hindrances and your ancestry (Humans get a bonus edge). Pick abilities that fit your character—a rogue might pick Fast Draw or Luck, a mage picks spellcasting edges. No rush to pick everything on your first try; you can always take more edges with advances as your character grows. Check the prerequisites—some edges require skills or attributes at certain levels."
-- [ ] **Validation:** Inform if prerequisites not met, warn if over edge points
+- [x] Edge cards from compendium (search dropdown + drag-drop, same pattern as Hindrances)
+- [x] Multi-select (spends edge points from hindrance perk allocations)
+- [x] Show prerequisite info (non-blocking, info-only) — pulled from SWADE's `system.requirements` via each requirement's built-in `toString()`
+- [ ] Show edge cost if available (deferred — edges don't have a "cost" field in this ruleset; only prerequisites)
+- [x] Real-time edge point tracking: X/Y in footer and above the selected-edges list
+- [x] **New Player Guidance:** (uses existing `TAB_GUIDANCE.edges` text)
+- [x] **Validation:** Non-blocking warning toast if adding an edge exceeds available edge points; footer turns red when over budget
+- [x] **Ancestry-granted bonus edges** (e.g., Human's "Adaptable"): `calculateAncestryBonusEdgePoints()` scans the selected ancestry's granted child items and adds 1 edge point per match against the `bonusEdgePointAbilityNames` world setting (default: "Adaptable"), matched as a whole word/segment so it works regardless of item naming convention (e.g. `"Humans-Adaptable"`) — deliberately name-based, not a compendium-specific Active Effect tag, so any installed setting's Human-equivalent ancestry is covered without per-compendium edits
+- [x] **Granted child items display:** Edges (and Hindrances) that themselves grant further edges/hindrances (e.g. Arcane Background) show a collapsible "Granted by X" section, same pattern as Ancestry's ancestral abilities
 
 **Estimated Lines:** 150-200 (template + handler)
 
@@ -302,7 +303,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 - [ ] **Edge Case Testing**
   - [ ] Ancestry bonuses with multiple attributes
-  - [ ] Human ancestry with bonus edges
+  - [x] Human ancestry with bonus edges (name-matched via `bonusEdgePointAbilityNames`, tested with "Humans-Adaptable")
   - [ ] Over-spec'd characters (handled gracefully)
   - [ ] Empty character state
   - [ ] Multiple saves (no data loss)
@@ -313,15 +314,19 @@ Add ability to plan and manage character advancement progression (same tool or s
 **Applies to:** Phase 2
 
 - [ ] **CharacterManager.js Updates**
-  - [ ] Add _loadCharacterFromActor(): Detect existing character data and prepopulate all form fields
+  - [x] `getData()` detects and prepopulates Name, Archetype, Concept, Ancestry, and Attributes from an existing actor
+  - [x] Detection extended to Skills, Edges, Hindrances via `_detectSkillsFromActor()` / `_detectEdgesFromActor()` / `_detectHindrancesFromActor()` — read from `actor.itemTypes.skill/edge/hindrance` (embedded Items), matched to compendium entries by name (no `compendiumUuid` flag exists yet for these three since real save hasn't landed — see Note below)
   - [ ] Add change detection: Highlight which fields have been modified since open
   - [ ] Add validation for mid-edit states (e.g., character with advances)
 
 - [ ] **Data Detection Logic**
-  - [ ] Ancestry detection from actor items
-  - [ ] Hindrances/edges detection from actor traits
-  - [ ] Skill/attribute values extraction from character data
+  - [x] Ancestry detection from actor items
+  - [x] Hindrances/edges detection from actor Items (`actor.itemTypes.hindrance` / `actor.itemTypes.edge`)
+  - [x] Attribute values extraction from actor system data
+  - [x] Skill values extraction from actor Items (`actor.itemTypes.skill`)
   - [ ] Gear detection from actor inventory
+
+**Note:** Prepopulation (read side) for Skills/Edges/Hindrances is now implemented per-tab, ahead of Save (write side) as originally planned — reads work by matching item names against the compendium, same fallback pattern Ancestry already used. Save (`_createActor()`) is still a scaffold and remains scoped to the Summary tab; once it creates real embedded Items there, it should also set the `compendiumUuid` flag (like Ancestry does) so detection can prefer the flag over name-matching.
 
 **Estimated Scope:** 200-300 lines (detection + prepopulation logic)
 
@@ -331,8 +336,8 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 ### Critical
 - **Ancestry Data:** Requires metadata for:
-  - Attribute bonuses (e.g., "d6 Vigor instead of d4")
-  - Edge bonuses (e.g., "Humans get 1 bonus edge")
+  - Attribute bonuses (e.g., "d6 Vigor instead of d4") — done, read from Active Effect `changes` on the ancestry/child items
+  - Edge bonuses (e.g., "Humans get 1 bonus edge") — done, via name-matching against the `bonusEdgePointAbilityNames` setting rather than metadata (see Tab 5: Edges above)
   - Skill bonuses (if any)
   - Pace modifications (if any)
 - **Hindrance Data:** Requires Major/Minor type flags

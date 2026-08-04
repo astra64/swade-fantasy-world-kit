@@ -25,19 +25,19 @@
     {{#if @root.character.ancestry}}
     <div class="selected-ancestry">
       {{#if @root.selectedAncestryData}}
-      <div class="ancestry-item {{#if @root.expandedAncestry}}expanded{{/if}}" data-action="toggle-ancestry-expand" data-item-uuid="{{@root.selectedAncestryData.uuid}}">
-        <div class="ancestry-item-header">
+      <div class="expandable-item {{#if @root.expandedAncestry}}expanded{{/if}}" data-action="toggle-ancestry-expand" data-item-uuid="{{@root.selectedAncestryData.uuid}}">
+        <div class="expandable-item-header">
           {{#if @root.selectedAncestryData.img}}
-          <img src="{{@root.selectedAncestryData.img}}" alt="{{@root.selectedAncestryData.name}}" class="ancestry-item-image">
+          <img src="{{@root.selectedAncestryData.img}}" alt="{{@root.selectedAncestryData.name}}" class="expandable-item-image">
           {{/if}}
-          <div class="ancestry-item-info">
-            <span class="ancestry-name">{{@root.selectedAncestryData.name}}</span>
+          <div class="expandable-item-info">
+            <span class="expandable-item-name">{{@root.selectedAncestryData.name}}</span>
           </div>
-          <button type="button" class="btn-open-ancestry" data-action="open-ancestry-item" title="Open item"></button>
+          <button type="button" class="btn-open-item" data-action="open-ancestry-item" title="Open item"></button>
           <button type="button" class="btn-remove-ancestry" data-action="remove-ancestry" title="Remove ancestry"></button>
         </div>
         {{#if @root.expandedAncestry}}
-        <div class="ancestry-item-description">
+        <div class="expandable-item-description">
           {{#if @root.selectedAncestryData.system.description}}
           {{{@root.selectedAncestryData.system.description}}}
           {{else}}
@@ -47,21 +47,21 @@
         {{/if}}
       </div>
       {{#if @root.selectedAncestryData.system.grants}}
-      <div class="ancestry-child-items">
+      <div class="granted-items-list">
         <h4>Ancestral Abilities</h4>
         {{#each @root.childItemsData}}
-        <div class="ancestry-item {{#if this.isExpanded}}expanded{{/if}}" data-action="toggle-child-expand" data-item-uuid="{{this.uuid}}">
-          <div class="ancestry-item-header">
+        <div class="expandable-item {{#if this.isExpanded}}expanded{{/if}}" data-action="toggle-child-expand" data-item-uuid="{{this.uuid}}">
+          <div class="expandable-item-header">
             {{#if this.img}}
-            <img src="{{this.img}}" alt="{{this.name}}" class="ancestry-item-image">
+            <img src="{{this.img}}" alt="{{this.name}}" class="expandable-item-image">
             {{/if}}
-            <div class="ancestry-item-info">
-              <span class="ancestry-name">{{this.name}}</span>
+            <div class="expandable-item-info">
+              <span class="expandable-item-name">{{this.name}}</span>
             </div>
-            <button type="button" class="btn-open-ancestry" data-action="open-child-item" data-uuid="{{this.uuid}}" title="Open item"></button>
+            <button type="button" class="btn-open-item" data-action="open-child-item" data-uuid="{{this.uuid}}" title="Open item"></button>
           </div>
           {{#if this.isExpanded}}
-          <div class="ancestry-item-description">
+          <div class="expandable-item-description">
             {{#if this.system.description}}
             {{{this.system.description}}}
             {{else}}

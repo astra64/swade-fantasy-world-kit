@@ -57,12 +57,8 @@ export class HindrancesTabHandler extends BaseTabHandler {
     // Setup expand/collapse toggle
     this._setupExpandToggleHandler(
       '[data-action="toggle-hindrance-expand"]',
-      () => {
-        const uuid = this.html.find('[data-action="toggle-hindrance-expand"]').attr('data-item-uuid');
-        return this.characterManager.character.hindrances?.[uuid]?.expanded || false;
-      },
-      (val) => {
-        const uuid = this.html.find('[data-action="toggle-hindrance-expand"]').attr('data-item-uuid');
+      (uuid) => this.characterManager.character.hindrances?.[uuid]?.expanded || false,
+      (uuid, val) => {
         if (this.characterManager.character.hindrances?.[uuid]) {
           this.characterManager.character.hindrances[uuid].expanded = val;
         }
@@ -77,8 +73,40 @@ export class HindrancesTabHandler extends BaseTabHandler {
       '[data-action="remove-hindrance"]',
       this._removeHindrance,
       (e) => $(e.currentTarget).closest('[data-item-uuid]')?.attr('data-item-uuid')
-          || $(e.currentTarget).closest('.hindrance-item').find('[data-item-uuid]').attr('data-item-uuid')
+          || $(e.currentTarget).closest('.item-card').find('[data-item-uuid]').attr('data-item-uuid')
     );
+
+    // Child items granted by this hindrance, same expand/open pattern as the Ancestry
+    // tab's granted abilities.
+    this.html.find('[data-action="toggle-child-expand"]').on('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const uuid = $(e.currentTarget).closest('[data-action="toggle-child-expand"]').attr('data-item-uuid');
+      this.characterManager.character.expandedChildItems[uuid] = !this.characterManager.character.expandedChildItems[uuid];
+      if (this.characterManager.character.expandedChildItems[uuid]) {
+        this.characterManager.pendingScrollTarget = `[data-action="toggle-child-expand"][data-item-uuid="${uuid}"] .expandable-item-header`;
+      }
+      this.characterManager.render();
+    });
+
+    this._setupOpenItemHandler('[data-action="open-child-item"]');
+
+    // Collapse/expand the whole "Granted by X" section, independent of each child's own
+    // description expand state, so it survives re-renders (kept in character state, not
+    // native <details> DOM state which would get wiped by the next render()).
+    this.html.find('[data-action="toggle-granted-section"]').on('click', (e) => {
+      e.preventDefault();
+      const uuid = $(e.currentTarget).attr('data-item-uuid');
+      if (!this.characterManager.character.expandedGrantedSections) {
+        this.characterManager.character.expandedGrantedSections = {};
+      }
+      const newState = !this.characterManager.character.expandedGrantedSections[uuid];
+      this.characterManager.character.expandedGrantedSections[uuid] = newState;
+      if (newState) {
+        this.characterManager.pendingScrollTarget = `[data-action="toggle-granted-section"][data-item-uuid="${uuid}"]`;
+      }
+      this.characterManager.render();
+    });
 
     // Setup major/minor radio toggles
     this.html.find('input[data-action="set-hindrance-major"]').on('change', (e) => {
@@ -136,14 +164,30 @@ export class HindrancesTabHandler extends BaseTabHandler {
     this.characterManager.render();
   }
 
+  /**
+   * Add a hindrance dropped onto the tab, whether or not it's in the configured
+   * compendium — matches an existing compendium hindrance by name if possible, otherwise
+   * adds it as a standalone entry (same fallback pattern as skills on the Traits tab).
+   */
   async _addHindranceByUuid(uuid) {
-    // Find the hindrance in compendium data
-    const hindrance = this.characterManager.compendiumData.hindrances.find(h => h.uuid === uuid);
-    if (hindrance) {
-      this._addHindrance(hindrance);
-    } else {
-      console.warn('[Hindrances] Could not find hindrance:', uuid);
+    let item = null;
+    try {
+      item = await getItemPreview(uuid);
+    } catch (e) {
+      console.warn('[Hindrances] Failed to fetch dropped item:', e);
     }
+
+    if (!item || item.type !== 'hindrance') {
+      ui.notifications.warn('Only hindrance items can be dropped on the Hindrances tab');
+      return;
+    }
+
+    const compendiumHindrance = this.characterManager.compendiumData.hindrances.find(
+      (h) => h.name.toLowerCase() === item.name.toLowerCase()
+    );
+
+    const hindrance = compendiumHindrance || { uuid, name: item.name, major: false };
+    this._addHindrance(hindrance);
   }
 
   async _setHindranceMajor(uuid, isMajor) {

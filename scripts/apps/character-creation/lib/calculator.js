@@ -32,11 +32,14 @@ export const FREE_CORE_SKILLS = [
 
 /**
  * Check if a skill is one of the 5 free core skills.
- * @param {string} skillName - Skill name (lowercase, with dashes)
+ * Accepts either display form ("Common Knowledge") or slug form ("common-knowledge").
+ * @param {string} skillName - Skill name
  * @returns {boolean} True if skill is a free core skill
  */
 export function isFreeCoreSkill(skillName) {
-  return FREE_CORE_SKILLS.includes(skillName?.toLowerCase());
+  if (!skillName) return false;
+  const normalized = skillName.toLowerCase().trim().replace(/\s+/g, '-');
+  return FREE_CORE_SKILLS.includes(normalized);
 }
 
 /**
@@ -54,6 +57,7 @@ export function initializeCharacter() {
     ancestry: null,
     expandedAncestry: false,
     expandedChildItems: {},
+    expandedGrantedSections: {},
 
     // Attributes: Each is {die: "d6", advances: 0}
     attributes: {
@@ -308,6 +312,67 @@ export function calculateSkillCost(skillName, targetDie, linkedAttributeDie, cur
 }
 
 /**
+ * Build a per-skill breakdown of skill point cost, for both totaling and debugging.
+ * Single source of truth for calculateTotalSkillPoints() below.
+ *
+ * @param {Object} character - Character object with skills
+ * @param {Object} skillCompendiumData - Compendium data with skill metadata (for linked attributes)
+ * @returns {Array} Array of {uuid, name, die, linkedAttrDie, isCore, fromAncestry, grantedDie, cost}
+ */
+export function getSkillPointBreakdown(character, skillCompendiumData = {}) {
+  const breakdown = [];
+
+  if (!character.skills || typeof character.skills !== 'object') {
+    return breakdown;
+  }
+
+  for (const [skillUuid, skillData] of Object.entries(character.skills)) {
+    if (!skillData.die) continue;
+
+    // Find skill metadata to get linked attribute and name (character.skills entries
+    // don't reliably carry their own name, so fall back to the compendium map, then to
+    // whatever the skill's own item data recorded when it isn't in the compendium at all)
+    const skillMeta = skillCompendiumData[skillUuid];
+    const linkedAttribute = skillMeta?.linkedAttribute || skillData.attribute;
+    const linkedAttrDie = linkedAttribute
+      ? character.attributes?.[linkedAttribute]?.die
+      : "d4";
+    const skillName = skillData.name || skillMeta?.name || "";
+
+    // Unskilled Attempt is a catch-all every actor has; it's never player-selected
+    // or changed, so it never contributes to the skill point budget.
+    if (skillName.toLowerCase() === 'unskilled attempt') continue;
+
+    const isCore = isFreeCoreSkill(skillName);
+
+    let cost;
+    if (skillData.fromAncestry) {
+      // Skills granted by ancestry are free up to their granted die tier only;
+      // increases above that tier still cost points normally.
+      const grantedDie = skillData.grantedDie || skillData.die;
+      const costToGranted = calculateSkillCost(skillName, grantedDie, linkedAttrDie, "d4");
+      const costToTarget = calculateSkillCost(skillName, skillData.die, linkedAttrDie, "d4");
+      cost = Math.max(0, costToTarget - costToGranted);
+    } else {
+      cost = calculateSkillCost(skillName, skillData.die, linkedAttrDie, "d4");
+    }
+
+    breakdown.push({
+      uuid: skillUuid,
+      name: skillName || '(unknown skill name)',
+      die: skillData.die,
+      linkedAttrDie,
+      isCore,
+      fromAncestry: !!skillData.fromAncestry,
+      grantedDie: skillData.grantedDie || null,
+      cost,
+    });
+  }
+
+  return breakdown;
+}
+
+/**
  * Calculate total skill points spent in character creation.
  *
  * @param {Object} character - Character object with skills
@@ -315,31 +380,7 @@ export function calculateSkillCost(skillName, targetDie, linkedAttributeDie, cur
  * @returns {number} Total points spent on skills
  */
 export function calculateTotalSkillPoints(character, skillCompendiumData = {}) {
-  let totalSpent = 0;
-
-  if (!character.skills || typeof character.skills !== 'object') {
-    return 0;
-  }
-
-  // For each skill, calculate cost from d4 to selected die
-  for (const [skillUuid, skillData] of Object.entries(character.skills)) {
-    if (!skillData.die) continue;
-
-    // Find skill metadata to get linked attribute
-    const skillMeta = skillCompendiumData[skillUuid];
-    const linkedAttrDie = skillMeta?.linkedAttribute
-      ? character.attributes?.[skillMeta.linkedAttribute]?.die
-      : "d4";
-
-    // Get skill name for core skill check
-    const skillName = skillData.name || "";
-
-    // Calculate cost from d4 to current die
-    const cost = calculateSkillCost(skillName, skillData.die, linkedAttrDie, "d4");
-    totalSpent += cost;
-  }
-
-  return totalSpent;
+  return getSkillPointBreakdown(character, skillCompendiumData).reduce((sum, s) => sum + s.cost, 0);
 }
 
 /**
@@ -508,6 +549,82 @@ export function isPerkSlotVisible(slots, index) {
 
   // If previous slot selected a 2-point allocation, this slot is consumed/hidden
   return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
+}
+
+/**
+ * Get available edge points granted by hindrance perk allocations.
+ * Each perk slot with "edge" selected grants 1 edge point.
+ *
+ * @param {Object} character - Character object with perkPointAllocations
+ * @returns {number} Available edge points
+ */
+export function calculateAvailableEdgePoints(character) {
+  const allocations = character.perkPointAllocations || [];
+  return allocations.filter((a) => a?.selected === 'edge').length;
+}
+
+/**
+ * Get bonus attribute points granted by hindrance perk allocations.
+ * Each perk slot with "attribute-boost" selected grants 1 extra attribute point.
+ *
+ * @param {Object} character - Character object with perkPointAllocations
+ * @returns {number} Bonus attribute points
+ */
+export function calculateBonusAttributePoints(character) {
+  const allocations = character.perkPointAllocations || [];
+  return allocations.filter((a) => a?.selected === 'attribute-boost').length;
+}
+
+/**
+ * Get bonus skill points granted by hindrance perk allocations.
+ * Each perk slot with "skill-point" selected grants 1 extra skill point.
+ *
+ * @param {Object} character - Character object with perkPointAllocations
+ * @returns {number} Bonus skill points
+ */
+export function calculateBonusSkillPoints(character) {
+  const allocations = character.perkPointAllocations || [];
+  return allocations.filter((a) => a?.selected === 'skill-point').length;
+}
+
+/**
+ * Count ancestral abilities that grant a free Edge at character creation (e.g. Humans'
+ * "Adaptable"), matched by name rather than compendium-specific data. This is setting/
+ * compendium-agnostic on purpose — the same ability name is reused across virtually every
+ * SWADE setting book, and the configurable name list (world setting) covers the rest.
+ *
+ * @param {Array} ancestralAbilities - Granted child items from the selected ancestry
+ * @param {Array<string>} bonusAbilityNames - Ability names (from settings) that grant a free Edge
+ * @returns {number} Bonus edge points granted by ancestry
+ */
+export function calculateAncestryBonusEdgePoints(ancestralAbilities = [], bonusAbilityNames = []) {
+  const normalizedNames = bonusAbilityNames
+    .map((n) => n.toLowerCase().trim())
+    .filter(Boolean);
+
+  if (!normalizedNames.length || !Array.isArray(ancestralAbilities)) {
+    return 0;
+  }
+
+  // Match as a whole word/segment rather than exact equality — ability items are commonly
+  // named "<Ancestry>-<Ability>" (e.g. "Humans-Adaptable") to disambiguate in a flat
+  // compendium list, so the configured name won't equal the full item name.
+  return ancestralAbilities.filter((item) => {
+    const itemName = (item?.name || '').toLowerCase().trim();
+    if (!itemName) return false;
+    return normalizedNames.some((name) => new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(itemName));
+  }).length;
+}
+
+/**
+ * Calculate how many edges the character has selected.
+ *
+ * @param {Object} character - Character object with edges
+ * @returns {number} Number of selected edges
+ */
+export function calculateUsedEdgePoints(character) {
+  if (!character.edges || typeof character.edges !== 'object') return 0;
+  return Object.keys(character.edges).length;
 }
 
 /**

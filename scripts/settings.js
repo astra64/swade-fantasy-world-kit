@@ -174,4 +174,13 @@ export function setupSettings(config) {
     type: Boolean,
     default: true
   });
+
+  game.settings.register(MODULE_ID, "bonusEdgePointAbilityNames", {
+    name: "Free-Edge Ancestral Ability Names",
+    hint: "Comma-separated ancestral ability names (e.g. 'Adaptable') that grant a free Edge at character creation. Matched by name, so this works with any ancestry from any compendium/setting — add more names here if another setting's Human (or other) ancestry uses a different term.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "Adaptable"
+  });
 }

@@ -102,8 +102,9 @@ export class BaseTabHandler {
   _setupExpandToggleHandler(selector, getState, setState) {
     this.html.find(selector).on('click', (e) => {
       e.preventDefault();
-      const newState = !getState();
-      setState(newState);
+      const uuid = $(e.currentTarget).attr('data-item-uuid');
+      const newState = !getState(uuid);
+      setState(uuid, newState);
       if (newState) {
         const target = $(e.currentTarget).attr('data-scroll-target') || selector;
         this.characterManager.pendingScrollTarget = target;

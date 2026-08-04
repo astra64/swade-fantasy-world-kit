@@ -60,7 +60,7 @@ export class AncestryTabHandler extends BaseTabHandler {
     this._setupExpandToggleHandler(
       '[data-action="toggle-ancestry-expand"]',
       () => this.characterManager.character.expandedAncestry,
-      (val) => { this.characterManager.character.expandedAncestry = val; }
+      (uuid, val) => { this.characterManager.character.expandedAncestry = val; }
     );
 
     // Setup child item expand/collapse
@@ -70,7 +70,7 @@ export class AncestryTabHandler extends BaseTabHandler {
       const uuid = $(e.currentTarget).closest('[data-action="toggle-child-expand"]').attr('data-item-uuid');
       this.characterManager.character.expandedChildItems[uuid] = !this.characterManager.character.expandedChildItems[uuid];
       if (this.characterManager.character.expandedChildItems[uuid]) {
-        this.characterManager.pendingScrollTarget = `[data-action="toggle-child-expand"][data-item-uuid="${uuid}"] .ancestry-item-header`;
+        this.characterManager.pendingScrollTarget = `[data-action="toggle-child-expand"][data-item-uuid="${uuid}"] .expandable-item-header`;
       }
       this.characterManager.render();
     });
