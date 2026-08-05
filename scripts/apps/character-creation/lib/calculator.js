@@ -75,6 +75,9 @@ export function initializeCharacter() {
     edges: {},
     hindrances: {},
 
+    // Gear: Each is {name, price, quantity, ...}, keyed by compendium/item uuid
+    gear: {},
+
     // Advancement tracking
     experience: 0,
     advances: 0,
@@ -625,6 +628,38 @@ export function calculateAncestryBonusEdgePoints(ancestralAbilities = [], bonusA
 export function calculateUsedEdgePoints(character) {
   if (!character.edges || typeof character.edges !== 'object') return 0;
   return Object.keys(character.edges).length;
+}
+
+/**
+ * Check whether the character's current Strength is below an item's minimum Strength
+ * requirement (weapons/armor). SWADE's actual penalty for being under minStr is a -1 die
+ * step on the relevant roll, not "can't use it" — so this is informational only, matching
+ * how edge prerequisites are shown (non-blocking hint), not a hard block on adding the item.
+ *
+ * @param {Object} character - Character object with attributes
+ * @param {string|null} minStrDie - Item's minimum Strength die (e.g. "d8"), or null/falsy if none
+ * @returns {boolean} True if the character's Strength die is below minStrDie
+ */
+export function isUnderMinStrength(character, minStrDie) {
+  if (!minStrDie) return false;
+  const strengthDie = character?.attributes?.strength?.die ?? 'd4';
+  return (DIE_VALUES[strengthDie] ?? 4) < (DIE_VALUES[minStrDie] ?? 4);
+}
+
+/**
+ * Calculate total gear cost (price × quantity, summed across all selected gear).
+ *
+ * @param {Object} character - Character object with gear
+ * @returns {number} Total silver spent on gear
+ */
+export function calculateGearCost(character) {
+  if (!character.gear || typeof character.gear !== 'object') return 0;
+
+  return Object.values(character.gear).reduce((sum, item) => {
+    const price = item.price ?? 0;
+    const quantity = item.quantity ?? 1;
+    return sum + price * quantity;
+  }, 0);
 }
 
 /**

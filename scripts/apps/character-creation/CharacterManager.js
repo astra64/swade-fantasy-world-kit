@@ -11,6 +11,7 @@ import {
   getSkills,
   getEdges,
   getHindrances,
+  getGearItems,
   getItemPreview
 } from './lib/compendium-utils.js';
 import {
@@ -31,6 +32,7 @@ import {
   calculateBonusAttributePoints,
   calculateBonusSkillPoints,
   calculateAncestryBonusEdgePoints,
+  calculateGearCost,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
@@ -38,7 +40,8 @@ import { AncestryTabHandler } from './handlers/AncestryTabHandler.js';
 import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TraitsTabHandler } from './handlers/TraitsTabHandler.js';
 import { EdgesTabHandler } from './handlers/EdgesTabHandler.js';
-import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, BUDGETS, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIPS } from './constants.js';
+import { GearTabHandler } from './handlers/GearTabHandler.js';
+import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIPS } from './constants.js';
 
 const MODULE_ID = 'swade-fantasy-world-kit';
 
@@ -49,6 +52,7 @@ export class CharacterManager extends FormApplication {
     hindrances: HindrancesTabHandler,
     traits: TraitsTabHandler,
     edges: EdgesTabHandler,
+    gear: GearTabHandler,
   };
 
   constructor(options = {}) {
@@ -65,6 +69,7 @@ export class CharacterManager extends FormApplication {
       skills: [],
       edges: [],
       hindrances: [],
+      gear: [],
     };
     this.skillsByAttribute = {};
 
@@ -151,6 +156,7 @@ export class CharacterManager extends FormApplication {
           this.compendiumData.skills = await getSkills();
           this.compendiumData.edges = await getEdges();
           this.compendiumData.hindrances = await getHindrances();
+          this.compendiumData.gear = await getGearItems();
           console.log('[CharacterManager] Compendium loaded. Skills count:', this.compendiumData.skills.length);
         } catch (error) {
           console.error('[Character Manager] Failed to load compendium data:', error);
@@ -188,6 +194,7 @@ export class CharacterManager extends FormApplication {
             skills: await this._detectSkillsFromActor(this.actor),
             edges: await this._detectEdgesFromActor(this.actor),
             hindrances: await this._detectHindrancesFromActor(this.actor),
+            gear: await this._detectGearFromActor(this.actor),
           };
         } else {
           this.character = initializeCharacter();
@@ -264,6 +271,7 @@ export class CharacterManager extends FormApplication {
       const edgePointsUsed = calculateUsedEdgePoints(this.character);
       const bonusAttributePoints = calculateBonusAttributePoints(this.character);
       const bonusSkillPoints = calculateBonusSkillPoints(this.character);
+      const gearCost = calculateGearCost(this.character);
 
       // Calculate perk points spent based on actual option costs
       const perkOptionCosts = {
@@ -293,6 +301,7 @@ export class CharacterManager extends FormApplication {
         skills: this.compendiumData.skills,
         edges: this.compendiumData.edges,
         hindrances: this.compendiumData.hindrances,
+        gearItems: this.compendiumData.gear,
         skillsByAttribute: this.skillsByAttribute,
         derivedStats: derivedStats,
         attributePointsUsed: attributePointsUsed,
@@ -306,6 +315,11 @@ export class CharacterManager extends FormApplication {
         perkPointsSpent: perkPointsSpent,
         edgePointsAvailable: edgePointsAvailable,
         edgePointsUsed: edgePointsUsed,
+        gearCost: gearCost,
+        // Starting funds come from SWADE's native pcStartingCurrency setting (doubled, per
+        // SWADE's own starting-funds convention) rather than a module-hardcoded number, so it
+        // stays correct if a GM changes that setting for their table.
+        gearBudget: currencyAmount,
         currentTab: this.currentTab,
         expandedAncestry: this.character.expandedAncestry,
         expandedChildItems: this.character.expandedChildItems || {},
@@ -318,6 +332,15 @@ export class CharacterManager extends FormApplication {
         ancestryBonuses: ancestryBonuses,
         attributeDescriptions: ATTRIBUTE_DESCRIPTIONS,
         attributeTips: ATTRIBUTE_TIPS,
+      };
+
+      // Snapshot for the Save confirmation check — cheaper to read back here than to
+      // recompute (edge points in particular depend on ancestry child items, which are
+      // async and already resolved above during this same getData() pass).
+      this._budgetSnapshot = {
+        attributePointsRemaining: data.attributePointsRemaining,
+        skillPointsRemaining: data.skillPointsRemaining,
+        edgePointsRemaining: edgePointsAvailable - edgePointsUsed,
       };
 
       return data;
@@ -341,6 +364,8 @@ export class CharacterManager extends FormApplication {
 
       // Form actions
       html.find('button[data-action="save"]').on('click', async () => {
+        const confirmed = await this._confirmUnspentPoints();
+        if (!confirmed) return;
         await this._createActor();
       });
 
@@ -598,9 +623,111 @@ export class CharacterManager extends FormApplication {
     return hindrances;
   }
 
+  /**
+   * Detect gear already on the actor (embedded Items of type gear/weapon/armor/shield) and
+   * map them to matching compendium entries by name. Items that aren't in the configured
+   * compendiums are still included, keyed by their own item uuid and built entirely from the
+   * actor's own item data — the compendium is only a suggestion source, not a filter on what
+   * can display. Excludes items granted by another item (e.g. ancestral abilities), same as
+   * Edges/Hindrances detection.
+   */
+  async _detectGearFromActor(actor) {
+    const gear = {};
+
+    for (const gearItem of actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy)) {
+      const compendiumGear = this.compendiumData.gear.find(
+        g => g.name.toLowerCase() === gearItem.name.toLowerCase()
+      );
+
+      const key = compendiumGear?.uuid || gearItem.uuid;
+      gear[key] = {
+        uuid: key,
+        name: compendiumGear?.name || gearItem.name,
+        price: compendiumGear?.price ?? gearItem.system?.price ?? 0,
+        quantity: gearItem.system?.quantity ?? 1,
+        minStr: compendiumGear?.minStr ?? gearItem.system?.minStr ?? null,
+        expanded: false,
+        img: gearItem.img || compendiumGear?.img || '',
+        description: gearItem.system?.description
+          ? await TextEditor.enrichHTML(gearItem.system.description, { async: true })
+          : '',
+      };
+    }
+
+    return gear;
+  }
+
   async _updateObject(event, formData) {
     // No-op on standard form submission
     return;
+  }
+
+  /**
+   * Replace the actor's gear/weapon/armor/shield items with the current selections,
+   * same create-embedded-with-compendiumUuid-flag pattern as Ancestry. Existing gear-type
+   * items are wiped first (rather than diffed) since this always writes the full set.
+   */
+  async _saveGearToActor(actor) {
+    // Resolve every selected item's full data BEFORE deleting the actor's existing gear —
+    // a non-compendium selection's uuid points at that existing embedded item itself, so
+    // deleting first would make it unresolvable when rebuilding it below.
+    const newItemsData = [];
+    for (const gearData of Object.values(this.character.gear || {})) {
+      const gearItem = await fromUuid(gearData.uuid);
+      if (!gearItem) continue;
+
+      const itemData = gearItem.toObject();
+      delete itemData._id;
+      itemData.system.quantity = gearData.quantity ?? 1;
+      newItemsData.push({ itemData, compendiumUuid: gearData.uuid });
+    }
+
+    const existingGear = actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy);
+    if (existingGear.length > 0) {
+      await actor.deleteEmbeddedDocuments('Item', existingGear.map(i => i.id));
+    }
+
+    for (const { itemData, compendiumUuid } of newItemsData) {
+      const created = await actor.createEmbeddedDocuments('Item', [itemData]);
+      if (created.length > 0) {
+        await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', compendiumUuid);
+      }
+    }
+  }
+
+  /**
+   * Block the save with a confirmation dialog if the character still has unspent Attribute,
+   * Skill, or Edge points — a likely mistake worth catching before it's written to the actor.
+   * Leftover Hindrance points and gear silver are intentionally NOT checked here: taking
+   * fewer hindrances or not spending every last coin isn't a mistake the way an unspent
+   * creation point usually is.
+   *
+   * @returns {Promise<boolean>} True if the user confirmed (or nothing was unspent)
+   */
+  async _confirmUnspentPoints() {
+    const snapshot = this._budgetSnapshot || {};
+    const unspent = [];
+    if ((snapshot.attributePointsRemaining ?? 0) > 0) {
+      unspent.push(`${snapshot.attributePointsRemaining} attribute point${snapshot.attributePointsRemaining === 1 ? '' : 's'}`);
+    }
+    if ((snapshot.skillPointsRemaining ?? 0) > 0) {
+      unspent.push(`${snapshot.skillPointsRemaining} skill point${snapshot.skillPointsRemaining === 1 ? '' : 's'}`);
+    }
+    if ((snapshot.edgePointsRemaining ?? 0) > 0) {
+      unspent.push(`${snapshot.edgePointsRemaining} edge point${snapshot.edgePointsRemaining === 1 ? '' : 's'}`);
+    }
+
+    if (unspent.length === 0) return true;
+
+    const result = await Dialog.confirm({
+      title: 'Unspent Points',
+      content: `<p>This character still has unspent ${unspent.join(', ')}. Save anyway?</p>`,
+      yes: () => true,
+      no: () => false,
+      defaultYes: false,
+    });
+
+    return result === true;
   }
 
   async _createActor() {
@@ -655,6 +782,8 @@ export class CharacterManager extends FormApplication {
           }
         }
 
+        await this._saveGearToActor(this.actor);
+
         ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
       } else {
         const actorData = {
@@ -686,6 +815,8 @@ export class CharacterManager extends FormApplication {
           }
         }
 
+        await this._saveGearToActor(newActor);
+
         ui.notifications.info(`[Character Creation] Created: ${this.character.name}`);
       }
 
@@ -714,6 +845,8 @@ Handlebars.registerHelper('objLength', (obj) => {
 });
 
 Handlebars.registerHelper('gte', (a, b) => a >= b);
+
+Handlebars.registerHelper('multiply', (a, b) => (a ?? 0) * (b ?? 0));
 
 Handlebars.registerHelper('capitalize', (str) => {
   if (typeof str !== 'string') return str;

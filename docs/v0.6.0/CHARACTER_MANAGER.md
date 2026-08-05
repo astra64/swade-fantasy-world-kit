@@ -1,6 +1,6 @@
 # Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Character Creation & Editing In Progress | Concept, Ancestry, Hindrances, Traits, Edges Tabs Complete and tested in-Foundry
+**Status:** Character Creation & Editing In Progress | Concept, Ancestry, Hindrances, Traits, Edges, Gear Tabs Complete — Gear tab not yet tested in-Foundry (implemented but unverified)
 
 ## Overview
 
@@ -224,13 +224,16 @@ Add ability to plan and manage character advancement progression (same tool or s
 **Estimated Lines:** 150-200 (template + handler)
 
 #### Tab 6: Gear
-- [ ] Drag-drop zone for items from compendiums
-- [ ] List items with individual cost, quantity, running total
-- [ ] Show remaining budget (300 - used)
-- [ ] Remove item button
-- [ ] **New Player Guidance:**
-  > "Pick your starting equipment. You have 300 silver to spend. Drag items from the compendium list on the left into your gear. Don't sweat perfection—you can't break anything here, and you'll pick up more loot in the game. A new character usually grabs one good weapon, armor if available, and handy adventuring gear like rope or a torch. Anything over budget is fine, but the GM might tell you to trim down."
-- [ ] **Validation:** Warn if over 300 silver budget
+- [x] Drag-drop zone for items from compendiums (gear, weapons, armor & shields — same search dropdown + drag-drop pattern as Edges/Hindrances)
+- [x] List items with individual cost, quantity (+/- controls), running total — duplicates allowed by design (picking the same item again just bumps quantity instead of adding a second card)
+- [x] Show remaining budget, displayed in the sticky footer while on the Gear tab. Budget is **not** the original spec's hardcoded 300 — it reads SWADE's native `pcStartingCurrency` world setting (doubled, per SWADE's own starting-funds convention), so it tracks whatever a GM has that set to for their table.
+- [x] Remove item button
+- [x] **New Player Guidance:** (uses existing `TAB_GUIDANCE.gear` text)
+- [x] **Validation:** Non-blocking; footer budget value turns red when over budget (no hard block, consistent with Edges/Hindrances)
+- [x] **Min-Strength warning:** items with a `system.minStr` value (weapons and armor) show an inline "Requires Strength dX to use without penalty" hint, in `warning-text` red when the character's current Strength die is below it, plus a toast on add. Informational only — SWADE's actual penalty is a -1 die step on the relevant roll, not "can't use," so this never blocks adding the item.
+- [x] Save button now appears on every tab, not just Gear/Summary — see "Save button & unspent-points confirmation" below.
+
+**Not yet done:** Weight/encumbrance tracking (not in original spec — only silver cost is budgeted)
 
 **Estimated Lines:** 150-200 (template + handler)
 
@@ -322,9 +325,9 @@ Add ability to plan and manage character advancement progression (same tool or s
   - [x] Hindrances/edges detection from actor Items (`actor.itemTypes.hindrance` / `actor.itemTypes.edge`)
   - [x] Attribute values extraction from actor system data
   - [x] Skill values extraction from actor Items (`actor.itemTypes.skill`)
-  - [ ] Gear detection from actor inventory
+  - [x] Gear detection from actor inventory (`_detectGearFromActor()` — reads `gear`/`weapon`/`armor`/`shield` type Items, matched to the gear/weapons/armor compendiums by name, same fallback pattern as Edges/Hindrances)
 
-**Note:** Prepopulation (read side) for Skills/Edges/Hindrances is now implemented per-tab, ahead of Save (write side) as originally planned — reads work by matching item names against the compendium, same fallback pattern Ancestry already used. Save (`_createActor()`) is still a scaffold and remains scoped to the Summary tab; once it creates real embedded Items there, it should also set the `compendiumUuid` flag (like Ancestry does) so detection can prefer the flag over name-matching.
+**Note:** Prepopulation (read side) for Skills/Edges/Hindrances is now implemented per-tab, ahead of Save (write side) as originally planned — reads work by matching item names against the compendium, same fallback pattern Ancestry already used. Save (`_createActor()`) still writes Skills/Edges/Hindrances as raw `system.skills`/`system.edges`/`system.hindrances` data rather than real embedded Items (a scaffold gap, since SWADE actually reads these from `actor.itemTypes.*`, not that schema) — this is the one piece still deferred to the Summary tab. Gear is the exception: `_saveGearToActor()` (added with the Gear tab) already creates real embedded Items with the `compendiumUuid` flag, same pattern as Ancestry, so it isn't blocked on Summary landing.
 
 **Estimated Scope:** 200-300 lines (detection + prepopulation logic)
 
@@ -347,6 +350,20 @@ Add ability to plan and manage character advancement progression (same tool or s
 - Edge prerequisite enforcement → Nice UI warnings already planned
 - Ancestry-specific attribute caps (e.g., "d12+1 Vigor") → Basic support via metadata
 - Skill grouping optimization → Start flat, optimize if testing shows need
+
+---
+
+## Cross-Tab Enhancements (added during Gear tab work, not tab-specific)
+
+### Save Button & Unspent-Points Confirmation
+- The footer's Save/Cancel buttons now show on every tab, not just Gear/Summary — needed since Summary doesn't exist yet and Save was otherwise unreachable in the running app.
+- Clicking Save now checks for unspent Attribute/Skill/Edge points first. If any exist, a blocking `Dialog.confirm` ("This character still has unspent X. Save anyway?") must be explicitly confirmed before `_createActor()` runs. Cancelling the dialog (or the confirm returning anything but `true`) aborts the save.
+- Deliberately **not** checked: leftover Hindrance points or unspent gear silver — neither is really a "mistake" the way an unspent creation point usually is (fewer hindrances or not spending every coin is a valid choice).
+- Implementation: `CharacterManager._confirmUnspentPoints()`, reading a `this._budgetSnapshot` cached at the end of the last `getData()` call (cheaper than recomputing edge points, which depend on async ancestry child-item data).
+
+### Configurable Additional Compendium Packs
+- Five new world settings (`additionalAncestryPacks`, `additionalSkillPacks`, `additionalEdgePacks`, `additionalHindrancePacks`, `additionalGearPacks` in `scripts/settings.js`) let a GM merge in packs from other modules/homebrew alongside the built-in Fantasy packs — comma/semicolon/whitespace-separated pack IDs, same parsing convention as `extraVisiblePacks`.
+- This is additive only: it does **not** replace `FANTASY_PACKS` in `compendium-utils.js`. A future full override/replacement model (letting a GM point Character Manager at a different setting's compendiums entirely, or the standalone-module extraction noted in DEVELOPMENT.md) is a separate, bigger piece of work, not yet started.
 
 ---
 

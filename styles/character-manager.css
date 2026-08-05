@@ -810,6 +810,38 @@
   flex-shrink: 0;
 }
 
+.swade-character-manager .gear-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.swade-character-manager .btn-qty-adjust {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 70%, white 30%);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.swade-character-manager .btn-qty-adjust:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
+}
+
+.swade-character-manager .gear-qty-value {
+  min-width: 1.25rem;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-dark-primary);
+}
+
 .swade-character-manager .item-card-image-wrapper {
   flex-shrink: 0;
 }

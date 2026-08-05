@@ -27,6 +27,27 @@ const FANTASY_PACKS = {
 };
 
 /**
+ * Read a comma/semicolon/whitespace-separated pack ID list from a module setting.
+ * Used to merge GM-added compendiums (e.g. a homebrew supplement) into Character Manager's
+ * built-in Fantasy pack lists, without replacing them. Returns [] if the setting isn't
+ * registered yet or is empty — additional packs are opt-in, never required.
+ *
+ * @param {string} settingKey - Module setting key holding the pack ID list
+ * @returns {Array<string>} Pack IDs
+ */
+function getAdditionalPackIds(settingKey) {
+  try {
+    const raw = game.settings?.get?.(MODULE_ID, settingKey) ?? "";
+    return raw
+      .split(/[,;\s]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  } catch (error) {
+    return [];
+  }
+}
+
+/**
  * Check if a pack is visible to the current user based on curated mode settings.
  * Gracefully handles missing settings (returns true if settings unavailable).
  * 
@@ -111,15 +132,30 @@ async function fetchPackItems(packId, itemType = null) {
 }
 
 /**
- * Get all ancestries from curated compendium.
+ * Fetch items of a given type from several packs at once and merge into one sorted list —
+ * used to combine a built-in Fantasy pack with any GM-configured additional packs.
+ *
+ * @param {Array<string>} packIds - Pack collection IDs
+ * @param {string} [itemType] - Filter by item type
+ * @returns {Promise<Array>} Array of {name, uuid} objects sorted alphabetically by name
+ */
+async function fetchPackItemsMulti(packIds, itemType = null) {
+  const lists = await Promise.all(packIds.map((packId) => fetchPackItems(packId, itemType)));
+  const items = lists.flat();
+  items.sort((a, b) => a.name.localeCompare(b.name));
+  return items;
+}
+
+/**
+ * Get all ancestries from curated + any GM-configured additional compendiums.
  * Filters to type='ancestry' to exclude child abilities.
  * Respects curated visibility settings if enabled.
  * Read-only; returns plain objects.
- * 
+ *
  * @returns {Promise<Array>} Array of {name, uuid} objects
  */
 export async function getAncestries() {
-  return fetchPackItems(FANTASY_PACKS.ancestries, 'ancestry');
+  return fetchPackItemsMulti([FANTASY_PACKS.ancestries, ...getAdditionalPackIds('additionalAncestryPacks')], 'ancestry');
 }
 
 /**
@@ -140,7 +176,7 @@ export async function getAncestries() {
  * @returns {Promise<Array>} Array of {name, uuid, attribute, description} objects sorted alphabetically
  */
 export async function getSkills() {
-  const basicItems = await fetchPackItems(FANTASY_PACKS.skills, 'skill');
+  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.skills, ...getAdditionalPackIds('additionalSkillPacks')], 'skill');
 
   // Fetch full item data in parallel to get system.attribute and description
   const enriched = await Promise.all(basicItems.map(async (item) => {
@@ -174,7 +210,7 @@ export async function getSkills() {
  * @returns {Promise<Array>} Array of {name, uuid, description, img, requirements} objects sorted alphabetically
  */
 export async function getEdges() {
-  const basicItems = await fetchPackItems(FANTASY_PACKS.edges, 'edge');
+  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.edges, ...getAdditionalPackIds('additionalEdgePacks')], 'edge');
 
   const enriched = await Promise.all(basicItems.map(async (item) => {
     try {
@@ -215,7 +251,7 @@ export async function getEdges() {
  * @returns {Promise<Array>} Array of {name, uuid, major, description} objects sorted alphabetically
  */
 export async function getHindrances() {
-  const basicItems = await fetchPackItems(FANTASY_PACKS.hindrances, 'hindrance');
+  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.hindrances, ...getAdditionalPackIds('additionalHindrancePacks')], 'hindrance');
 
   // Fetch full item data in parallel to get system.major flag
   const enriched = await Promise.all(basicItems.map(async (item) => {
@@ -244,6 +280,50 @@ export async function getHindrances() {
     };
   }));
 
+  return enriched;
+}
+
+/**
+ * Get all starting-equipment items (gear, weapons, armor & shields) from curated
+ * compendiums. Fetches full item data to include price, weight, image, and description.
+ * Respects curated visibility settings if enabled.
+ * Read-only; returns plain objects with metadata.
+ *
+ * @returns {Promise<Array>} Array of {name, uuid, price, weight, description, img, type, minStr} objects sorted alphabetically
+ */
+export async function getGearItems() {
+  const packIds = [
+    FANTASY_PACKS.gear,
+    FANTASY_PACKS.weapons,
+    FANTASY_PACKS.armor,
+    ...getAdditionalPackIds("additionalGearPacks"),
+  ];
+  const basicItems = await fetchPackItemsMulti(packIds);
+
+  const enriched = await Promise.all(basicItems.map(async (item) => {
+    try {
+      const fullItem = await getItemPreview(item.uuid);
+      if (fullItem) {
+        return {
+          name: fullItem.name,
+          uuid: fullItem.uuid,
+          price: fullItem.system?.price ?? 0,
+          weight: fullItem.system?.weight ?? 0,
+          description: fullItem.system?.description ?? '',
+          img: fullItem.img || '',
+          type: fullItem.type,
+          // Minimum Strength die needed to use this item without penalty (weapons/armor).
+          // Not every gear item has one — items without it never trigger the Gear tab's warning.
+          minStr: fullItem.system?.minStr || null,
+        };
+      }
+    } catch (error) {
+      console.warn(`[Character Creation] Failed to fetch gear item ${item.uuid}:`, error);
+    }
+    return { name: item.name, uuid: item.uuid, price: 0, weight: 0, description: '', img: '', type: '' };
+  }));
+
+  enriched.sort((a, b) => a.name.localeCompare(b.name));
   return enriched;
 }
 

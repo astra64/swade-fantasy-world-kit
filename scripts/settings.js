@@ -183,4 +183,52 @@ export function setupSettings(config) {
     type: String,
     default: "Adaptable"
   });
+
+  // Character Manager: additional compendium packs, merged in alongside this module's
+  // built-in Fantasy packs (not a replacement for them). Comma/semicolon/whitespace-separated
+  // pack IDs, e.g. "my-module.custom-edges". Each is scoped to the data type it feeds.
+  game.settings.register(MODULE_ID, "additionalAncestryPacks", {
+    name: "Character Manager: Additional Ancestry Packs",
+    hint: "Comma-separated compendium pack IDs (e.g. 'my-module.custom-ancestries') to include alongside the built-in Fantasy ancestries in Character Manager.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
+
+  game.settings.register(MODULE_ID, "additionalSkillPacks", {
+    name: "Character Manager: Additional Skill Packs",
+    hint: "Comma-separated compendium pack IDs to include alongside the built-in Fantasy skills in Character Manager.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
+
+  game.settings.register(MODULE_ID, "additionalEdgePacks", {
+    name: "Character Manager: Additional Edge Packs",
+    hint: "Comma-separated compendium pack IDs to include alongside the built-in Fantasy edges in Character Manager.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
+
+  game.settings.register(MODULE_ID, "additionalHindrancePacks", {
+    name: "Character Manager: Additional Hindrance Packs",
+    hint: "Comma-separated compendium pack IDs to include alongside the built-in Fantasy hindrances in Character Manager.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
+
+  game.settings.register(MODULE_ID, "additionalGearPacks", {
+    name: "Character Manager: Additional Gear Packs",
+    hint: "Comma-separated compendium pack IDs (gear, weapons, or armor) to include alongside the built-in Fantasy equipment in Character Manager.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
 }

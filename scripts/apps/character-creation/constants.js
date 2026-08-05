@@ -49,6 +49,7 @@ export const COMPENDIUM_PACKS = {
   skills: 'swade-fantasy-world-kit.skills-fantasy',
   edges: 'swade-fantasy-world-kit.edges-fantasy',
   hindrances: 'swade-fantasy-world-kit.hindrances-fantasy',
+  gear: 'swade-fantasy-world-kit.gear-fantasy',
 };
 
 // Budget limits
@@ -56,7 +57,6 @@ export const BUDGETS = {
   attributes: 5,
   skills: 12,
   hindrances: 4,
-  gear: 300,
 };
 
 // Tab names

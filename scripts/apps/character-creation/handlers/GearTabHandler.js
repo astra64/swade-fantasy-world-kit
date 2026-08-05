@@ -1,0 +1,181 @@
+import { BaseTabHandler } from './BaseTabHandler.js';
+import { getItemPreview } from '../lib/compendium-utils.js';
+import { calculateGearCost, isUnderMinStrength } from '../lib/calculator.js';
+
+export class GearTabHandler extends BaseTabHandler {
+  getTabName() {
+    return 'gear';
+  }
+
+  getCompendiumPackKey() {
+    return 'gear';
+  }
+
+  getCompendiumPackLabel() {
+    return 'Gear';
+  }
+
+  getDropdownConfig() {
+    // Unlike Edges/Hindrances, duplicates are allowed here — picking the same item
+    // again just bumps its quantity, so the dropdown always shows the full list.
+    return {
+      items: this.characterManager.compendiumData.gear,
+      placeholder: 'Select Gear...',
+      onSelect: (item) => this._addGear(item),
+      inputSelector: '.gear-search',
+      menuSelector: '.gear-dropdown-menu',
+      optionClass: 'dropdown-option',
+    };
+  }
+
+  getDropdownContainerSelector() {
+    return '.search-container';
+  }
+
+  getAddButtonSelector() {
+    return 'button[data-action="add-gear"]';
+  }
+
+  getCompendiumButtonSelector() {
+    return 'button[data-action="open-gear-compendium"]';
+  }
+
+  getClearSearchButtonSelector() {
+    return 'button[data-action="clear-gear-search"]';
+  }
+
+  getSearchInputSelector() {
+    return '.gear-search';
+  }
+
+  _handleDragDrop(uuid) {
+    this._addGearByUuid(uuid);
+  }
+
+  _setupCustomHandlers() {
+    this._setupExpandToggleHandler(
+      '[data-action="toggle-gear-expand"]',
+      (uuid) => this.characterManager.character.gear?.[uuid]?.expanded || false,
+      (uuid, val) => {
+        if (this.characterManager.character.gear?.[uuid]) {
+          this.characterManager.character.gear[uuid].expanded = val;
+        }
+      }
+    );
+
+    this._setupOpenItemHandler('[data-action="open-gear-item"]');
+
+    this._setupRemoveHandler(
+      '[data-action="remove-gear"]',
+      this._removeGear,
+      (e) => $(e.currentTarget).closest('[data-item-uuid]')?.attr('data-item-uuid')
+          || $(e.currentTarget).closest('.item-card').find('[data-item-uuid]').attr('data-item-uuid')
+    );
+
+    this.html.find('[data-action="increment-gear-qty"]').on('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const uuid = $(e.currentTarget).attr('data-item-uuid');
+      this._adjustQuantity(uuid, 1);
+    });
+
+    this.html.find('[data-action="decrement-gear-qty"]').on('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const uuid = $(e.currentTarget).attr('data-item-uuid');
+      this._adjustQuantity(uuid, -1);
+    });
+  }
+
+  async _addGear(item) {
+    if (!item || !item.uuid) return;
+
+    // Same item picked again just bumps quantity — gear allows duplicates.
+    if (this.characterManager.character.gear?.[item.uuid]) {
+      this._adjustQuantity(item.uuid, 1);
+      return;
+    }
+
+    let itemData = null;
+    try {
+      itemData = await getItemPreview(item.uuid);
+    } catch (e) {
+      console.warn('[Gear] Failed to fetch full item data:', e);
+    }
+
+    if (!this.characterManager.character.gear) {
+      this.characterManager.character.gear = {};
+    }
+
+    const minStr = item.minStr ?? itemData?.system?.minStr ?? null;
+
+    this.characterManager.character.gear[item.uuid] = {
+      uuid: item.uuid,
+      name: item.name,
+      price: item.price ?? itemData?.system?.price ?? 0,
+      quantity: 1,
+      minStr,
+      expanded: false,
+      img: itemData?.img || '',
+      description: itemData?.system?.description ?
+        await TextEditor.enrichHTML(itemData.system.description, { async: true }) : '',
+    };
+
+    if (isUnderMinStrength(this.characterManager.character, minStr)) {
+      ui.notifications.warn(`${item.name} requires Strength ${minStr} to use without penalty — your character is below that.`);
+    }
+
+    this.characterManager.render();
+  }
+
+  /**
+   * Add gear dropped onto the tab, whether or not it's in the configured gear compendium —
+   * matches an existing gear/weapon/armor compendium entry by name if possible, otherwise
+   * adds it as a standalone entry (same fallback pattern as skills on the Traits tab).
+   */
+  async _addGearByUuid(uuid) {
+    let item = null;
+    try {
+      item = await getItemPreview(uuid);
+    } catch (e) {
+      console.warn('[Gear] Failed to fetch dropped item:', e);
+    }
+
+    if (!item || !['gear', 'weapon', 'armor', 'shield'].includes(item.type)) {
+      ui.notifications.warn('Only gear, weapon, or armor items can be dropped on the Gear tab');
+      return;
+    }
+
+    const compendiumItem = this.characterManager.compendiumData.gear.find(
+      (g) => g.name.toLowerCase() === item.name.toLowerCase()
+    );
+
+    const gearEntry = compendiumItem || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null };
+    this._addGear(gearEntry);
+  }
+
+  _adjustQuantity(uuid, delta) {
+    const gearItem = this.characterManager.character.gear?.[uuid];
+    if (!gearItem) return;
+
+    const newQuantity = (gearItem.quantity ?? 1) + delta;
+    if (newQuantity <= 0) {
+      this._removeGear(uuid);
+      return;
+    }
+
+    gearItem.quantity = newQuantity;
+    this.characterManager.render();
+  }
+
+  _removeGear(uuid) {
+    if (this.characterManager.character.gear?.[uuid]) {
+      delete this.characterManager.character.gear[uuid];
+      this.characterManager.render();
+    }
+  }
+
+  _getTotalCost() {
+    return calculateGearCost(this.characterManager.character);
+  }
+}

@@ -629,7 +629,7 @@ async function registerTemplatePartials() {
     // 2. Include it in templates/character-creation/character-manager.hbs with {{> partial-name}}
     // 3. ADD THE PARTIAL NAME TO THIS ARRAY so it gets registered with Handlebars
     // Without this registration step, the partial will not load and the template will fail silently
-    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab', 'traits-tab', 'edges-tab'];
+    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab', 'traits-tab', 'edges-tab', 'gear-tab'];
     for (const partial of partials) {
       const path = `modules/${MODULE_ID}/templates/character-creation/_components/${partial}.hbs`;
       const html = await fetch(path).then(r => {
