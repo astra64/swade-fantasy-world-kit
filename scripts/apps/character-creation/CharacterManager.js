@@ -129,10 +129,8 @@ export class CharacterManager extends FormApplication {
     const scrollPos = this.element?.find('.form-tabs')?.scrollTop() || 0;
     const tabScrollPos = this.element?.find('.tab.active')?.scrollTop() || 0;
 
-    const renderStart = performance.now();
     try {
       const result = await super.render(force, options);
-      console.log(`[CharacterManager] render() total: ${(performance.now() - renderStart).toFixed(1)}ms`);
 
       // Use requestAnimationFrame (not setTimeout) so the restore lands before the
       // browser's next paint — setTimeout(0) is a macrotask and lets the reset-to-top
@@ -166,27 +164,17 @@ export class CharacterManager extends FormApplication {
   }
 
   async getData(options = {}) {
-    const getDataStart = performance.now();
     try {
       // Fetch compendium data if not cached (needed before character detection below).
       // Cached at module level, so this only runs once per session, not once per open.
-      const compendiumStart = performance.now();
       if (!compendiumCache.loaded) {
-        console.log('[CharacterManager] Loading compendium data...');
         try {
-          const timed = (label, promise) => {
-            const start = performance.now();
-            return promise.then((result) => {
-              console.log(`[CharacterManager]   ${label}: ${(performance.now() - start).toFixed(1)}ms (${result.length} items)`);
-              return result;
-            });
-          };
           const [ancestries, skills, edges, hindrances, gear] = await Promise.all([
-            timed('ancestries', getAncestries()),
-            timed('skills', getSkills()),
-            timed('edges', getEdges()),
-            timed('hindrances', getHindrances()),
-            timed('gear', getGearItems()),
+            getAncestries(),
+            getSkills(),
+            getEdges(),
+            getHindrances(),
+            getGearItems(),
           ]);
           compendiumCache.ancestries = ancestries;
           compendiumCache.skills = skills;
@@ -194,19 +182,14 @@ export class CharacterManager extends FormApplication {
           compendiumCache.hindrances = hindrances;
           compendiumCache.gear = gear;
           compendiumCache.loaded = true;
-          console.log(`[CharacterManager] Compendium loaded in ${(performance.now() - compendiumStart).toFixed(1)}ms. Skills count:`, this.compendiumData.skills.length);
         } catch (error) {
           console.error('[Character Manager] Failed to load compendium data:', error);
           ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
         }
-      } else {
-        console.log(`[CharacterManager] Using cached compendium data (${(performance.now() - compendiumStart).toFixed(1)}ms check). Skills count:`, this.compendiumData.skills.length);
       }
 
       // Initialize character on first open (after compendium data is available, so
       // existing actor Skills/Edges/Hindrances can be matched to compendium entries)
-      const characterInitStart = performance.now();
-      const isFirstInit = !this.character;
       if (!this.character) {
         if (!this.actor) {
           // This tool only ever edits an existing actor — it has no "create a new
@@ -272,15 +255,11 @@ export class CharacterManager extends FormApplication {
 
         this._initializeFreeCoreSkills();
       }
-      if (isFirstInit) {
-        console.log(`[CharacterManager] Character init (skills/edges/hindrances/gear detection) took ${(performance.now() - characterInitStart).toFixed(1)}ms`);
-      }
 
       // Always rebuild skills by attribute (needed for renders after character changes)
       this._buildSkillsByAttribute();
 
       // Fetch ancestry preview if selected
-      const ancestryStart = performance.now();
       let selectedAncestryData = null;
       let childItemsData = [];
       if (this.character.ancestry) {
@@ -292,12 +271,10 @@ export class CharacterManager extends FormApplication {
           selectedAncestryData.system.description = await TextEditor.enrichHTML(selectedAncestryData.system.description, { async: true });
         }
       }
-      console.log(`[CharacterManager] Ancestry preview + child items took ${(performance.now() - ancestryStart).toFixed(1)}ms`);
 
       // Some edges (e.g. Arcane Backgrounds) and hindrances grant other edges/hindrances as
       // child items, the same way an ancestry grants ancestral abilities. Build the same kind
       // of nested display data for each selected edge/hindrance, keyed by its own uuid.
-      const childItemsStart = performance.now();
       const edgeUuids = Object.keys(this.character.edges || {});
       const edgeChildResults = await Promise.all(edgeUuids.map((uuid) => this._getGrantedChildItems(uuid)));
       const edgeChildItems = {};
@@ -311,7 +288,6 @@ export class CharacterManager extends FormApplication {
       hindranceUuids.forEach((uuid, i) => {
         if (hindranceChildResults[i].length) hindranceChildItems[uuid] = hindranceChildResults[i];
       });
-      console.log(`[CharacterManager] Edge/hindrance child items (${edgeUuids.length} edges, ${hindranceUuids.length} hindrances) took ${(performance.now() - childItemsStart).toFixed(1)}ms`);
 
       const derivedStats = calculateDerivedStats(this.character);
       const attributePointsUsed = calculateTotalAttributePoints(this.character);
@@ -415,7 +391,6 @@ export class CharacterManager extends FormApplication {
         edgePointsRemaining: edgePointsAvailable - edgePointsUsed,
       };
 
-      console.log(`[CharacterManager] getData() total: ${(performance.now() - getDataStart).toFixed(1)}ms`);
       return data;
     } catch (error) {
       console.error('[CharacterManager] getData() failed:', error);
