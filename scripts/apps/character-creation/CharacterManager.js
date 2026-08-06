@@ -33,6 +33,8 @@ import {
   calculateBonusSkillPoints,
   calculateAncestryBonusEdgePoints,
   calculateGearCost,
+  calculateStartingFunds,
+  parseRichFundsMultipliers,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
@@ -195,6 +197,10 @@ export class CharacterManager extends FormApplication {
             edges: await this._detectEdgesFromActor(this.actor),
             hindrances: await this._detectHindrancesFromActor(this.actor),
             gear: await this._detectGearFromActor(this.actor),
+            gearFundsOverride: this.actor.getFlag(MODULE_ID, 'gearFundsOverride') ?? null,
+            // UI-only toggle for the Gear tab's override input, not persisted itself — starts
+            // revealed if the actor already has an override flag set from a previous save.
+            showGearFundsOverride: (this.actor.getFlag(MODULE_ID, 'gearFundsOverride') ?? null) !== null,
           };
         } else {
           this.character = initializeCharacter();
@@ -286,10 +292,21 @@ export class CharacterManager extends FormApplication {
         return sum + cost;
       }, 0);
 
-      // Get currency settings from SWADE system
+      // Get currency settings from SWADE system. Wealth Die / no-wealth tables have no numeric
+      // currency field at all — rather than building parallel logic for those uncommon setting
+      // rules, all currency tracking (budget, override, Extra Funds perk) is simply hidden and
+      // left for the table to handle manually when this isn't 'currency'.
+      const usesCurrency = game.settings.get('swade', 'wealthType') === 'currency';
       const currencyName = game.settings.get('swade', 'currencyName') || 'Silver';
       const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
+      // Extra Funds hindrance perk grants a bonus equal to twice the setting's starting
+      // amount — kept separate from the Gear tab's startingFunds formula below, which has
+      // no unconditional doubling of its own.
       const currencyAmount = pcStartingCurrency * 2;
+      const richFundsMultipliers = parseRichFundsMultipliers(
+        game.settings.get(MODULE_ID, 'richFundsMultipliers')
+      );
+      const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
 
       const data = {
         character: this.character,
@@ -316,10 +333,15 @@ export class CharacterManager extends FormApplication {
         edgePointsAvailable: edgePointsAvailable,
         edgePointsUsed: edgePointsUsed,
         gearCost: gearCost,
-        // Starting funds come from SWADE's native pcStartingCurrency setting (doubled, per
-        // SWADE's own starting-funds convention) rather than a module-hardcoded number, so it
-        // stays correct if a GM changes that setting for their table.
-        gearBudget: currencyAmount,
+        // Starting funds come from SWADE's native pcStartingCurrency setting, adjusted by any
+        // matched Rich/Filthy Rich-type edge and Extra Funds perk allocations, or replaced
+        // outright by the GM's manual override — see calculateStartingFunds().
+        gearBudget: startingFunds,
+        // Counts down as gear is added (budget minus spend), not up — matches how a player
+        // actually tracks shopping money, rather than a spent-so-far total.
+        gearRemaining: startingFunds - gearCost,
+        gearFundsOverride: this.character.gearFundsOverride ?? '',
+        usesCurrency: usesCurrency,
         currentTab: this.currentTab,
         expandedAncestry: this.character.expandedAncestry,
         expandedChildItems: this.character.expandedChildItems || {},
@@ -663,35 +685,93 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
-   * Replace the actor's gear/weapon/armor/shield items with the current selections,
-   * same create-embedded-with-compendiumUuid-flag pattern as Ancestry. Existing gear-type
-   * items are wiped first (rather than diffed) since this always writes the full set.
+   * Reconcile the actor's gear/weapon/armor/shield items with the current selections. Never
+   * deletes and recreates an item that's already on the actor — only its `quantity` is ever
+   * patched in place, so any homebrew tweaks to an existing item are always preserved (at the
+   * cost of not auto-picking-up later compendium edits, an accepted tradeoff). New selections
+   * are created fresh from their source item; anything on the actor no longer in the current
+   * selection (an explicit Remove) is deleted.
    */
   async _saveGearToActor(actor) {
-    // Resolve every selected item's full data BEFORE deleting the actor's existing gear —
-    // a non-compendium selection's uuid points at that existing embedded item itself, so
-    // deleting first would make it unresolvable when rebuilding it below.
-    const newItemsData = [];
-    for (const gearData of Object.values(this.character.gear || {})) {
-      const gearItem = await fromUuid(gearData.uuid);
-      if (!gearItem) continue;
-
-      const itemData = gearItem.toObject();
-      delete itemData._id;
-      itemData.system.quantity = gearData.quantity ?? 1;
-      newItemsData.push({ itemData, compendiumUuid: gearData.uuid });
-    }
-
     const existingGear = actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy);
-    if (existingGear.length > 0) {
-      await actor.deleteEmbeddedDocuments('Item', existingGear.map(i => i.id));
+    const existingByUuid = new Map(existingGear.map(item => [item.uuid, item]));
+    const toDelete = new Set(existingGear.map(item => item.id));
+
+    const toCreate = [];
+    const toPatchQuantity = [];
+
+    for (const gearData of Object.values(this.character.gear || {})) {
+      const existingItem = existingByUuid.get(gearData.uuid);
+      if (existingItem) {
+        toDelete.delete(existingItem.id);
+        toPatchQuantity.push({ id: existingItem.id, quantity: gearData.quantity ?? 1 });
+      } else {
+        const sourceItem = await fromUuid(gearData.uuid);
+        if (!sourceItem) continue;
+        const itemData = sourceItem.toObject();
+        delete itemData._id;
+        itemData.system.quantity = gearData.quantity ?? 1;
+        toCreate.push({ itemData, compendiumUuid: gearData.uuid });
+      }
     }
 
-    for (const { itemData, compendiumUuid } of newItemsData) {
+    if (toDelete.size > 0) {
+      await actor.deleteEmbeddedDocuments('Item', Array.from(toDelete));
+    }
+
+    if (toPatchQuantity.length > 0) {
+      await actor.updateEmbeddedDocuments('Item', toPatchQuantity.map(({ id, quantity }) => ({
+        _id: id,
+        'system.quantity': quantity,
+      })));
+    }
+
+    for (const { itemData, compendiumUuid } of toCreate) {
       const created = await actor.createEmbeddedDocuments('Item', [itemData]);
       if (created.length > 0) {
-        await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', compendiumUuid);
+        await created[0].setFlag(MODULE_ID, 'compendiumUuid', compendiumUuid);
       }
+    }
+  }
+
+  /**
+   * Credit any leftover gear-shopping currency to the actor without overwriting unrelated
+   * wealth: track only what Character Manager itself previously credited (via the
+   * `gearFundsCredited` actor flag) and write just the delta each save. Re-saving with no
+   * changes → delta = 0. No-op when SWADE's wealth type isn't numeric currency.
+   */
+  async _reconcileGearFunds(actor, startingFunds, gearCost) {
+    if (game.settings.get('swade', 'wealthType') !== 'currency') return;
+
+    const previouslyCredited = actor.getFlag(MODULE_ID, 'gearFundsCredited') ?? 0;
+    const leftover = startingFunds - gearCost;
+    const delta = leftover - previouslyCredited;
+
+    if (delta !== 0) {
+      const currentCurrency = actor.system?.details?.currency ?? 0;
+      await actor.update({ 'system.details.currency': currentCurrency + delta });
+    }
+
+    await actor.setFlag(MODULE_ID, 'gearFundsCredited', leftover);
+  }
+
+  /**
+   * Persist (or clear) the GM's manual "override starting funds" input as an actor flag, so
+   * it survives reopening Character Manager rather than being recomputed and silently discarded.
+   * No-op when SWADE's wealth type isn't numeric currency — the input is hidden in that case.
+   */
+  async _persistGearFundsOverride(actor) {
+    if (game.settings.get('swade', 'wealthType') !== 'currency') return;
+
+    const override = this.character.gearFundsOverride;
+    if (override === null || override === undefined || override === '') {
+      await actor.unsetFlag(MODULE_ID, 'gearFundsOverride');
+      return;
+    }
+
+    const overrideValue = Number(override);
+    if (!Number.isNaN(overrideValue)) {
+      await actor.setFlag(MODULE_ID, 'gearFundsOverride', overrideValue);
     }
   }
 
@@ -743,6 +823,11 @@ export class CharacterManager extends FormApplication {
         this.character.skills[unskilleddSkill.uuid] = { die: 'd4', advances: 0 };
       }
 
+      const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
+      const richFundsMultipliers = parseRichFundsMultipliers(game.settings.get(MODULE_ID, 'richFundsMultipliers'));
+      const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
+      const gearCost = calculateGearCost(this.character);
+
       if (this.actor) {
         const updateData = {
           name: this.character.name,
@@ -783,6 +868,8 @@ export class CharacterManager extends FormApplication {
         }
 
         await this._saveGearToActor(this.actor);
+        await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
+        await this._persistGearFundsOverride(this.actor);
 
         ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
       } else {
@@ -816,6 +903,8 @@ export class CharacterManager extends FormApplication {
         }
 
         await this._saveGearToActor(newActor);
+        await this._reconcileGearFunds(newActor, startingFunds, gearCost);
+        await this._persistGearFundsOverride(newActor);
 
         ui.notifications.info(`[Character Creation] Created: ${this.character.name}`);
       }

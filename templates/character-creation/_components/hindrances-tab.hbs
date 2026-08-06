@@ -143,9 +143,13 @@
               <option value="skill-point" {{#if (eq this.selected "skill-point")}}selected{{/if}}>
                 Gain Skill Point (1)
               </option>
-              <option value="extra-funds" {{#if (eq this.selected "extra-funds")}}selected{{/if}}>
-                Extra {{@root.currencyAmount}} {{@root.currencyName}} (1)
-              </option>
+              {{#if @root.usesCurrency}}
+                <option value="extra-funds" {{#if (eq this.selected "extra-funds")}}selected{{/if}}>
+                  Extra {{@root.currencyAmount}} {{@root.currencyName}} (1)
+                </option>
+              {{else}}
+                <option value="extra-funds" disabled>Extra Funds (not tracked on this table)</option>
+              {{/if}}
             </select>
           </div>
           {{/if}}

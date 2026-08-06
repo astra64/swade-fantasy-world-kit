@@ -77,6 +77,8 @@ export function initializeCharacter() {
 
     // Gear: Each is {name, price, quantity, ...}, keyed by compendium/item uuid
     gear: {},
+    gearFundsOverride: null,
+    showGearFundsOverride: false,
 
     // Advancement tracking
     experience: 0,
@@ -660,6 +662,85 @@ export function calculateGearCost(character) {
     const quantity = item.quantity ?? 1;
     return sum + price * quantity;
   }, 0);
+}
+
+/**
+ * Get the count of hindrance perk-allocation slots that chose "Extra Funds".
+ * Each allocated point grants a bonus equal to twice the setting's starting currency.
+ *
+ * @param {Object} character - Character object with perkPointAllocations
+ * @returns {number} Count of "Extra Funds" perk allocations
+ */
+export function calculateExtraFundsBonusCount(character) {
+  const allocations = character.perkPointAllocations || [];
+  return allocations.filter((a) => a?.selected === 'extra-funds').length;
+}
+
+/**
+ * Parse the `richFundsMultipliers` world setting ("Rich:3,Filthy Rich:5") into a lookup array.
+ *
+ * @param {string} settingValue - Comma-separated "Name:multiplier" pairs
+ * @returns {Array<{name: string, multiplier: number}>}
+ */
+export function parseRichFundsMultipliers(settingValue) {
+  if (!settingValue) return [];
+  return settingValue
+    .split(',')
+    .map((pair) => {
+      const [name, multiplier] = pair.split(':').map((s) => s?.trim());
+      return { name, multiplier: Number(multiplier) || 1 };
+    })
+    .filter((entry) => entry.name);
+}
+
+/**
+ * Determine the starting-funds multiplier granted by a Rich/Filthy Rich-type edge, matched
+ * by name against the `richFundsMultipliers` setting (same name-matching pattern as
+ * `calculateAncestryBonusEdgePoints`). Highest matching multiplier wins if more than one matches.
+ *
+ * @param {Object} character - Character object with edges
+ * @param {Array<{name: string, multiplier: number}>} richFundsMultipliers - Parsed setting entries
+ * @returns {number} Multiplier (1 if no matching edge selected)
+ */
+export function calculateRichFundsMultiplier(character, richFundsMultipliers = []) {
+  if (!character.edges || typeof character.edges !== 'object' || !richFundsMultipliers.length) {
+    return 1;
+  }
+
+  const edgeNames = Object.values(character.edges).map((e) => (e?.name || '').toLowerCase().trim());
+
+  let multiplier = 1;
+  for (const entry of richFundsMultipliers) {
+    const normalized = entry.name.toLowerCase().trim();
+    if (edgeNames.some((n) => n === normalized)) {
+      multiplier = Math.max(multiplier, entry.multiplier);
+    }
+  }
+  return multiplier;
+}
+
+/**
+ * Calculate the Gear tab's starting-funds budget: `(pcStartingCurrency × richMultiplier) +
+ * extraFundsBonus`, or the GM's manual override when set. There is no general "everyone gets
+ * doubled starting funds" rule — the only multipliers are a matched Rich/Filthy Rich-type edge
+ * and the Hindrances tab's Extra Funds perk allocation (each worth `pcStartingCurrency × 2`).
+ *
+ * @param {Object} character - Character object with edges, perkPointAllocations, gearFundsOverride
+ * @param {Object} options
+ * @param {number} options.pcStartingCurrency - SWADE's `pcStartingCurrency` world setting
+ * @param {Array<{name: string, multiplier: number}>} [options.richFundsMultipliers] - Parsed setting entries
+ * @returns {number} Starting funds budget
+ */
+export function calculateStartingFunds(character, { pcStartingCurrency = 0, richFundsMultipliers = [] } = {}) {
+  const override = character.gearFundsOverride;
+  if (override !== null && override !== undefined && override !== '') {
+    const overrideValue = Number(override);
+    if (!Number.isNaN(overrideValue)) return overrideValue;
+  }
+
+  const richMultiplier = calculateRichFundsMultiplier(character, richFundsMultipliers);
+  const extraFundsBonus = calculateExtraFundsBonusCount(character) * (pcStartingCurrency * 2);
+  return (pcStartingCurrency * richMultiplier) + extraFundsBonus;
 }
 
 /**

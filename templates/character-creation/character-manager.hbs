@@ -39,12 +39,6 @@
           <span class="budget-label">Edges:</span>
           <span class="budget-value {{#if (gt edgePointsUsed edgePointsAvailable)}}over-budget{{/if}}">{{edgePointsUsed}}/{{edgePointsAvailable}}</span>
         </span>
-        {{#if (eq @root.currentTab "gear")}}
-        <span class="budget-item">
-          <span class="budget-label">Gear ({{currencyName}}):</span>
-          <span class="budget-value {{#if (gt gearCost gearBudget)}}over-budget{{/if}}">{{gearCost}}/{{gearBudget}}</span>
-        </span>
-        {{/if}}
       </div>
 
       <div class="form-actions">

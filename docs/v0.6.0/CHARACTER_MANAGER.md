@@ -226,7 +226,8 @@ Add ability to plan and manage character advancement progression (same tool or s
 #### Tab 6: Gear
 - [x] Drag-drop zone for items from compendiums (gear, weapons, armor & shields — same search dropdown + drag-drop pattern as Edges/Hindrances)
 - [x] List items with individual cost, quantity (+/- controls), running total — duplicates allowed by design (picking the same item again just bumps quantity instead of adding a second card)
-- [x] Show remaining budget, displayed in the sticky footer while on the Gear tab. Budget is **not** the original spec's hardcoded 300 — it reads SWADE's native `pcStartingCurrency` world setting (doubled, per SWADE's own starting-funds convention), so it tracks whatever a GM has that set to for their table.
+- [x] Show remaining budget, displayed in the sticky footer while on the Gear tab. Budget is **not** the original spec's hardcoded 300 — it reads SWADE's native `pcStartingCurrency` world setting, so it tracks whatever a GM has that set to for their table. Now computed via `calculateStartingFunds()` — `(pcStartingCurrency × richMultiplier) + extraFundsBonus`, or the GM's manual override — rather than an unconditional `× 2`. See "Planned: Currency Reconciliation..." below.
+- [x] Customization-safe saves: an item already on the actor is never deleted/recreated on save, only its quantity is patched in place — homebrew tweaks always survive, at the cost of not auto-syncing later compendium edits (deliberate simplification, see "Gear Tab — Final Behavior Contract" below). Currency leftover is credited to the actor via a flag-tracked delta, not a raw overwrite.
 - [x] Remove item button
 - [x] **New Player Guidance:** (uses existing `TAB_GUIDANCE.gear` text)
 - [x] **Validation:** Non-blocking; footer budget value turns red when over budget (no hard block, consistent with Edges/Hindrances)
@@ -350,6 +351,118 @@ Add ability to plan and manage character advancement progression (same tool or s
 - Edge prerequisite enforcement → Nice UI warnings already planned
 - Ancestry-specific attribute caps (e.g., "d12+1 Vigor") → Basic support via metadata
 - Skill grouping optimization → Start flat, optimize if testing shows need
+
+---
+
+## Planned: Currency Reconciliation, Advancement as a Tab, and Customization-Safe Saves
+
+**Status: Problems 1 and 3 implemented for the Gear tab (this session); Problem 2 (Advancement as a Tab) still design-only.** Converged on across a design discussion after the Gear tab landed. Recorded here so the reasoning survives past the chat that produced it. **Revised once already** — an earlier draft of this section scoped Character Manager to pre-advancement only and pushed advancement into a separate `AdvancementManager` tool; that was corrected (see Problem 2 below) once it turned out to conflict with wanting to rebuild a character at any point in its lifecycle.
+
+**Implemented (Problem 1 — currency):** `calculateStartingFunds()`/`calculateRichFundsMultiplier()`/`calculateExtraFundsBonusCount()`/`parseRichFundsMultipliers()` in `calculator.js`; new `richFundsMultipliers` world setting (default `"Rich:3,Filthy Rich:5"`); Gear tab's `gearBudget` now uses this formula instead of the old unconditional `pcStartingCurrency × 2`. `CharacterManager._reconcileGearFunds()` credits only the flag-tracked delta (`gearFundsCredited` actor flag), gated on `game.settings.get('swade', 'wealthType') === 'currency'`. A new "Override Starting Funds" input on the Gear tab persists as the `gearFundsOverride` actor flag via `CharacterManager._persistGearFundsOverride()`. The `characterCreatorMenu` no-actor entry point and the `!this.actor` branch in `_createActor()` were left as-is — still an open decision, noted below.
+
+**Wealth Die / no-currency tables (uncommon setting rule):** rather than building parallel logic for SWADE's `wealthType: wealthDie`/`none` setting rules, all currency-tracking UI is simply hidden when `wealthType !== 'currency'` (a `usesCurrency` flag from `getData()`): the Gear tab's per-item price line, the pinned budget footer (see below), and the Hindrances tab's "Extra Funds" perk option (shown disabled instead). `_reconcileGearFunds()` and `_persistGearFundsOverride()` both no-op under this setting too. Tables using those setting rules handle starting funds/gear cost manually — Character Manager still tracks gear selection and quantity, just not against a numeric budget.
+
+**Gear tab budget UI, moved and reworked after initial landing:** the budget display and override input started out in the *global* sticky footer and a labeled form field at the top of the tab, then moved to a **tab-scoped pinned footer** (`.gear-tab-pinned-footer`, sticky to the bottom of the Gear tab's own scroll area, not the app-wide footer) reading `Starting {currencyName}: {gearRemaining} / {gearBudget}` — a countdown (budget minus spend) rather than a spent-so-far total, so it reads the way a player actually tracks shopping money. The override input moved into that same footer behind a small "Override" checkbox (unchecked by default unless the actor already has a saved override) — checking it reveals a compact number input; unchecking clears the override and reverts to the formula. The now-redundant cost total was dropped from the "Selected Gear" section header, and the per-item price line was simplified to just `{price} {currencyName}` (quantity is already visible via the +/- controls, so "each × qty = total" was dropped too).
+
+**Implemented, then simplified (Problem 3 — Gear saves):** the first pass built full customization detection (`isGearItemCustomized()` in `calculator.js`, comparing an actor's embedded item against a fresh compendium fetch, a `customized` flag + "Customized" badge). On review, the wipe-and-recreate branch it was protecting against only existed to let *unmodified* items pick up later compendium edits — not a goal here — so the whole detection layer was removed again the same session. **Current model:** `CharacterManager._saveGearToActor()` never deletes-and-recreates an item already on the actor; it only ever patches `quantity` in place (`updateEmbeddedDocuments`). New selections are created fresh from their source; anything no longer in `character.gear` (an explicit Remove) is deleted. This gets the same "never destroys homebrew" outcome with no compendium-source fetch on open and no customization bookkeeping at all — see the "known downsides" note below the Final Behavior Contract.
+
+**Not implemented this session:** a customization check (or the same patch-in-place question) for Ancestry's save, real embedded-item saves for Edges/Hindrances, and folding `AdvancementManager.js` into a Character Manager tab (Problem 2) — see "Suggested implementation order" below for the remaining steps.
+
+### Problem 1: Crediting leftover gear-shopping currency to the actor
+
+Gear tab spending should leave any leftover starting funds on the actor as cash, without overwriting money the actor already has from other sources (loot, GM adjustments, prior play). A naive `actor.currency = startingFunds − gearCost` overwrites; a naive `actor.currency += (startingFunds − gearCost)` double-credits on every re-save.
+
+**Resolved approach:** track only what Character Manager itself has previously credited, via a small actor flag (e.g. `gearFundsCredited`), and write just the delta on each save:
+```
+delta = (startingFunds − gearCost) − previouslyCredited
+actor.currency += delta
+previouslyCredited = startingFunds − gearCost   // store for next time
+```
+Re-saving with no changes → delta = 0. This only ever touches the portion of currency Character Manager itself contributed — never the actor's unrelated wealth.
+
+Only run this when SWADE's `settingRules.wealthType === 'currency'` — no-op for `wealthDie`/`none` modes, since there's no numeric field to credit.
+
+**Character Manager does not create actors (corrected).** An earlier draft of this plan had Character Manager creating blank actors itself (a `!this.actor` branch in `_createActor()`), which turned out to be unneeded complexity for little benefit — Character Manager should always receive an actor to work on, matching its stated design ("always opens from an actor sheet"). This removes a whole parallel code path (most of the ancestry/gear/currency logic was duplicated across a "new actor" branch and an "existing actor" branch for no real gain). The one place that relied on the old behavior — the `characterCreatorMenu` settings-menu entry in `scripts/settings.js`, which instantiates `CharacterManager` with no actor — needs to either be removed, or changed to create a blank actor via a plain `Actor.create()` call first and open Character Manager pointed at the result. **Decide which when implementing.**
+
+This also means there's no special "just-created-by-Character-Manager" moment to hook into for currency seeding — every actor Character Manager ever touches already exists. SWADE's own `_preCreate` hook still auto-sets a truly fresh actor's `system.details.currency` to `pcStartingCurrency` the instant it's created (via whatever normal Foundry flow made it), so a brand-new blank actor opened in Character Manager for the first time will show that amount already sitting there before any Gear tab shopping happens. Rather than build a heuristic to detect "is this actor's current currency actually the still-untouched SWADE default, or genuine established wealth" (not reliably distinguishable in general), this is left as an accepted, minor discrepancy — the manual **override starting funds** input already in the design (see below) is the transparent fix if a GM cares to correct for it, rather than a clever auto-detection that could get it wrong the other direction. `previouslyCredited` simply always starts at 0 for an actor Character Manager hasn't touched before, full stop, no special-casing.
+
+**`startingFunds` formula (corrected — no unconditional creation-doubling):**
+```
+richMultiplier  = matched from the new `richFundsMultipliers` setting (name→multiplier list,
+                   default "Rich:3,Filthy Rich:5" — confirmed SWADE values, GM-editable), same name-matching
+                   pattern as `bonusEdgePointAbilityNames`; 1 if no matching edge is selected
+extraFundsBonus = (count of Hindrance perk-allocation slots with "Extra Funds" selected)
+                   × (pcStartingCurrency × 2)
+                   — per the actual rule text: "for 1 Hindrance point... gain additional
+                   starting funds equal to twice your setting's starting amount"
+computed        = (pcStartingCurrency × richMultiplier) + extraFundsBonus
+```
+There is **no general "everyone gets double starting funds for creation shopping" rule** — an earlier draft of this plan incorrectly assumed one (inherited from pre-existing code, `currencyAmount = pcStartingCurrency * 2`, which is used elsewhere in the codebase today as the Gear tab's displayed budget and will need correcting to this formula as part of implementing this plan). The only ×2 multipliers that exist are (a) `richMultiplier`, which only kicks in when a Rich/Filthy Rich-type edge is actually present, and (b) the Extra Funds hindrance bonus, which only applies per point actually allocated to it. With no Rich edge and no Extra Funds allocation, `startingFunds` is simply `pcStartingCurrency` — not doubled.
+
+**Manual override:** the Gear tab also gets a direct "override starting funds" input — when set, this value is used as `startingFunds` instead of the formula above, for both the displayed budget and the currency-credit calculation. Persisted as its own actor flag (e.g. `gearFundsOverride`) so it survives reopening Character Manager, rather than being recomputed and silently discarded. This is the escape hatch for anything the formula doesn't cover (a one-off GM ruling, a homebrew Background Edge not in the `richFundsMultipliers` list, etc.) — consistent with the "warn, don't restrict" philosophy: the computed number is a helpful default, never the final word.
+
+**New setting needed:** `richFundsMultipliers` (world setting, `scripts/settings.js`) — no setting needed for Extra Funds specifically, since that's fully defined in terms of the existing `pcStartingCurrency` setting.
+
+### Problem 2: Advancement is a tab in Character Manager, not a separate tool
+
+**Corrected direction:** Character Manager should stay the single tool across a character's whole lifecycle — creation, editing, *and* advancement — via an Advancement tab (Tab 8, or wherever it lands in the tab order), not a standalone `AdvancementManager` app. The standalone `AdvancementManager.js` file already in this repo (skeletal/non-functional — uses flat `system?.experience`/`system?.advances`, not the real `advances.rank`/`.value` schema) should eventually be folded into Character Manager's tab-handler architecture (an `AdvancementTabHandler.js` + `advancement-tab.hbs`, reusing whatever logic in the standalone file is salvageable) rather than kept as a separate app to maintain in parallel.
+
+An earlier draft of this section used `actor.system.advances.value` (SWADE's real native rank/XP field, confirmed in the system source) to gate Character Manager into "blocks or redirects once the character has advanced." That's wrong given the stated goal: a GM/player should be able to fully rebuild a character at any point in its life, not just before its first Advance. `advances.value`/`.rank` still matters for the Advancement tab's own logic (what advances are available, current rank), just not as a lock on the rest of the tool.
+
+**What actually needs deciding** is the *default* Save behavior — see Problem 3, which turns out to be the piece that actually matters here, independent of advancement state.
+
+### Problem 3: Customization-safe saves are the permanent default — no separate "rebuild" action needed
+
+**Update:** for the Gear tab specifically, this was implemented as designed below and then deliberately simplified back out — see the note after the Final Behavior Contract. The compare-against-source detection this section describes is still the plan for Ancestry/Edges/Hindrances *unless* the same question gets asked there too (do we actually want unmodified items to auto-pick-up later compendium edits?) — if not, the same patch-in-place simplification likely applies to those saves as well, and this section should be revisited before building them rather than assumed.
+
+A GM/player may tweak or homebrew a custom Edge/Ancestry/Gear item at any point — during initial creation, or years into a campaign. Whether that customization should survive a save was never really about advancement timing; it's about whether the *default* Save action is destructive at all.
+
+**Resolved approach:** for every item staying in a tab's current build (explicit removal via the tab's own Remove button, or swapping to a different Ancestry, still always deletes — that's the player's deliberate choice, not something this rule protects against):
+- If it carries a `compendiumUuid` flag, fetch that source fresh and compare "customization-relevant" fields, excluding whatever Character Manager itself is expected to edit (e.g. gear `quantity`).
+- **Identical to source** → safe to wipe-and-recreate as today (no data loss, recreating produces the same content).
+- **Diverged, or no compendium match at all** → treat as customized. Skip delete+recreate for that item entirely; leave the actor's existing embedded document untouched, and only patch Character-Manager-owned fields (quantity, for gear) via a direct in-place update.
+
+**No separate "Rebuild Character" action is needed on top of this** (an earlier draft of this section proposed one). Remove (which already always deletes, regardless of customization) plus unrestricted Add already give full manual control to reshape a character piece by piece — reverting a customized item is just Remove-then-Add-fresh-copy, a deliberate per-item choice rather than a bulk nuke-everything action, and arguably clearer for it. A story-granted "extra" edge/hindrance/gear item some character has for narrative reasons works the same way it already does for budgets generally: add it via the tab, the footer shows over-budget in red, nothing blocks it — informational only, same non-blocking philosophy already built into Edges/Hindrances/Gear.
+
+Per-type comparison fields for the default-save customization check (draft, refine during implementation):
+- **Gear/weapon/armor:** name, img, description, price, weight, minStr, effects
+- **Edges:** name, img, description, requirements, effects
+- **Hindrances:** name, img, description, major, severity, effects
+- **Ancestry:** same idea, plus its granted child items
+
+**Known trade-off:** if the compendium content itself is later patched (e.g. a typo fix), previously-identical actor copies will look "diverged" from the updated source on next open and stop auto-refreshing under default Save. Not data loss — just stops being treated as a vanilla copy; picking up the compendium change would need a manual Remove-and-re-Add of that specific item. Accepted as low-stakes.
+
+**Implementation gotcha to get right:** the comparison must use each item's *raw* `system.description`, not the enriched HTML (`TextEditor.enrichHTML()` output) that `character.gear[uuid].description` holds for display — comparing enriched vs. raw would produce false "diverged" flags from formatting artifacts alone, not real customization. Keep the raw source description around specifically for this comparison, separate from the display copy. Active Effects don't have a clean equality check; comparing a normalized `JSON.stringify` of each effect's `changes` (plus count) is good enough — false positives here just mean an unmodified item stops auto-refreshing, which is low-cost by design (see the "warn, don't restrict" philosophy running through this whole plan), so the comparison should err toward "diverged" when uncertain rather than trying to be perfectly precise.
+
+### Gear Tab — Final Behavior Contract
+
+Precise Open/Edit/Save behavior, incorporating everything above. This is the concrete spec implementation follows (**as simplified** — no customization detection; see the note below).
+
+**On Open** (`getData()` / detection):
+1. Detect existing `gear`/`weapon`/`armor`/`shield` items on the actor → `character.gear`, keyed by name-match against the compendium or falling back to the item's own uuid (unchanged from before this plan).
+2. Compute `startingFunds` (override flag if set, else the `calculateStartingFunds()` formula) and `gearCost` (Σ `price × quantity`). Display the budget non-blockingly (unchanged).
+
+**On Edit** (within the tab, unchanged from today):
+- Add (search or drag) → new entry.
+- Remove → always allowed.
+- Quantity +/− → unchanged.
+- Min-Strength warning → unchanged (informational hint + toast).
+- Override starting funds: a small checkbox in the pinned footer (`character.showGearFundsOverride`, UI-only, not persisted itself) reveals a compact number input when checked; the typed value is stored in `character.gearFundsOverride` for the session. Unchecking clears it back to `null`, reverting to the formula.
+
+**On Save** (`_saveGearToActor()` + `_reconcileGearFunds()`):
+1. For each entry in `character.gear`: if an embedded item with that uuid already exists on the actor, patch only its `quantity` field in place (`updateEmbeddedDocuments`) — never delete/recreate it. Otherwise, create a fresh copy from its source item with `quantity` set and the `compendiumUuid` flag.
+2. Any gear-type item that was on the actor but is no longer in `character.gear` (explicitly removed via the tab) → deleted.
+3. Compute `startingFunds` (override or formula) and `gearCost`, apply the flag-tracked currency delta from Problem 1 (only if `wealthType === 'currency'`), and persist the `gearFundsOverride` flag if the GM set one this session.
+
+**Why the customization-detection layer got dropped:** it only existed to let *unmodified* items pick up later compendium edits (a price tweak, a typo fix) on save — the "customized" flag was purely the exception carve-out to protect modified items from that same refresh. Once "auto-sync with the compendium" isn't a goal, patching in place unconditionally gets the identical "never destroys homebrew" guarantee with no per-item source fetch and no bookkeeping. Traded away deliberately: (a) an unmodified item's price/description no longer follows a later compendium edit — accepted; (b) **loses the self-healing property** wipe-and-recreate had for free — a bad field value from a past bug on an "should be vanilla" item, or a missing/wrong `compendiumUuid` flag, now persists forever instead of auto-correcting on next save; recovery requires a manual Remove-and-re-Add. Worth remembering given this module is still under active development. (c) `updateEmbeddedDocuments` vs. delete+create aren't guaranteed identical for any create-only side effects some other module might hook — low risk, not verified in-app.
+
+### Suggested implementation order
+
+1. Currency: flag-tracked delta + starting-funds fixes (Rich/Filthy Rich detection, Extra Funds wiring). Currency-only, no save-model changes needed.
+2. Customization-detection helper, wired into Gear's existing save path as the new default (smallest surface — already has a real embedded-item save to retrofit).
+3. Extend the same customization check to Ancestry's save (already has a real embedded-item save path too).
+4. Build the real embedded-item save for Edges/Hindrances (closing the `system.edges`/`system.hindrances` scaffold gap), using the create+flag+customization-check pattern from the start rather than retrofitting it later.
+5. Fold `AdvancementManager.js` into Character Manager as a new Advancement tab (`AdvancementTabHandler.js` + `advancement-tab.hbs`), fixing its `advances.rank`/`.value` schema mismatch along the way. This is the biggest single piece and probably deserves its own dedicated design pass rather than being scoped in detail here.
 
 ---
 

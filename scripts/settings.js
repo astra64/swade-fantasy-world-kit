@@ -223,6 +223,15 @@ export function setupSettings(config) {
     default: ""
   });
 
+  game.settings.register(MODULE_ID, "richFundsMultipliers", {
+    name: "Character Manager: Rich Edge Funds Multipliers",
+    hint: "Comma-separated 'Edge Name:multiplier' pairs (e.g. 'Rich:3,Filthy Rich:5') that multiply starting gear funds when the character has that edge. Matched by name, so this works with any setting's Rich/Filthy Rich-equivalent edge.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "Rich:3,Filthy Rich:5"
+  });
+
   game.settings.register(MODULE_ID, "additionalGearPacks", {
     name: "Character Manager: Additional Gear Packs",
     hint: "Comma-separated compendium pack IDs (gear, weapons, or armor) to include alongside the built-in Fantasy equipment in Character Manager.",

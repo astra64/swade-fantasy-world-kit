@@ -21,11 +21,15 @@
       </div>
     </div>
 
+    {{#unless @root.usesCurrency}}
+    <p class="hint-text">This table doesn't use tracked currency (Wealth Die or none) — starting funds and gear budget aren't tracked here; handle that manually.</p>
+    {{/unless}}
+
     <!-- Selected Gear Display -->
     {{#each @root.character.gear}}
     {{#if @first}}
     <div class="selected-items-section">
-      <h4>Selected Gear — {{@root.currencyName}} {{@root.gearCost}}/{{@root.gearBudget}}</h4>
+      <h4>Selected Gear</h4>
     {{/if}}
       <div class="item-card {{#if this.expanded}}expanded{{/if}}">
         <!-- Header (Always Visible) -->
@@ -39,7 +43,9 @@
             </div>
             <div class="item-card-info">
               <span class="item-card-name">{{this.name}}</span>
-              <span class="hint-text">{{this.price}} {{@root.currencyName}} each &times; {{this.quantity}} = {{multiply this.price this.quantity}} {{@root.currencyName}}</span>
+              {{#if @root.usesCurrency}}
+              <span class="hint-text">{{this.price}} {{@root.currencyName}}</span>
+              {{/if}}
               {{#if this.minStr}}
               <span class="hint-text {{#if (dieLt @root.character.attributes.strength.die this.minStr)}}warning-text{{/if}}">Requires Strength {{this.minStr}} to use without penalty</span>
               {{/if}}
@@ -75,5 +81,25 @@
     {{else}}
     <p class="hint-text">No gear selected yet.</p>
     {{/each}}
+
+    {{#if @root.usesCurrency}}
+    <div class="gear-tab-pinned-footer">
+      <span class="budget-label">Starting {{@root.currencyName}}:</span>
+      <span class="budget-value {{#if (lt @root.gearRemaining 0)}}over-budget{{/if}}">{{@root.gearRemaining}} / {{@root.gearBudget}}</span>
+      <label class="gear-funds-override-toggle" title="Replace the calculated starting funds with a manual number">
+        <input type="checkbox" data-action="toggle-gear-funds-override" {{#if @root.character.showGearFundsOverride}}checked{{/if}}>
+        Override
+      </label>
+      {{#if @root.character.showGearFundsOverride}}
+      <input
+        type="number"
+        class="gear-funds-override-input"
+        data-action="set-gear-funds-override"
+        placeholder="{{@root.gearBudget}}"
+        value="{{@root.gearFundsOverride}}"
+      >
+      {{/if}}
+    </div>
+    {{/if}}
   </div>
 </div>

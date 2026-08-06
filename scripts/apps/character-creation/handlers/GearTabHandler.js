@@ -85,6 +85,21 @@ export class GearTabHandler extends BaseTabHandler {
       const uuid = $(e.currentTarget).attr('data-item-uuid');
       this._adjustQuantity(uuid, -1);
     });
+
+    this.html.find('[data-action="set-gear-funds-override"]').on('change', (e) => {
+      const value = $(e.currentTarget).val();
+      this.characterManager.character.gearFundsOverride = value === '' ? null : value;
+      this.characterManager.render();
+    });
+
+    this.html.find('[data-action="toggle-gear-funds-override"]').on('change', (e) => {
+      const checked = $(e.currentTarget).is(':checked');
+      this.characterManager.character.showGearFundsOverride = checked;
+      if (!checked) {
+        this.characterManager.character.gearFundsOverride = null;
+      }
+      this.characterManager.render();
+    });
   }
 
   async _addGear(item) {
@@ -150,7 +165,8 @@ export class GearTabHandler extends BaseTabHandler {
       (g) => g.name.toLowerCase() === item.name.toLowerCase()
     );
 
-    const gearEntry = compendiumItem || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null };
+    const gearEntry = compendiumItem
+      || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null };
     this._addGear(gearEntry);
   }
 

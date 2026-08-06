@@ -197,6 +197,21 @@
   color: #ef5350;
 }
 
+/* ===== Gear Tab - Pinned Budget Footer (tab-scoped, not the global footer) ===== */
+
+.swade-character-manager .gear-tab-pinned-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 1rem -1rem 0 -1rem;
+  background: #d6d2c8;
+  border-top: 1px solid var(--color-border-light-primary);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 -1px 3px color-mix(in srgb, black 10%, transparent);
+}
+
 /* ===== Action Buttons - FWK Style ===== */
 
 .swade-character-manager .form-actions {
@@ -217,12 +232,12 @@
 }
 
 .swade-character-manager .action-button.primary {
-  background: color-mix(in srgb, #7a9928 35%, #d6d2c8 65%);
-  border-color: color-mix(in srgb, #7a9928 60%, var(--color-border-light-primary));
+  background: color-mix(in srgb, var(--color-cool-2) 70%, white 30%);
+  border-color: var(--color-border-light-primary);
 }
 
 .swade-character-manager .action-button.primary:hover {
-  background: color-mix(in srgb, #7a9928 50%, #d6d2c8 50%);
+  background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
   border-color: color-mix(in srgb, #7a9928 85%, black 15%);
 }
 
@@ -355,7 +370,6 @@
 .swade-character-manager .item-card {
   border: 1px solid var(--color-border-light-primary);
   border-radius: 4px;
-  padding: 0.75rem;
   background: color-mix(in srgb, var(--color-cool-2) 15%, transparent);
 }
 
@@ -866,6 +880,39 @@
   font-weight: 600;
   font-size: 12px;
   color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .item-card-info .hint-text {
+  margin-bottom: 0;
+}
+
+.swade-character-manager .gear-funds-override-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0 auto;
+  font-size: 9px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 70%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.swade-character-manager .gear-funds-override-toggle input[type="checkbox"] {
+  margin: 0;
+  width: 11px;
+  height: 11px;
+}
+
+.swade-character-manager .gear-funds-override-input {
+  width: 70px;
+  padding: 0.2rem 0.35rem;
+  font-size: 10px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+  box-sizing: border-box;
 }
 
 .swade-character-manager .hindrance-major-minor {
