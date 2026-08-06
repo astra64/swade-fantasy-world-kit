@@ -11,7 +11,7 @@ import { setupMigrations } from "./migrations.js";
 import { setupUI } from "./ui.js";
 import { createIconRemapper } from "./lib/icon-remapper.js";
 import { pathMappings, nameMappings, fallbackIconMappings } from "./lib/icon-mappings.js";
-import { setupCharacterCreationTools, CharacterManager, AdvancementManager } from "./apps/character-creation/index.js";
+import { setupCharacterCreationTools, CharacterManager, AdvancementManager, invalidateCompendiumCache } from "./apps/character-creation/index.js";
 
 // Expose icon remapping utilities immediately
 window.swadeFwkIconRemapper = createIconRemapper(pathMappings, nameMappings, fallbackIconMappings);
@@ -87,6 +87,7 @@ const {
 async function handleVisibilitySettingsChanged() {
   rerenderCompendiumDirectory();
   await syncSearchModulePackRestrictions();
+  invalidateCompendiumCache();
 }
 
 async function rerenderBaselineManagers() {

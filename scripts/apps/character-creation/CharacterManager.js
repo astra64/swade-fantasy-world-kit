@@ -15,7 +15,6 @@ import {
   getItemPreview
 } from './lib/compendium-utils.js';
 import {
-  initializeCharacter,
   calculateDerivedStats,
   calculateTotalAttributePoints,
   calculateTotalSkillPoints,
@@ -47,6 +46,28 @@ import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIP
 
 const MODULE_ID = 'swade-fantasy-world-kit';
 
+// Module-level cache: compendium data is identical for every CharacterManager instance
+// within a session (a fresh instance is created on each open, see main.js), so keeping
+// this outside the class lets the expensive per-item fromUuid lookups run only once
+// per session instead of on every open.
+const compendiumCache = {
+  ancestries: [],
+  skills: [],
+  edges: [],
+  hindrances: [],
+  gear: [],
+  loaded: false,
+};
+
+/**
+ * Force the next Character Manager open to re-fetch compendium data instead of
+ * using the cached copy. Call after settings that affect which items/packs are
+ * visible change (curated mode, extra visible packs, additional pack lists).
+ */
+export function invalidateCompendiumCache() {
+  compendiumCache.loaded = false;
+}
+
 export class CharacterManager extends FormApplication {
   static TAB_HANDLERS = {
     concept: ConceptTabHandler,
@@ -66,13 +87,7 @@ export class CharacterManager extends FormApplication {
     this.actor = options.actor || null;
     this.character = null;
     this.currentTab = 'concept';
-    this.compendiumData = {
-      ancestries: [],
-      skills: [],
-      edges: [],
-      hindrances: [],
-      gear: [],
-    };
+    this.compendiumData = compendiumCache;
     this.skillsByAttribute = {};
 
     // Initialize tab handlers from registry
@@ -114,8 +129,10 @@ export class CharacterManager extends FormApplication {
     const scrollPos = this.element?.find('.form-tabs')?.scrollTop() || 0;
     const tabScrollPos = this.element?.find('.tab.active')?.scrollTop() || 0;
 
+    const renderStart = performance.now();
     try {
       const result = await super.render(force, options);
+      console.log(`[CharacterManager] render() total: ${(performance.now() - renderStart).toFixed(1)}ms`);
 
       // Use requestAnimationFrame (not setTimeout) so the restore lands before the
       // browser's next paint — setTimeout(0) is a macrotask and lets the reset-to-top
@@ -149,29 +166,55 @@ export class CharacterManager extends FormApplication {
   }
 
   async getData(options = {}) {
+    const getDataStart = performance.now();
     try {
-      // Fetch compendium data if not cached (needed before character detection below)
-      if (this.compendiumData.ancestries.length === 0) {
+      // Fetch compendium data if not cached (needed before character detection below).
+      // Cached at module level, so this only runs once per session, not once per open.
+      const compendiumStart = performance.now();
+      if (!compendiumCache.loaded) {
         console.log('[CharacterManager] Loading compendium data...');
         try {
-          this.compendiumData.ancestries = await getAncestries();
-          this.compendiumData.skills = await getSkills();
-          this.compendiumData.edges = await getEdges();
-          this.compendiumData.hindrances = await getHindrances();
-          this.compendiumData.gear = await getGearItems();
-          console.log('[CharacterManager] Compendium loaded. Skills count:', this.compendiumData.skills.length);
+          const timed = (label, promise) => {
+            const start = performance.now();
+            return promise.then((result) => {
+              console.log(`[CharacterManager]   ${label}: ${(performance.now() - start).toFixed(1)}ms (${result.length} items)`);
+              return result;
+            });
+          };
+          const [ancestries, skills, edges, hindrances, gear] = await Promise.all([
+            timed('ancestries', getAncestries()),
+            timed('skills', getSkills()),
+            timed('edges', getEdges()),
+            timed('hindrances', getHindrances()),
+            timed('gear', getGearItems()),
+          ]);
+          compendiumCache.ancestries = ancestries;
+          compendiumCache.skills = skills;
+          compendiumCache.edges = edges;
+          compendiumCache.hindrances = hindrances;
+          compendiumCache.gear = gear;
+          compendiumCache.loaded = true;
+          console.log(`[CharacterManager] Compendium loaded in ${(performance.now() - compendiumStart).toFixed(1)}ms. Skills count:`, this.compendiumData.skills.length);
         } catch (error) {
           console.error('[Character Manager] Failed to load compendium data:', error);
           ui.notifications.error('[Character Manager] Could not load Fantasy compendiums. Are they installed and visible?');
         }
       } else {
-        console.log('[CharacterManager] Using cached compendium data. Skills count:', this.compendiumData.skills.length);
+        console.log(`[CharacterManager] Using cached compendium data (${(performance.now() - compendiumStart).toFixed(1)}ms check). Skills count:`, this.compendiumData.skills.length);
       }
 
       // Initialize character on first open (after compendium data is available, so
       // existing actor Skills/Edges/Hindrances can be matched to compendium entries)
+      const characterInitStart = performance.now();
+      const isFirstInit = !this.character;
       if (!this.character) {
-        if (this.actor) {
+        if (!this.actor) {
+          // This tool only ever edits an existing actor — it has no "create a new
+          // character from scratch" mode — so it should never be opened without one.
+          throw new Error('[Character Manager] Cannot open without an actor.');
+        }
+
+        {
           const ancestryItem = this.actor.items.find(item => item.type === 'ancestry');
           let ancestryUuid = ancestryItem?.getFlag('swade-fantasy-world-kit', 'compendiumUuid') || null;
 
@@ -202,8 +245,6 @@ export class CharacterManager extends FormApplication {
             // revealed if the actor already has an override flag set from a previous save.
             showGearFundsOverride: (this.actor.getFlag(MODULE_ID, 'gearFundsOverride') ?? null) !== null,
           };
-        } else {
-          this.character = initializeCharacter();
         }
 
         // Convert actor attribute format (die.sides) to our format (die: "d4")
@@ -231,11 +272,15 @@ export class CharacterManager extends FormApplication {
 
         this._initializeFreeCoreSkills();
       }
+      if (isFirstInit) {
+        console.log(`[CharacterManager] Character init (skills/edges/hindrances/gear detection) took ${(performance.now() - characterInitStart).toFixed(1)}ms`);
+      }
 
       // Always rebuild skills by attribute (needed for renders after character changes)
       this._buildSkillsByAttribute();
 
       // Fetch ancestry preview if selected
+      const ancestryStart = performance.now();
       let selectedAncestryData = null;
       let childItemsData = [];
       if (this.character.ancestry) {
@@ -247,21 +292,26 @@ export class CharacterManager extends FormApplication {
           selectedAncestryData.system.description = await TextEditor.enrichHTML(selectedAncestryData.system.description, { async: true });
         }
       }
+      console.log(`[CharacterManager] Ancestry preview + child items took ${(performance.now() - ancestryStart).toFixed(1)}ms`);
 
       // Some edges (e.g. Arcane Backgrounds) and hindrances grant other edges/hindrances as
       // child items, the same way an ancestry grants ancestral abilities. Build the same kind
       // of nested display data for each selected edge/hindrance, keyed by its own uuid.
+      const childItemsStart = performance.now();
+      const edgeUuids = Object.keys(this.character.edges || {});
+      const edgeChildResults = await Promise.all(edgeUuids.map((uuid) => this._getGrantedChildItems(uuid)));
       const edgeChildItems = {};
-      for (const uuid of Object.keys(this.character.edges || {})) {
-        const children = await this._getGrantedChildItems(uuid);
-        if (children.length) edgeChildItems[uuid] = children;
-      }
+      edgeUuids.forEach((uuid, i) => {
+        if (edgeChildResults[i].length) edgeChildItems[uuid] = edgeChildResults[i];
+      });
 
+      const hindranceUuids = Object.keys(this.character.hindrances || {});
+      const hindranceChildResults = await Promise.all(hindranceUuids.map((uuid) => this._getGrantedChildItems(uuid)));
       const hindranceChildItems = {};
-      for (const uuid of Object.keys(this.character.hindrances || {})) {
-        const children = await this._getGrantedChildItems(uuid);
-        if (children.length) hindranceChildItems[uuid] = children;
-      }
+      hindranceUuids.forEach((uuid, i) => {
+        if (hindranceChildResults[i].length) hindranceChildItems[uuid] = hindranceChildResults[i];
+      });
+      console.log(`[CharacterManager] Edge/hindrance child items (${edgeUuids.length} edges, ${hindranceUuids.length} hindrances) took ${(performance.now() - childItemsStart).toFixed(1)}ms`);
 
       const derivedStats = calculateDerivedStats(this.character);
       const attributePointsUsed = calculateTotalAttributePoints(this.character);
@@ -365,6 +415,7 @@ export class CharacterManager extends FormApplication {
         edgePointsRemaining: edgePointsAvailable - edgePointsUsed,
       };
 
+      console.log(`[CharacterManager] getData() total: ${(performance.now() - getDataStart).toFixed(1)}ms`);
       return data;
     } catch (error) {
       console.error('[CharacterManager] getData() failed:', error);
@@ -388,7 +439,7 @@ export class CharacterManager extends FormApplication {
       html.find('button[data-action="save"]').on('click', async () => {
         const confirmed = await this._confirmUnspentPoints();
         if (!confirmed) return;
-        await this._createActor();
+        await this._saveActor();
       });
 
       html.find('button[data-action="cancel"]').on('click', () => {
@@ -435,7 +486,15 @@ export class CharacterManager extends FormApplication {
       vigor: [],
     };
 
-    const seenUuids = new Set();
+    // character.skills is keyed by the actor's own item uuid (or a fresh compendium uuid
+    // for a brand-new pick not yet saved), never by a compendium row's uuid directly — so
+    // an existing skill has to be found by name, not by looking up skill.uuid as a key.
+    const keyByName = new Map();
+    for (const [uuid, skillData] of Object.entries(this.character.skills || {})) {
+      if (skillData.name) keyByName.set(skillData.name.toLowerCase(), uuid);
+    }
+
+    const seenKeys = new Set();
 
     for (const skill of this.compendiumData.skills) {
       // Skip Unskilled Attempt (fallback skill, added separately at end)
@@ -446,15 +505,17 @@ export class CharacterManager extends FormApplication {
       const attrLink = skill.attribute || 'smarts';
       if (this.skillsByAttribute[attrLink]) {
         const isCoreSkill = isFreeCoreSkill(skill.name);
+        const existingKey = keyByName.get(skill.name.toLowerCase());
+        const skillData = existingKey ? this.character.skills[existingKey] : null;
         this.skillsByAttribute[attrLink].push({
-          uuid: skill.uuid,
+          uuid: existingKey || skill.uuid,
           name: skill.name,
           isCoreSkill: isCoreSkill,
-          die: this.character.skills[skill.uuid]?.die ?? (isCoreSkill ? 'd4' : null),
-          fromAncestry: this.character.skills[skill.uuid]?.fromAncestry || false,
+          die: skillData?.die ?? (isCoreSkill ? 'd4' : null),
+          fromAncestry: skillData?.fromAncestry || false,
           description: skill.description || '',
         });
-        seenUuids.add(skill.uuid);
+        if (existingKey) seenKeys.add(existingKey);
       }
     }
 
@@ -462,7 +523,7 @@ export class CharacterManager extends FormApplication {
     // from another source) so they still display — the compendium is only a suggestion
     // list, not a filter on what can show up here.
     for (const [uuid, skillData] of Object.entries(this.character.skills || {})) {
-      if (seenUuids.has(uuid) || !skillData.die) continue;
+      if (seenKeys.has(uuid) || !skillData.die) continue;
 
       const attrLink = skillData.attribute || 'smarts';
       if (!this.skillsByAttribute[attrLink]) continue;
@@ -502,13 +563,12 @@ export class CharacterManager extends FormApplication {
    */
   async _getGrantedChildItems(itemUuid, itemData = null) {
     const parentData = itemData || await getItemPreview(itemUuid);
-    const children = [];
 
     if (!Array.isArray(parentData?.system?.grants)) {
-      return children;
+      return [];
     }
 
-    for (const grant of parentData.system.grants) {
+    const results = await Promise.all(parentData.system.grants.map(async (grant) => {
       try {
         const childData = await getItemPreview(grant.uuid);
         if (childData) {
@@ -516,14 +576,15 @@ export class CharacterManager extends FormApplication {
             childData.system.description = await TextEditor.enrichHTML(childData.system.description, { async: true });
           }
           childData.isExpanded = this.character.expandedChildItems[childData.uuid] || false;
-          children.push(childData);
+          return childData;
         }
       } catch (e) {
         console.warn('[Character Manager] Failed to load granted item:', grant.uuid);
       }
-    }
+      return null;
+    }));
 
-    return children;
+    return results.filter(Boolean);
   }
 
   /**
@@ -555,17 +616,21 @@ export class CharacterManager extends FormApplication {
       }
 
       const grantedByAncestry = !!skillItem.grantedBy;
-      const key = compendiumSkill?.uuid || skillItem.uuid;
+      // Always key by the actor's own item — see _detectGearFromActor for why.
+      const key = skillItem.uuid;
       skills[key] = {
         die,
         advances: skillItem.system?.advances ?? 0,
         fromAncestry: grantedByAncestry,
         // Baseline die granted for free; increases above this still cost points
         grantedDie: grantedByAncestry ? die : undefined,
-        // Only needed as a display/cost fallback when this skill isn't in the compendium
-        name: compendiumSkill ? undefined : skillItem.name,
-        attribute: compendiumSkill ? undefined : (skillItem.system?.attribute || 'smarts'),
-        description: compendiumSkill ? undefined : (skillItem.system?.description || ''),
+        // Always stored (not just as a "not in compendium" fallback) — _buildSkillsByAttribute
+        // needs the name to find this entry by name-match, and calculator.js's skill-point
+        // cost lookup needs the linked attribute, since the key is the actor's own item uuid
+        // rather than any compendium uuid it could otherwise be looked up by.
+        name: skillItem.name,
+        attribute: compendiumSkill?.attribute || skillItem.system?.attribute || 'smarts',
+        description: compendiumSkill?.description || skillItem.system?.description || '',
       };
     }
 
@@ -581,19 +646,22 @@ export class CharacterManager extends FormApplication {
    * since those are automatic bonuses, not player choices made on this tab.
    */
   async _detectEdgesFromActor(actor) {
-    const edges = {};
+    const edgeItems = actor.items.filter(item => item.type === 'edge' && !item.grantedBy);
 
-    for (const edgeItem of actor.items.filter(item => item.type === 'edge' && !item.grantedBy)) {
+    const entries = await Promise.all(edgeItems.map(async (edgeItem) => {
       const compendiumEdge = this.compendiumData.edges.find(
         e => e.name.toLowerCase() === edgeItem.name.toLowerCase()
       );
 
-      const key = compendiumEdge?.uuid || edgeItem.uuid;
+      // Always key by the actor's own item — never the compendium uuid. See the same
+      // fix in _detectGearFromActor for why: a shared compendium-uuid key collapses
+      // distinct actor items and breaks save reconciliation's existing-item lookup.
+      const key = edgeItem.uuid;
       const requirements = Array.isArray(edgeItem.system?.requirements)
         ? edgeItem.system.requirements.map(r => (typeof r?.toString === 'function' ? r.toString() : '')).filter(Boolean)
         : compendiumEdge?.requirements || [];
 
-      edges[key] = {
+      return [key, {
         uuid: key,
         name: compendiumEdge?.name || edgeItem.name,
         expanded: false,
@@ -602,10 +670,10 @@ export class CharacterManager extends FormApplication {
         description: edgeItem.system?.description
           ? await TextEditor.enrichHTML(edgeItem.system.description, { async: true })
           : '',
-      };
-    }
+      }];
+    }));
 
-    return edges;
+    return Object.fromEntries(entries);
   }
 
   /**
@@ -618,17 +686,18 @@ export class CharacterManager extends FormApplication {
    * since those are automatic bonuses, not player choices made on this tab.
    */
   async _detectHindrancesFromActor(actor) {
-    const hindrances = {};
+    const hindranceItems = actor.items.filter(item => item.type === 'hindrance' && !item.grantedBy);
 
-    for (const hindranceItem of actor.items.filter(item => item.type === 'hindrance' && !item.grantedBy)) {
+    const entries = await Promise.all(hindranceItems.map(async (hindranceItem) => {
       const compendiumHindrance = this.compendiumData.hindrances.find(
         h => h.name.toLowerCase() === hindranceItem.name.toLowerCase()
       );
 
-      const key = compendiumHindrance?.uuid || hindranceItem.uuid;
+      // Always key by the actor's own item — see _detectGearFromActor for why.
+      const key = hindranceItem.uuid;
       const major = hindranceItem.system?.major ?? compendiumHindrance?.major ?? false;
 
-      hindrances[key] = {
+      return [key, {
         uuid: key,
         name: compendiumHindrance?.name || hindranceItem.name,
         major,
@@ -639,10 +708,10 @@ export class CharacterManager extends FormApplication {
         description: hindranceItem.system?.description
           ? await TextEditor.enrichHTML(hindranceItem.system.description, { async: true })
           : '',
-      };
-    }
+      }];
+    }));
 
-    return hindrances;
+    return Object.fromEntries(entries);
   }
 
   /**
@@ -654,15 +723,20 @@ export class CharacterManager extends FormApplication {
    * Edges/Hindrances detection.
    */
   async _detectGearFromActor(actor) {
-    const gear = {};
+    const gearItems = actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy);
 
-    for (const gearItem of actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy)) {
+    const entries = await Promise.all(gearItems.map(async (gearItem) => {
       const compendiumGear = this.compendiumData.gear.find(
         g => g.name.toLowerCase() === gearItem.name.toLowerCase()
       );
 
-      const key = compendiumGear?.uuid || gearItem.uuid;
-      gear[key] = {
+      // Always key by the actor's own item — never the compendium uuid. Two actor items
+      // that happen to share a name (e.g. two separately-added Greatswords) are still two
+      // distinct rows; keying by a shared compendium uuid collapsed them into one entry
+      // and made _saveGearToActor's existing-item lookup miss, deleting and recreating
+      // the item on every save (losing any per-item edits) instead of patching quantity.
+      const key = gearItem.uuid;
+      return [key, {
         uuid: key,
         name: compendiumGear?.name || gearItem.name,
         price: compendiumGear?.price ?? gearItem.system?.price ?? 0,
@@ -673,10 +747,10 @@ export class CharacterManager extends FormApplication {
         description: gearItem.system?.description
           ? await TextEditor.enrichHTML(gearItem.system.description, { async: true })
           : '',
-      };
-    }
+      }];
+    }));
 
-    return gear;
+    return Object.fromEntries(entries);
   }
 
   async _updateObject(event, formData) {
@@ -731,6 +805,161 @@ export class CharacterManager extends FormApplication {
       if (created.length > 0) {
         await created[0].setFlag(MODULE_ID, 'compendiumUuid', compendiumUuid);
       }
+    }
+  }
+
+  /**
+   * Reconcile the actor's edge items with the current selections, same pattern as
+   * _saveGearToActor: existing items are matched by their own uuid (never a compendium
+   * uuid) and left untouched, new selections are created fresh, anything no longer
+   * selected is deleted. Edges have no per-instance mutable field, so there's no patch step.
+   */
+  async _saveEdgesToActor(actor) {
+    const existingEdges = actor.items.filter(item => item.type === 'edge' && !item.grantedBy);
+    const existingByUuid = new Map(existingEdges.map(item => [item.uuid, item]));
+    const toDelete = new Set(existingEdges.map(item => item.id));
+
+    const toCreate = [];
+
+    for (const key of Object.keys(this.character.edges || {})) {
+      const existingItem = existingByUuid.get(key);
+      if (existingItem) {
+        toDelete.delete(existingItem.id);
+      } else {
+        const sourceItem = await fromUuid(key);
+        if (!sourceItem) continue;
+        const itemData = sourceItem.toObject();
+        delete itemData._id;
+        toCreate.push(itemData);
+      }
+    }
+
+    if (toDelete.size > 0) {
+      await actor.deleteEmbeddedDocuments('Item', Array.from(toDelete));
+    }
+
+    if (toCreate.length > 0) {
+      await actor.createEmbeddedDocuments('Item', toCreate);
+    }
+  }
+
+  /**
+   * Reconcile the actor's hindrance items with the current selections, same pattern as
+   * _saveGearToActor. Major/minor is the one per-instance mutable field (toggled via the
+   * tab's radio buttons), so existing items get that patched in place rather than recreated.
+   */
+  async _saveHindrancesToActor(actor) {
+    const existingHindrances = actor.items.filter(item => item.type === 'hindrance' && !item.grantedBy);
+    const existingByUuid = new Map(existingHindrances.map(item => [item.uuid, item]));
+    const toDelete = new Set(existingHindrances.map(item => item.id));
+
+    const toCreate = [];
+    const toPatchMajor = [];
+
+    for (const [key, hindranceData] of Object.entries(this.character.hindrances || {})) {
+      const existingItem = existingByUuid.get(key);
+      if (existingItem) {
+        toDelete.delete(existingItem.id);
+        toPatchMajor.push({ id: existingItem.id, major: hindranceData.major ?? false });
+      } else {
+        const sourceItem = await fromUuid(key);
+        if (!sourceItem) continue;
+        const itemData = sourceItem.toObject();
+        delete itemData._id;
+        itemData.system.major = hindranceData.major ?? false;
+        toCreate.push(itemData);
+      }
+    }
+
+    if (toDelete.size > 0) {
+      await actor.deleteEmbeddedDocuments('Item', Array.from(toDelete));
+    }
+
+    if (toPatchMajor.length > 0) {
+      await actor.updateEmbeddedDocuments('Item', toPatchMajor.map(({ id, major }) => ({
+        _id: id,
+        'system.major': major,
+      })));
+    }
+
+    if (toCreate.length > 0) {
+      await actor.createEmbeddedDocuments('Item', toCreate);
+    }
+  }
+
+  /**
+   * Reconcile the actor's skill items with the current selections, same pattern as
+   * _saveGearToActor. Die and advances are the per-instance mutable fields, patched in
+   * place on existing items. Ancestry-granted skills are excluded entirely — they're
+   * managed by whatever grants them, not by this tab. A skill with no die selected (e.g.
+   * added then immediately cleared) is treated as not actually taken and skipped.
+   *
+   * If the "Use Curated Skill Icons" setting is on, any skill that name-matches a
+   * compendium entry also gets its icon and description replaced with the compendium's
+   * version — lets a SWADE core-created character's default skills be re-skinned to this
+   * kit's curated equivalents without touching die/advances/identity.
+   */
+  async _saveSkillsToActor(actor) {
+    const dieToSides = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12 };
+    const useCuratedIcons = game.settings.get(MODULE_ID, 'useCuratedSkillIcons');
+    const existingSkills = actor.items.filter(item =>
+      item.type === 'skill' && !item.grantedBy && item.name.toLowerCase() !== 'unskilled attempt'
+    );
+    const existingByUuid = new Map(existingSkills.map(item => [item.uuid, item]));
+    const toDelete = new Set(existingSkills.map(item => item.id));
+
+    const toCreate = [];
+    const toPatch = [];
+
+    for (const [key, skillData] of Object.entries(this.character.skills || {})) {
+      if (skillData.fromAncestry || !skillData.die) continue;
+
+      const compendiumMatch = useCuratedIcons
+        ? this.compendiumData.skills.find(s => s.name.toLowerCase() === (skillData.name || '').toLowerCase())
+        : null;
+
+      const existingItem = existingByUuid.get(key);
+      if (existingItem) {
+        toDelete.delete(existingItem.id);
+        toPatch.push({
+          id: existingItem.id,
+          sides: dieToSides[skillData.die] ?? 4,
+          advances: skillData.advances ?? 0,
+          img: compendiumMatch?.img || undefined,
+          description: compendiumMatch?.description || undefined,
+        });
+      } else {
+        const sourceItem = await fromUuid(key);
+        if (!sourceItem) continue;
+        const itemData = sourceItem.toObject();
+        delete itemData._id;
+        itemData.system.die = { ...itemData.system.die, sides: dieToSides[skillData.die] ?? 4 };
+        itemData.system.advances = skillData.advances ?? 0;
+        if (compendiumMatch?.img) itemData.img = compendiumMatch.img;
+        if (compendiumMatch?.description) itemData.system.description = compendiumMatch.description;
+        toCreate.push(itemData);
+      }
+    }
+
+    if (toDelete.size > 0) {
+      await actor.deleteEmbeddedDocuments('Item', Array.from(toDelete));
+    }
+
+    if (toPatch.length > 0) {
+      await actor.updateEmbeddedDocuments('Item', toPatch.map(({ id, sides, advances, img, description }) => {
+        const update = {
+          _id: id,
+          'system.die.sides': sides,
+          'system.advances': advances,
+        };
+        if (img) update.img = img;
+        if (description) update['system.description'] = description;
+        return update;
+      }));
+    }
+
+    if (toCreate.length > 0) {
+      await actor.createEmbeddedDocuments('Item', toCreate);
     }
   }
 
@@ -810,17 +1039,64 @@ export class CharacterManager extends FormApplication {
     return result === true;
   }
 
-  async _createActor() {
+  /**
+   * Convert our attribute format ({die: 'd6', advances: 0}) to flat dot-notation updates
+   * targeting SWADE's actual schema shape (system.attributes.<name>.die is a
+   * {sides, modifier} SchemaField, not a plain string — writing the string directly gets
+   * silently dropped by Foundry's data model validation, which is why attribute die changes
+   * weren't persisting). Dot-notation patches only the `sides` leaf, leaving `modifier` (and
+   * any other sibling fields on that attribute, like smarts' `animal`) untouched — a nested
+   * {die: {sides}} object risked being treated as a full replacement of the `die` sub-schema.
+   */
+  _attributesToUpdateData(attributes) {
+    const dieToSides = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12 };
+    const result = {};
+    for (const [attrName, attrData] of Object.entries(attributes || {})) {
+      result[`system.attributes.${attrName}.die.sides`] = dieToSides[attrData.die] ?? 4;
+    }
+    return result;
+  }
+
+  /**
+   * Save the current selections onto the actor this Character Manager was opened for.
+   * This tool only ever edits an existing actor — it doesn't create new characters — so
+   * there's no "no actor" branch here.
+   */
+  async _saveActor() {
     try {
       if (!this.character.name) {
         ui.notifications.warn('[Character Creation] Please enter a character name');
         return;
       }
 
-      // Add Unskilled Attempt skill (fallback for untrained skills)
-      const unskilleddSkill = this.compendiumData.skills.find(s => s.name.toLowerCase() === 'unskilled attempt');
-      if (unskilleddSkill && !this.character.skills[unskilleddSkill.uuid]) {
-        this.character.skills[unskilleddSkill.uuid] = { die: 'd4', advances: 0 };
+      const updateData = {
+        name: this.character.name,
+        system: {
+          details: {
+            archetype: this.character.archetype,
+            notes: this.character.concept,
+          },
+        },
+        ...this._attributesToUpdateData(this.character.attributes),
+      };
+
+      await this.actor.update(updateData);
+
+      const existingAncestries = this.actor.items.filter(item => item.type === 'ancestry');
+      if (existingAncestries.length > 0) {
+        await this.actor.deleteEmbeddedDocuments('Item', existingAncestries.map(i => i.id));
+      }
+
+      if (this.character.ancestry) {
+        const ancestryItem = await fromUuid(this.character.ancestry);
+        if (ancestryItem) {
+          const itemData = ancestryItem.toObject();
+          delete itemData._id;
+          const created = await this.actor.createEmbeddedDocuments('Item', [itemData]);
+          if (created.length > 0) {
+            await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', this.character.ancestry);
+          }
+        }
       }
 
       const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
@@ -828,90 +1104,15 @@ export class CharacterManager extends FormApplication {
       const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
       const gearCost = calculateGearCost(this.character);
 
-      if (this.actor) {
-        const updateData = {
-          name: this.character.name,
-          system: {
-            details: {
-              archetype: this.character.archetype,
-              notes: this.character.concept,
-            },
-            attributes: this.character.attributes,
-            skills: this.character.skills,
-            edges: this.character.edges,
-            hindrances: this.character.hindrances,
-          },
-        };
+      await this._saveSkillsToActor(this.actor);
+      await this._saveEdgesToActor(this.actor);
+      await this._saveHindrancesToActor(this.actor);
+      await this._saveGearToActor(this.actor);
+      await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
+      await this._persistGearFundsOverride(this.actor);
 
-        await this.actor.update(updateData);
-
-        if (this.character.ancestry) {
-          const existingAncestries = this.actor.items.filter(item => item.type === 'ancestry');
-          if (existingAncestries.length > 0) {
-            await this.actor.deleteEmbeddedDocuments('Item', existingAncestries.map(i => i.id));
-          }
-
-          const ancestryItem = await fromUuid(this.character.ancestry);
-          if (ancestryItem) {
-            const itemData = ancestryItem.toObject();
-            delete itemData._id;
-            const created = await this.actor.createEmbeddedDocuments('Item', [itemData]);
-            if (created.length > 0) {
-              await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', this.character.ancestry);
-            }
-          }
-        } else {
-          const existingAncestries = this.actor.items.filter(item => item.type === 'ancestry');
-          if (existingAncestries.length > 0) {
-            await this.actor.deleteEmbeddedDocuments('Item', existingAncestries.map(i => i.id));
-          }
-        }
-
-        await this._saveGearToActor(this.actor);
-        await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
-        await this._persistGearFundsOverride(this.actor);
-
-        ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
-      } else {
-        const actorData = {
-          name: this.character.name,
-          type: 'character',
-          system: {
-            details: {
-              archetype: this.character.archetype,
-              notes: this.character.concept,
-            },
-            attributes: this.character.attributes,
-            skills: this.character.skills,
-            edges: this.character.edges,
-            hindrances: this.character.hindrances,
-          },
-        };
-
-        const newActor = await Actor.create(actorData);
-
-        if (this.character.ancestry) {
-          const ancestryItem = await fromUuid(this.character.ancestry);
-          if (ancestryItem) {
-            const itemData = ancestryItem.toObject();
-            delete itemData._id;
-            const created = await newActor.createEmbeddedDocuments('Item', [itemData]);
-            if (created.length > 0) {
-              await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', this.character.ancestry);
-            }
-          }
-        }
-
-        await this._saveGearToActor(newActor);
-        await this._reconcileGearFunds(newActor, startingFunds, gearCost);
-        await this._persistGearFundsOverride(newActor);
-
-        ui.notifications.info(`[Character Creation] Created: ${this.character.name}`);
-      }
-
-      this.character = initializeCharacter();
-      this._initializeFreeCoreSkills();
-      this.render();
+      ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
+      this.close();
     } catch (error) {
       console.error('[Character Manager] Failed to save actor:', error);
       ui.notifications.error('[Character Creation] Failed to save character');

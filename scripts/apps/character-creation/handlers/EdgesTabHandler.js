@@ -16,8 +16,14 @@ export class EdgesTabHandler extends BaseTabHandler {
   }
 
   getDropdownConfig() {
+    // character.edges is keyed by the actor's own item uuid (or a fresh compendium uuid for
+    // a not-yet-saved pick), never by a compendium row's own uuid — "already selected" has
+    // to be a name match, not a key lookup.
+    const ownedNames = new Set(
+      Object.values(this.characterManager.character.edges || {}).map((e) => e.name?.toLowerCase())
+    );
     const availableEdges = this.characterManager.compendiumData.edges.filter(
-      (e) => !this.characterManager.character.edges?.[e.uuid]
+      (e) => !ownedNames.has(e.name.toLowerCase())
     );
     return {
       items: availableEdges,
@@ -109,7 +115,9 @@ export class EdgesTabHandler extends BaseTabHandler {
   async _addEdge(edge) {
     if (!edge || !edge.uuid) return;
 
-    if (this.characterManager.character.edges?.[edge.uuid]) {
+    const alreadySelected = Object.values(this.characterManager.character.edges || {})
+      .some((e) => e.name?.toLowerCase() === edge.name?.toLowerCase());
+    if (alreadySelected) {
       ui.notifications.warn('This edge is already selected');
       return;
     }

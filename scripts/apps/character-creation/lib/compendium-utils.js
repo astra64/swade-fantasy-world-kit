@@ -89,14 +89,20 @@ function isPackVisibleToUser(packId, user = null) {
 
 /**
  * Fetch items from a compendium pack, with optional filtering.
- * Read-only; returns plain objects with name and uuid.
+ * Read-only; returns plain objects with name, uuid, and any requested `fields`.
  * Results are sorted alphabetically by name.
- * 
+ *
+ * Requests extra fields (e.g. 'system.description') directly from the pack index
+ * instead of loading each item's full Document — a single indexed query per pack
+ * instead of one document fetch per item, which is what made compendium loading
+ * take ~2 seconds for a few dozen items.
+ *
  * @param {string} packId - Pack collection ID
  * @param {string} [itemType] - Filter by item type (e.g., 'ancestry', 'skill'). If provided, only returns items matching this type.
- * @returns {Promise<Array>} Array of {name, uuid} objects sorted alphabetically by name
+ * @param {Array<string>} [fields] - Additional index fields to request (dot-path, e.g. 'system.attribute')
+ * @returns {Promise<Array>} Array of {name, uuid, ...fields} objects sorted alphabetically by name
  */
-async function fetchPackItems(packId, itemType = null) {
+async function fetchPackItems(packId, itemType = null, fields = []) {
   try {
     // Check visibility first; skip pack if not visible to current user
     if (!isPackVisibleToUser(packId)) {
@@ -106,14 +112,16 @@ async function fetchPackItems(packId, itemType = null) {
     const pack = game.packs.get(packId);
     if (!pack) return [];
 
-    const index = await pack.getIndex();
+    const index = await pack.getIndex({ fields });
     if (!index) return [];
 
-    let items = Array.from(index).map((entry) => ({
-      name: entry.name,
-      uuid: entry.uuid,
-      type: entry.type, // Include type for filtering
-    }));
+    let items = Array.from(index).map((entry) => {
+      const item = { name: entry.name, uuid: entry.uuid, type: entry.type, img: entry.img || '' };
+      for (const field of fields) {
+        foundry.utils.setProperty(item, field, foundry.utils.getProperty(entry, field));
+      }
+      return item;
+    });
 
     // Filter by type if specified
     if (itemType) {
@@ -123,8 +131,7 @@ async function fetchPackItems(packId, itemType = null) {
     // Sort alphabetically by name
     items.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Return only name and uuid (remove type from output)
-    return items.map((item) => ({ name: item.name, uuid: item.uuid }));
+    return items;
   } catch (error) {
     console.warn(`[Character Creation] Failed to fetch pack ${packId}:`, error);
     return [];
@@ -137,10 +144,11 @@ async function fetchPackItems(packId, itemType = null) {
  *
  * @param {Array<string>} packIds - Pack collection IDs
  * @param {string} [itemType] - Filter by item type
- * @returns {Promise<Array>} Array of {name, uuid} objects sorted alphabetically by name
+ * @param {Array<string>} [fields] - Additional index fields to request (dot-path)
+ * @returns {Promise<Array>} Array of {name, uuid, ...fields} objects sorted alphabetically by name
  */
-async function fetchPackItemsMulti(packIds, itemType = null) {
-  const lists = await Promise.all(packIds.map((packId) => fetchPackItems(packId, itemType)));
+async function fetchPackItemsMulti(packIds, itemType = null, fields = []) {
+  const lists = await Promise.all(packIds.map((packId) => fetchPackItems(packId, itemType, fields)));
   const items = lists.flat();
   items.sort((a, b) => a.name.localeCompare(b.name));
   return items;
@@ -176,28 +184,19 @@ export async function getAncestries() {
  * @returns {Promise<Array>} Array of {name, uuid, attribute, description} objects sorted alphabetically
  */
 export async function getSkills() {
-  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.skills, ...getAdditionalPackIds('additionalSkillPacks')], 'skill');
+  const items = await fetchPackItemsMulti(
+    [FANTASY_PACKS.skills, ...getAdditionalPackIds('additionalSkillPacks')],
+    'skill',
+    ['system.attribute', 'system.description']
+  );
 
-  // Fetch full item data in parallel to get system.attribute and description
-  const enriched = await Promise.all(basicItems.map(async (item) => {
-    try {
-      const fullItem = await getItemPreview(item.uuid);
-      if (fullItem) {
-        return {
-          name: fullItem.name,
-          uuid: fullItem.uuid,
-          attribute: fullItem.system?.attribute ?? 'smarts',
-          description: fullItem.system?.description ?? '',
-        };
-      }
-      return item;
-    } catch (error) {
-      console.warn(`[Character Creation] Failed to fetch skill ${item.name}:`, error);
-      return item;
-    }
+  return items.map((item) => ({
+    name: item.name,
+    uuid: item.uuid,
+    img: item.img || '',
+    attribute: item.system?.attribute ?? 'smarts',
+    description: item.system?.description ?? '',
   }));
-
-  return enriched.filter(skill => skill);
 }
 
 /**
@@ -210,34 +209,37 @@ export async function getSkills() {
  * @returns {Promise<Array>} Array of {name, uuid, description, img, requirements} objects sorted alphabetically
  */
 export async function getEdges() {
-  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.edges, ...getAdditionalPackIds('additionalEdgePacks')], 'edge');
+  // Requirements are stored as a system DataModel (RequirementsField) with a custom
+  // toString() that formats them for display — the compendium index only holds plain
+  // serialized data, not model instances, so full Documents are still needed to render
+  // requirements correctly. Fetching them one at a time via fromUuid() took ~7ms/item
+  // (1.6s+ for ~230 edges); pack.getDocuments() fetches every document in a pack as a
+  // single batch operation instead, which is dramatically faster for the same data.
+  const packIds = [FANTASY_PACKS.edges, ...getAdditionalPackIds('additionalEdgePacks')];
 
-  const enriched = await Promise.all(basicItems.map(async (item) => {
+  const packResults = await Promise.all(packIds.map(async (packId) => {
+    if (!isPackVisibleToUser(packId)) return [];
+    const pack = game.packs.get(packId);
+    if (!pack) return [];
     try {
-      const fullItem = await getItemPreview(item.uuid);
-      if (fullItem) {
-        return {
-          name: fullItem.name,
-          uuid: fullItem.uuid,
-          description: fullItem.system?.description ?? '',
-          img: fullItem.img || '',
-          requirements: Array.isArray(fullItem.system?.requirements)
-            ? fullItem.system.requirements.map((r) => (typeof r?.toString === 'function' ? r.toString() : '')).filter(Boolean)
-            : [],
-        };
-      }
+      return await pack.getDocuments({ type: 'edge' });
     } catch (error) {
-      console.warn(`[Character Creation] Failed to fetch edge ${item.uuid}:`, error);
+      console.warn(`[Character Creation] Failed to batch-fetch edges from ${packId}:`, error);
+      return [];
     }
-    return {
-      name: item.name,
-      uuid: item.uuid,
-      description: '',
-      img: '',
-      requirements: [],
-    };
   }));
 
+  const enriched = packResults.flat().map((edgeItem) => ({
+    name: edgeItem.name,
+    uuid: edgeItem.uuid,
+    description: edgeItem.system?.description ?? '',
+    img: edgeItem.img || '',
+    requirements: Array.isArray(edgeItem.system?.requirements)
+      ? edgeItem.system.requirements.map((r) => (typeof r?.toString === 'function' ? r.toString() : '')).filter(Boolean)
+      : [],
+  }));
+
+  enriched.sort((a, b) => a.name.localeCompare(b.name));
   return enriched;
 }
 
@@ -251,36 +253,20 @@ export async function getEdges() {
  * @returns {Promise<Array>} Array of {name, uuid, major, description} objects sorted alphabetically
  */
 export async function getHindrances() {
-  const basicItems = await fetchPackItemsMulti([FANTASY_PACKS.hindrances, ...getAdditionalPackIds('additionalHindrancePacks')], 'hindrance');
+  const items = await fetchPackItemsMulti(
+    [FANTASY_PACKS.hindrances, ...getAdditionalPackIds('additionalHindrancePacks')],
+    'hindrance',
+    ['system.major', 'system.severity', 'system.description']
+  );
 
-  // Fetch full item data in parallel to get system.major flag
-  const enriched = await Promise.all(basicItems.map(async (item) => {
-    try {
-      const fullItem = await getItemPreview(item.uuid);
-      if (fullItem) {
-        return {
-          name: fullItem.name,
-          uuid: fullItem.uuid,
-          major: fullItem.system?.major ?? false,
-          severity: fullItem.system?.severity ?? 'either',
-          description: fullItem.system?.description ?? '',
-          img: fullItem.img || '',
-        };
-      }
-    } catch (error) {
-      console.warn(`[Character Creation] Failed to fetch hindrance ${item.uuid}:`, error);
-    }
-    // Fall back to basic info if full fetch fails
-    return {
-      name: item.name,
-      uuid: item.uuid,
-      major: false,
-      description: '',
-      img: '',
-    };
+  return items.map((item) => ({
+    name: item.name,
+    uuid: item.uuid,
+    major: item.system?.major ?? false,
+    severity: item.system?.severity ?? 'either',
+    description: item.system?.description ?? '',
+    img: item.img || '',
   }));
-
-  return enriched;
 }
 
 /**
@@ -298,29 +284,24 @@ export async function getGearItems() {
     FANTASY_PACKS.armor,
     ...getAdditionalPackIds("additionalGearPacks"),
   ];
-  const basicItems = await fetchPackItemsMulti(packIds);
+  const items = await fetchPackItemsMulti(packIds, null, [
+    'system.price',
+    'system.weight',
+    'system.description',
+    'system.minStr',
+  ]);
 
-  const enriched = await Promise.all(basicItems.map(async (item) => {
-    try {
-      const fullItem = await getItemPreview(item.uuid);
-      if (fullItem) {
-        return {
-          name: fullItem.name,
-          uuid: fullItem.uuid,
-          price: fullItem.system?.price ?? 0,
-          weight: fullItem.system?.weight ?? 0,
-          description: fullItem.system?.description ?? '',
-          img: fullItem.img || '',
-          type: fullItem.type,
-          // Minimum Strength die needed to use this item without penalty (weapons/armor).
-          // Not every gear item has one — items without it never trigger the Gear tab's warning.
-          minStr: fullItem.system?.minStr || null,
-        };
-      }
-    } catch (error) {
-      console.warn(`[Character Creation] Failed to fetch gear item ${item.uuid}:`, error);
-    }
-    return { name: item.name, uuid: item.uuid, price: 0, weight: 0, description: '', img: '', type: '' };
+  const enriched = items.map((item) => ({
+    name: item.name,
+    uuid: item.uuid,
+    price: item.system?.price ?? 0,
+    weight: item.system?.weight ?? 0,
+    description: item.system?.description ?? '',
+    img: item.img || '',
+    type: item.type,
+    // Minimum Strength die needed to use this item without penalty (weapons/armor).
+    // Not every gear item has one — items without it never trigger the Gear tab's warning.
+    minStr: item.system?.minStr || null,
   }));
 
   enriched.sort((a, b) => a.name.localeCompare(b.name));

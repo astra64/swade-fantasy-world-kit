@@ -5,8 +5,6 @@ export function setupSettings(config) {
   const {
     BaselineModulesManager,
     ExtraVisiblePacksSelector,
-    CharacterManager,
-    AdvancementManager,
     handleVisibilitySettingsChanged
   } = config;
 
@@ -26,15 +24,6 @@ export function setupSettings(config) {
     icon: "fas fa-puzzle-piece",
     type: BaselineModulesManager,
     restricted: true
-  });
-
-  game.settings.registerMenu(MODULE_ID, "characterCreatorMenu", {
-    name: "Create Character",
-    label: "Open Creator",
-    hint: "Create a new SWADE character with ancestry, skills, edges, and hindrances from curated compendiums.",
-    icon: "fas fa-user-plus",
-    type: CharacterManager,
-    restricted: false
   });
 
   game.settings.register(MODULE_ID, "curatedMode", {
@@ -193,7 +182,8 @@ export function setupSettings(config) {
     scope: "world",
     config: true,
     type: String,
-    default: ""
+    default: "",
+    onChange: handleVisibilitySettingsChanged
   });
 
   game.settings.register(MODULE_ID, "additionalSkillPacks", {
@@ -202,7 +192,17 @@ export function setupSettings(config) {
     scope: "world",
     config: true,
     type: String,
-    default: ""
+    default: "",
+    onChange: handleVisibilitySettingsChanged
+  });
+
+  game.settings.register(MODULE_ID, "useCuratedSkillIcons", {
+    name: "Character Manager: Use Curated Skill Icons",
+    hint: "When saving, any of the actor's skills that name-match a skill in the configured compendiums have their icon and description replaced with the compendium's version (die and advances are untouched). Useful for swapping a SWADE core-created character's default skills for this kit's curated equivalents.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
   });
 
   game.settings.register(MODULE_ID, "additionalEdgePacks", {
@@ -211,7 +211,8 @@ export function setupSettings(config) {
     scope: "world",
     config: true,
     type: String,
-    default: ""
+    default: "",
+    onChange: handleVisibilitySettingsChanged
   });
 
   game.settings.register(MODULE_ID, "additionalHindrancePacks", {
@@ -220,7 +221,8 @@ export function setupSettings(config) {
     scope: "world",
     config: true,
     type: String,
-    default: ""
+    default: "",
+    onChange: handleVisibilitySettingsChanged
   });
 
   game.settings.register(MODULE_ID, "richFundsMultipliers", {
@@ -238,6 +240,7 @@ export function setupSettings(config) {
     scope: "world",
     config: true,
     type: String,
-    default: ""
+    default: "",
+    onChange: handleVisibilitySettingsChanged
   });
 }

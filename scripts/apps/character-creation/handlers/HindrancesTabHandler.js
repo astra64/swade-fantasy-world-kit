@@ -16,8 +16,14 @@ export class HindrancesTabHandler extends BaseTabHandler {
   }
 
   getDropdownConfig() {
+    // character.hindrances is keyed by the actor's own item uuid (or a fresh compendium
+    // uuid for a not-yet-saved pick), never by a compendium row's own uuid — "already
+    // selected" has to be a name match, not a key lookup.
+    const ownedNames = new Set(
+      Object.values(this.characterManager.character.hindrances || {}).map(h => h.name?.toLowerCase())
+    );
     const availableHindrances = this.characterManager.compendiumData.hindrances.filter(
-      h => !this.characterManager.character.hindrances?.[h.uuid]
+      h => !ownedNames.has(h.name.toLowerCase())
     );
     return {
       items: availableHindrances,
@@ -131,7 +137,9 @@ export class HindrancesTabHandler extends BaseTabHandler {
     if (!hindrance || !hindrance.uuid) return;
 
     // Prevent adding same hindrance twice
-    if (this.characterManager.character.hindrances?.[hindrance.uuid]) {
+    const alreadySelected = Object.values(this.characterManager.character.hindrances || {})
+      .some(h => h.name?.toLowerCase() === hindrance.name?.toLowerCase());
+    if (alreadySelected) {
       ui.notifications.warn('This hindrance is already selected');
       return;
     }
@@ -193,21 +201,13 @@ export class HindrancesTabHandler extends BaseTabHandler {
   async _setHindranceMajor(uuid, isMajor) {
     if (!this.characterManager.character.hindrances?.[uuid]) return;
 
+    // Hindrance selection itself has no point cap — only the perk slots granted by
+    // hindrance points are limited (see generatePerkSlots), so there's nothing to check here.
     const hindrance = this.characterManager.character.hindrances[uuid];
-    const oldPoints = hindrance.points;
-    const newPoints = isMajor ? 2 : 1;
-
-    // Check if change would exceed budget
-    const currentPoints = this._getTotalPoints();
-    const pointDifference = newPoints - oldPoints;
-    if (currentPoints + pointDifference > 4) {
-      ui.notifications.warn(`Changing to ${isMajor ? 'Major' : 'Minor'} would exceed the 4-point budget`);
-      this.characterManager.render();
-      return;
-    }
-
     hindrance.major = isMajor;
-    hindrance.points = newPoints;
+    hindrance.points = isMajor ? 2 : 1;
+
+    this.characterManager.pendingScrollTarget = `[data-item-uuid="${uuid}"]`;
     this.characterManager.render();
   }
 

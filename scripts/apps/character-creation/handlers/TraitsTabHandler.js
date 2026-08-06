@@ -87,12 +87,22 @@ export class TraitsTabHandler {
     }
 
     if (!this.characterManager.character.skills[skillUuid]) {
-      this.characterManager.character.skills[skillUuid] = { die: 'd4', advances: 0 };
+      this.characterManager.character.skills[skillUuid] = { die: 'd4', advances: 0, name: this._compendiumSkillName(skillUuid) };
     }
 
     // Update skill die value (no budget restriction - warning shown on tab)
     this.characterManager.character.skills[skillUuid].die = die;
     this.characterManager.render();
+  }
+
+  /**
+   * skillUuid here is a row's rendered uuid, which is a compendium skill's own uuid whenever
+   * that skill isn't yet on the actor (see CharacterManager._buildSkillsByAttribute) — used to
+   * stamp a `name` on a freshly-created entry so it can be found by name-match later, since
+   * character.skills is otherwise keyed by the actor's own item uuid, not any compendium uuid.
+   */
+  _compendiumSkillName(skillUuid) {
+    return this.characterManager.compendiumData.skills.find((s) => s.uuid === skillUuid)?.name;
   }
 
   _addSkill(skillUuid) {
@@ -102,7 +112,7 @@ export class TraitsTabHandler {
 
     // Add skill at d4 if not already present (no budget restriction)
     if (!this.characterManager.character.skills[skillUuid]) {
-      this.characterManager.character.skills[skillUuid] = { die: 'd4', advances: 0 };
+      this.characterManager.character.skills[skillUuid] = { die: 'd4', advances: 0, name: this._compendiumSkillName(skillUuid) };
     }
 
     this.characterManager.render();
@@ -140,7 +150,11 @@ export class TraitsTabHandler {
     );
     const key = compendiumSkill?.uuid || uuid;
 
-    if (this.characterManager.character.skills[key]) {
+    // character.skills is keyed by the actor's own item uuid, never a compendium row's own
+    // uuid, so an existing skill has to be found by name, not by checking this new key.
+    const alreadyAdded = Object.values(this.characterManager.character.skills || {})
+      .some((s) => s.name?.toLowerCase() === item.name.toLowerCase());
+    if (alreadyAdded) {
       ui.notifications.warn('This skill is already added');
       return;
     }
@@ -148,8 +162,9 @@ export class TraitsTabHandler {
     this.characterManager.character.skills[key] = {
       die: 'd4',
       advances: 0,
-      // Only needed as a display/cost fallback when this skill isn't in the compendium
-      name: compendiumSkill ? undefined : item.name,
+      // Always stored — used for name-matching (dedupe checks, Traits tab display), not
+      // just as a "not in compendium" fallback.
+      name: item.name,
       attribute: compendiumSkill ? undefined : (item.system?.attribute || 'smarts'),
       description: compendiumSkill ? undefined : (item.system?.description || ''),
     };

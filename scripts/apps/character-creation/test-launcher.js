@@ -7,8 +7,16 @@ export async function launchCharacterManager() {
   console.log('[CharacterManager] Launch test starting...');
 
   try {
-    console.log('[CharacterManager] Attempting to create instance...');
-    const mgr = new window.CharacterManager();
+    // Character Manager only ever edits an existing actor — it has no "create a new
+    // character" mode — so the test launcher needs a real actor to open against.
+    const actor = game.user?.character || game.actors?.find((a) => a.type === 'character');
+    if (!actor) {
+      console.error('[CharacterManager] No character actor found to test against. Create or select one first.');
+      return;
+    }
+
+    console.log('[CharacterManager] Attempting to create instance for actor:', actor.name);
+    const mgr = new window.CharacterManager({ actor });
     console.log('[CharacterManager] Instance created:', mgr);
     console.log('[CharacterManager] Template:', mgr.options.template);
     console.log('[CharacterManager] ID:', mgr.options.id);

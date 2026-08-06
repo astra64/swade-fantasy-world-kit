@@ -43,50 +43,6 @@ export function isFreeCoreSkill(skillName) {
 }
 
 /**
- * Initialize a blank SWADE character sheet structure.
- * Used by character creation form to provide base data.
- * 
- * @returns {Object} Character object with default attributes, skills, edges, hindrances
- */
-export function initializeCharacter() {
-  return {
-    name: "",
-    description: "",
-    archetype: "",
-    concept: "",
-    ancestry: null,
-    expandedAncestry: false,
-    expandedChildItems: {},
-    expandedGrantedSections: {},
-
-    // Attributes: Each is {die: "d6", advances: 0}
-    attributes: {
-      agility: { die: "d4", advances: 0 },
-      smarts: { die: "d4", advances: 0 },
-      spirit: { die: "d4", advances: 0 },
-      strength: { die: "d4", advances: 0 },
-      vigor: { die: "d4", advances: 0 },
-    },
-
-    // Skills: Each is {die: "d4", advances: 0, linkedAttribute: "agility"}
-    skills: {},
-
-    // Character options: Each is {name: "edge/hindrance name"}
-    edges: {},
-    hindrances: {},
-
-    // Gear: Each is {name, price, quantity, ...}, keyed by compendium/item uuid
-    gear: {},
-    gearFundsOverride: null,
-    showGearFundsOverride: false,
-
-    // Advancement tracking
-    experience: 0,
-    advances: 0,
-  };
-}
-
-/**
  * Calculate derived stats from character attributes and skills.
  * Returns object with Parry and Toughness (SWADE current edition).
  * 
