@@ -41,6 +41,7 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 
 ### Technical
 - New modular component structure: `handlers/`, `components/`, `constants.js`, `_collapsible-item.hbs` partial
+- Removed unused `TABS` export from `constants.js` (dead since Attributes/Skills merged into the Traits tab)
 - Tab handlers pattern enables clean separation of concerns for future tabs (Edges, Gear, Summary)
 - Character template modularized using Handlebars partials (`concept-tab.hbs`, `ancestry-tab.hbs`, `hindrances-tab.hbs`, `traits-tab.hbs`) for independent testing and maintenance
 - HindrancesTabHandler manages major/minor toggles, perk point allocation, and compendium integration
@@ -51,6 +52,7 @@ Versions are organized from newest to oldest. Completed roadmap sections are arc
 - **Compendium Data**: Updated `getSkills()` to extract and pass skill descriptions for hover tooltips
 - **HTML Stripping**: Added `stripHtml()` Handlebars helper to safely decode HTML entities and remove tags from descriptions for display in title attributes
 - **Actions Compendium Dev Macros**: New one-off macros in `source/macros/` for populating/recategorizing the actions-fantasy compendium (`REORGANIZE_ACTIONS_COMPENDIUM_MACRO.js`, `SET_ACTION_CATEGORIES_MACRO.js`, `UPDATE_ACTION_ICONS_MACRO.js`) and for pushing a standard action set onto actor sheets (`APPLY_ACTIONS_TO_SELECTED_MACRO.js`, `APPLY_ACTIONS_TO_ALL_ACTORS_MACRO.js`)
+- **Tab Guidance Rewrite**: Reworded every tab's guidance text to be shorter and more flavorful; Hindrances now shows a second tip box (pick for story, not just points), and Summary gets a small Pace/Parry/Toughness explainer under the derived stats row
 
 ### Changed
 - **Roadmap: Per-Item Fallback Override (v0.6.1)**: Icon Remapping FormApplication now includes per-item "Use Fallback" button to override incorrect smart mappings with type-specific default icons, eliminating need for manual icon selection.

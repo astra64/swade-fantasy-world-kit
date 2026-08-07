@@ -1153,6 +1153,13 @@
   color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
 }
 
+.swade-character-manager .derived-stats-note {
+  margin: 0.5rem 0 0 0;
+  font-size: 10px;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
+}
+
 .swade-character-manager .skill-name {
   font-size: 11px;
   color: var(--color-text-dark-primary);
