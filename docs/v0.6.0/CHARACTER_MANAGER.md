@@ -1,6 +1,6 @@
 # Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Character Creation & Editing In Progress | Concept, Ancestry, Hindrances, Traits, Edges, Gear Tabs Complete — Gear tab not yet tested in-Foundry (implemented but unverified)
+**Status:** Character Creation & Editing In Progress | All 8 tabs implemented (Concept, Ancestry, Hindrances, Traits, Edges, Gear, Summary) — Gear and Summary tabs not yet tested in-Foundry (implemented but unverified)
 
 ## Overview
 
@@ -239,15 +239,17 @@ Add ability to plan and manage character advancement progression (same tool or s
 **Estimated Lines:** 150-200 (template + handler)
 
 #### Tab 7: Summary
-- [ ] Display all character selections in read-only format
-- [ ] Calculate and show:
-  - Final Pace (base 6 + modifications from hindrances/ancestry)
-  - Parry (2 + Fighting/2)
-  - Toughness (2 + Vigor/2 + Armor bonus)
-- [ ] Show gear cost breakdown
-- [ ] **New Player Guidance:**
-  > "Here's your final character. Review everything—if something looks off, go back to earlier tabs and fix it. The derived stats at the bottom (Pace, Parry, Toughness) are calculated automatically from your choices. Ready? Hit Save to add your character to the world!"
-- [ ] **Validation:** List all invalid states if any
+- [x] Display all character selections in a compact, read-only recap — deliberately terse (one row per category: Name/Archetype, Ancestry, Attributes, Skills, Hindrances, Edges, then a single "Derived Stats" row for Pace/Parry/Toughness together), not a full re-render of every tab's item cards. No Gear row (dropped per review — gear is already tracked live on its own tab's pinned footer). No per-section "Edit" buttons and no dedicated tab handler — the tab has nothing interactive on it, so there's nothing for a handler to wire up (Tab nav switching works regardless, since `TabManager` auto-generates nav buttons from `.tab` elements, not from a handler registration).
+- [x] Calculate:
+  - Final Pace (base 6 + modifications from hindrances/ancestry/edges — `calculatePaceModifier()` scans `system.pace` Active Effect changes across the selected ancestry, its granted child items, and every selected edge/hindrance's full item document, same scanning pattern as `getAncestryAttributeBonuses()`)
+  - Parry (2 + Fighting/2) — unchanged, already existed
+  - Toughness (2 + Vigor/2 + Armor bonus) — armor bonus is new: `getGearItems()`/gear detection/`_addGear` now carry each item's `system.armor` value, summed across `character.gear` (a simplification — no per-location/highest-only logic, since Gear tab doesn't track equipped state). Still computed even without a Gear row shown, since it feeds Toughness.
+- [x] **New Player Guidance:** (uses existing `TAB_GUIDANCE.summary` text)
+- [x] **Validation:** No separate warning box — each row's point count (Attributes/Skills/Hindrances/Edges) is color-coded inline instead: subtle yellow if under the max (still has points left to spend), red if over. Missing Name/Ancestry show as an italicized placeholder ("Unnamed" / "None selected") rather than a warning message. Purely informational, same as every other tab — Save is never blocked by any of this.
+
+**Not implemented:** change-detection highlighting (which fields were modified since open) — out of scope for this pass, not part of the original Tab 7 spec.
+
+**Estimated Lines:** 100-150 (template) — actual: ~70 lines template, no handler needed
 
 **Estimated Lines:** 100-150 (template + handler)
 

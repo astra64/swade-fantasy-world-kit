@@ -1298,4 +1298,38 @@
   }
 }
 
+/* ===== Summary Tab ===== */
+
+.swade-character-manager .summary-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.swade-character-manager .summary-row {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.swade-character-manager .summary-row-label {
+  flex: 0 0 auto;
+  min-width: 150px;
+  font-weight: bold;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 80%, transparent);
+}
+
+.swade-character-manager .summary-row-value {
+  color: var(--color-text-dark-primary);
+}
+
+.swade-character-manager .summary-count.under-budget {
+  color: color-mix(in srgb, #c9a227 85%, black 15%);
+}
+
+.swade-character-manager .summary-count.over-budget {
+  color: #ef5350;
+}
+
 /* ===== Die Icon Styling ===== */

@@ -16,6 +16,7 @@ import {
 } from './lib/compendium-utils.js';
 import {
   calculateDerivedStats,
+  calculatePaceModifier,
   calculateTotalAttributePoints,
   calculateTotalSkillPoints,
   calculateTotalHindrancePoints,
@@ -76,6 +77,9 @@ export class CharacterManager extends FormApplication {
     traits: TraitsTabHandler,
     edges: EdgesTabHandler,
     gear: GearTabHandler,
+    // No handler for 'summary' — it's a read-only recap with no interactive elements,
+    // so there's nothing for a tab handler to wire up. Tab nav/switching works regardless,
+    // since TabManager auto-generates nav buttons from .tab elements, not the handler map.
   };
 
   constructor(options = {}) {
@@ -289,7 +293,22 @@ export class CharacterManager extends FormApplication {
         if (hindranceChildResults[i].length) hindranceChildItems[uuid] = hindranceChildResults[i];
       });
 
-      const derivedStats = calculateDerivedStats(this.character);
+      // Pace/Toughness previews need the full item documents (for their Active Effects),
+      // not the trimmed display data character.edges/hindrances/gear already hold.
+      const [edgeItemsFull, hindranceItemsFull] = await Promise.all([
+        Promise.all(edgeUuids.map((uuid) => getItemPreview(uuid))),
+        Promise.all(hindranceUuids.map((uuid) => getItemPreview(uuid))),
+      ]);
+      const paceModifier = calculatePaceModifier([
+        selectedAncestryData,
+        ...childItemsData,
+        ...edgeItemsFull,
+        ...hindranceItemsFull,
+      ]);
+      const armorBonus = Object.values(this.character.gear || {})
+        .reduce((sum, gearData) => sum + (gearData.armor || 0), 0);
+
+      const derivedStats = calculateDerivedStats(this.character, { armorBonus, paceModifier });
       const attributePointsUsed = calculateTotalAttributePoints(this.character);
       const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
       const skillPointBreakdown = getSkillPointBreakdown(this.character, this._getSkillCompendiumMap());
@@ -304,6 +323,7 @@ export class CharacterManager extends FormApplication {
       const bonusAttributePoints = calculateBonusAttributePoints(this.character);
       const bonusSkillPoints = calculateBonusSkillPoints(this.character);
       const gearCost = calculateGearCost(this.character);
+      const hindrancePointsUsed = calculateTotalHindrancePoints(this.character);
 
       // Calculate perk points spent based on actual option costs
       const perkOptionCosts = {
@@ -334,6 +354,21 @@ export class CharacterManager extends FormApplication {
       );
       const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
 
+      const attributePointsMax = 5 + bonusAttributePoints;
+      const skillPointsMax = 12 + bonusSkillPoints;
+      const attributePointsRemaining = attributePointsMax - attributePointsUsed;
+      const skillPointsRemaining = skillPointsMax - skillPointsUsed;
+      const edgePointsRemaining = edgePointsAvailable - edgePointsUsed;
+      const gearRemaining = startingFunds - gearCost;
+
+      // Flattened "Name dX" list for the Summary tab's compact skills line — precomputed here
+      // rather than fought for in Handlebars, since skillsByAttribute is grouped by attribute
+      // and comma-joining across nested {{#each}} loops has no clean @last equivalent.
+      const summarySkills = Object.values(this.skillsByAttribute)
+        .flat()
+        .filter((skill) => skill.die)
+        .map((skill) => `${skill.name} ${skill.die}`);
+
       const data = {
         character: this.character,
         selectedAncestryData: selectedAncestryData,
@@ -348,16 +383,20 @@ export class CharacterManager extends FormApplication {
         skillsByAttribute: this.skillsByAttribute,
         derivedStats: derivedStats,
         attributePointsUsed: attributePointsUsed,
-        attributePointsRemaining: (5 + bonusAttributePoints) - attributePointsUsed,
+        attributePointsRemaining: attributePointsRemaining,
+        attributePointsMax: attributePointsMax,
         bonusAttributePoints: bonusAttributePoints,
         skillPointsUsed: skillPointsUsed,
-        skillPointsRemaining: (12 + bonusSkillPoints) - skillPointsUsed,
+        skillPointsRemaining: skillPointsRemaining,
+        skillPointsMax: skillPointsMax,
         bonusSkillPoints: bonusSkillPoints,
         skillPointBreakdown: skillPointBreakdown,
         availablePerkPoints: availablePerkPoints,
         perkPointsSpent: perkPointsSpent,
         edgePointsAvailable: edgePointsAvailable,
         edgePointsUsed: edgePointsUsed,
+        edgePointsRemaining: edgePointsRemaining,
+        hindrancePointsUsed: hindrancePointsUsed,
         gearCost: gearCost,
         // Starting funds come from SWADE's native pcStartingCurrency setting, adjusted by any
         // matched Rich/Filthy Rich-type edge and Extra Funds perk allocations, or replaced
@@ -365,8 +404,9 @@ export class CharacterManager extends FormApplication {
         gearBudget: startingFunds,
         // Counts down as gear is added (budget minus spend), not up — matches how a player
         // actually tracks shopping money, rather than a spent-so-far total.
-        gearRemaining: startingFunds - gearCost,
+        gearRemaining: gearRemaining,
         gearFundsOverride: this.character.gearFundsOverride ?? '',
+        summarySkills: summarySkills,
         usesCurrency: usesCurrency,
         currentTab: this.currentTab,
         expandedAncestry: this.character.expandedAncestry,
@@ -388,7 +428,7 @@ export class CharacterManager extends FormApplication {
       this._budgetSnapshot = {
         attributePointsRemaining: data.attributePointsRemaining,
         skillPointsRemaining: data.skillPointsRemaining,
-        edgePointsRemaining: edgePointsAvailable - edgePointsUsed,
+        edgePointsRemaining: edgePointsRemaining,
       };
 
       return data;
@@ -717,6 +757,7 @@ export class CharacterManager extends FormApplication {
         price: compendiumGear?.price ?? gearItem.system?.price ?? 0,
         quantity: gearItem.system?.quantity ?? 1,
         minStr: compendiumGear?.minStr ?? gearItem.system?.minStr ?? null,
+        armor: compendiumGear?.armor ?? gearItem.system?.armor ?? 0,
         expanded: false,
         img: gearItem.img || compendiumGear?.img || '',
         description: gearItem.system?.description

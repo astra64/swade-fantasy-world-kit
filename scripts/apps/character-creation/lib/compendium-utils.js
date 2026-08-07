@@ -289,6 +289,7 @@ export async function getGearItems() {
     'system.weight',
     'system.description',
     'system.minStr',
+    'system.armor',
   ]);
 
   const enriched = items.map((item) => ({
@@ -297,6 +298,8 @@ export async function getGearItems() {
     price: item.system?.price ?? 0,
     weight: item.system?.weight ?? 0,
     description: item.system?.description ?? '',
+    // Toughness bonus while worn (armor items only; 0/undefined for everything else).
+    armor: item.system?.armor ?? 0,
     img: item.img || '',
     type: item.type,
     // Minimum Strength die needed to use this item without penalty (weapons/armor).

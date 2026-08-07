@@ -123,6 +123,7 @@ export class GearTabHandler extends BaseTabHandler {
     }
 
     const minStr = item.minStr ?? itemData?.system?.minStr ?? null;
+    const armor = item.armor ?? itemData?.system?.armor ?? 0;
 
     this.characterManager.character.gear[item.uuid] = {
       uuid: item.uuid,
@@ -130,6 +131,7 @@ export class GearTabHandler extends BaseTabHandler {
       price: item.price ?? itemData?.system?.price ?? 0,
       quantity: 1,
       minStr,
+      armor,
       expanded: false,
       img: itemData?.img || '',
       description: itemData?.system?.description ?
@@ -166,7 +168,7 @@ export class GearTabHandler extends BaseTabHandler {
     );
 
     const gearEntry = compendiumItem
-      || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null };
+      || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null, armor: item.system?.armor ?? 0 };
     this._addGear(gearEntry);
   }
 

@@ -42,18 +42,65 @@ export function isFreeCoreSkill(skillName) {
   return FREE_CORE_SKILLS.includes(normalized);
 }
 
+/** Base Pace for every SWADE character before edge/hindrance modifiers (e.g. Fleet-Footed, Slow). */
+const BASE_PACE = 6;
+
+/**
+ * Sum any `system.pace` Active Effect changes found across a list of items (ancestry, its
+ * granted child items, selected edges, selected hindrances). Same scanning pattern as
+ * getAncestryAttributeBonuses, generalized to a flat numeric total rather than a per-attribute
+ * map since Pace has no sub-fields to track.
+ *
+ * @param {Array} items - Full item documents (or plain objects with an `effects` collection)
+ * @returns {number} Total Pace modifier (can be negative, e.g. Slow)
+ */
+export function calculatePaceModifier(items = []) {
+  let modifier = 0;
+
+  for (const item of items) {
+    if (!item) continue;
+
+    let effectsArray = [];
+    if (Array.isArray(item.effects)) {
+      effectsArray = item.effects;
+    } else if (item.effects && typeof item.effects[Symbol.iterator] === 'function') {
+      try {
+        effectsArray = Array.from(item.effects);
+      } catch (e) {
+        // Continue if conversion fails
+      }
+    }
+
+    for (const effect of effectsArray) {
+      if (!Array.isArray(effect.changes)) continue;
+      for (const change of effect.changes) {
+        if (change.key === 'system.pace' || change.key === 'system.pace.value') {
+          const value = Number(change.value);
+          if (!Number.isNaN(value)) modifier += value;
+        }
+      }
+    }
+  }
+
+  return modifier;
+}
+
 /**
  * Calculate derived stats from character attributes and skills.
- * Returns object with Parry and Toughness (SWADE current edition).
- * 
+ * Returns object with Pace, Parry, and Toughness (SWADE current edition).
+ *
  * @param {Object} character - Character object with attributes and skills
- * @param {Object} [armor] - Optional armor object with toughness bonus
- * @returns {Object} Derived stats {parry, toughness}
+ * @param {Object} [options]
+ * @param {number} [options.armorBonus] - Toughness bonus from selected armor gear
+ * @param {number} [options.paceModifier] - Net Pace modifier from ancestry/edges/hindrances
+ * @returns {Object} Derived stats {pace, parry, toughness}
  */
-export function calculateDerivedStats(character, armor = null) {
+export function calculateDerivedStats(character, { armorBonus = 0, paceModifier = 0 } = {}) {
   const stats = {};
-  
+
   try {
+    stats.pace = BASE_PACE + (paceModifier || 0);
+
     // Parry: Half fighting skill die + 2
     // Look for skill by name (case-insensitive, with or without dashes)
     let fightingSkill = null;
@@ -65,25 +112,24 @@ export function calculateDerivedStats(character, armor = null) {
         }
       }
     }
-    
+
     if (fightingSkill) {
       const dieValue = DIE_VALUES[fightingSkill.die] ?? 4;
       stats.parry = Math.floor(dieValue / 2) + 2;
     } else {
       stats.parry = 2; // Default if no fighting skill
     }
-    
+
     // Toughness: Base 2 + armor bonus + half vigor die
     const vigorDie = character.attributes?.vigor?.die ?? "d4";
     const vigorValue = DIE_VALUES[vigorDie] ?? 4;
     const vigorBonus = Math.floor(vigorValue / 2);
-    const armorBonus = armor?.toughness ?? 0;
-    stats.toughness = 2 + vigorBonus + armorBonus;
-    
+    stats.toughness = 2 + vigorBonus + (armorBonus || 0);
+
   } catch (error) {
     console.warn("[Character Creation] Failed to calculate derived stats:", error);
   }
-  
+
   return stats;
 }
 
