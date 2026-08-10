@@ -27,13 +27,16 @@ export class TabManager {
   }
 
   /**
-   * Create tab navigation buttons from tab elements
+   * Create tab navigation buttons from tab elements. Skips any tab marked
+   * `data-hide-from-nav` — its content div still exists and can still be switched to
+   * programmatically (e.g. a shortcut button elsewhere), it just doesn't get its own
+   * always-visible nav button.
    */
   _createTabNavigation(html) {
     const tabNav = document.createElement('div');
     tabNav.className = 'tab-navigation';
 
-    const tabs = Array.from(html.find('.form-tabs .tab'));
+    const tabs = Array.from(html.find('.form-tabs .tab')).filter((tab) => !tab.dataset.hideFromNav);
     tabs.forEach((tab) => {
       const tabName = tab.dataset.tab;
       const button = document.createElement('button');

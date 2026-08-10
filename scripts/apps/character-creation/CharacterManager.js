@@ -533,6 +533,17 @@ export class CharacterManager extends FormApplication {
         this.currentTab = tabName;
       });
 
+      // Summary tab's "Manage Gear" shortcut — jumps straight to the Gear tab using the same
+      // switch mechanism as the tab-nav buttons, rather than making Gear feel like a separate
+      // tool. See project memory on Gear tab scope for why a shortcut was tried before any
+      // bigger separation (its own window, dropped from the tab bar) was considered.
+      html.find('[data-action="goto-gear-tab"]').on('click', (e) => {
+        e.preventDefault();
+        this.tabManager.switchTab(html, 'gear', (tabName) => {
+          this.currentTab = tabName;
+        });
+      });
+
       // Setup all tab handlers
       this._setupTabHandlers(html);
 

@@ -49,8 +49,8 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 4. **Attributes** — 5 points to distribute (ancestry bonuses lock minimums)
 5. **Skills** — 12 points + bonuses from hindrances
 6. **Edges** — Select from available (spends edge points from hindrances)
-7. **Gear** — Drag-drop items from compendiums, 300 silver budget
-8. **Summary** — Final review with Pace, Parry, Toughness calculations
+7. **Gear** — Drag-drop items from compendiums, real starting-funds formula (not a hardcoded 300). **Revised 2026-08-10:** no longer has its own tab-bar button (`data-hide-from-nav` in `TabManager._createTabNavigation()`) — reachable only via a "Manage Gear" shortcut button inline in the Summary tab's guidance box, since Gear's transactional currency/shopping concerns read as distinct from the rest of the build-planning flow. Still a real tab underneath (content div, handler, Save behavior all unchanged) — only its nav-bar visibility changed.
+8. **Summary** — Final review with Pace, Parry, Toughness calculations; also the sole entry point into the Gear tab (see above)
 9. **Advancement** — Post-creation Advance tracking; feeds bonus budget into Attributes/Skills/Edges/Hindrances tabs (see Problem 2 below). Always visible, including on a blank/not-yet-saved actor — no gating on character completeness.
 
 ### Budget Tracking (Sticky Footer)

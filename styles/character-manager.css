@@ -690,6 +690,26 @@
   background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
 }
 
+.swade-character-manager .btn-goto-gear {
+  display: block;
+  width: auto;
+  margin-top: 1rem;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-cool-2) 70%, white 30%);
+  color: var(--color-text-dark-primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.swade-character-manager .btn-goto-gear:hover {
+  background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
+}
+
 .swade-character-manager .hint-text {
   margin: 0 0 0.75rem 0;
   font-size: 10px;
