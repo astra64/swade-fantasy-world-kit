@@ -1055,6 +1055,11 @@
   cursor: pointer;
 }
 
+.swade-character-manager .gear-currency-apply-hint {
+  flex-basis: 100%;
+  margin: 0.15rem 0 0 0;
+}
+
 .swade-character-manager .gear-currency-apply-toggle input[type="checkbox"] {
   margin: 0;
   width: 11px;

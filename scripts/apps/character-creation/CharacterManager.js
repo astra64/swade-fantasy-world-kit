@@ -538,7 +538,7 @@ export class CharacterManager extends FormApplication {
 
       // Form actions
       html.find('button[data-action="save"]').on('click', async () => {
-        const confirmed = await this._confirmUnspentPoints();
+        const confirmed = await this._confirmSaveEffects();
         if (!confirmed) return;
         await this._saveActor();
       });
@@ -1184,15 +1184,51 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
-   * Block the save with a confirmation dialog if the character still has unspent Attribute,
-   * Skill, or Edge points — a likely mistake worth catching before it's written to the actor.
-   * Leftover Hindrance points and gear silver are intentionally NOT checked here: taking
-   * fewer hindrances or not spending every last coin isn't a mistake the way an unspent
-   * creation point usually is.
+   * Single confirmation dialog for everything worth double-checking right before Save commits:
+   * unspent Attribute/Skill/Edge points, and exactly what will happen to currency. Combined
+   * into one dialog (rather than two sequential ones) so the currency line — which appears on
+   * every save, checked or not — doesn't read as a second, separate gate on top of the
+   * point-budget warning; it's one review of "here's what Save is about to do."
    *
-   * @returns {Promise<boolean>} True if the user confirmed (or nothing was unspent)
+   * Leftover Hindrance points and gear silver are intentionally NOT checked here: taking fewer
+   * hindrances or not spending every last coin isn't a mistake the way an unspent creation
+   * point usually is.
+   *
+   * @returns {Promise<boolean>} True if the user confirmed (or there was nothing to confirm)
    */
-  async _confirmUnspentPoints() {
+  async _confirmSaveEffects() {
+    const lines = [];
+    let hasRiskyChange = false;
+
+    if (game.settings.get('swade', 'wealthType') === 'currency') {
+      const currencyName = game.settings.get('swade', 'currencyName') || 'Silver';
+
+      if (!this.character.applyCurrencyOnSave) {
+        lines.push('Currency will <strong>not</strong> change.');
+      } else {
+        const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
+        const richFundsMultipliers = parseRichFundsMultipliers(game.settings.get(MODULE_ID, 'richFundsMultipliers'));
+        const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
+        const gearCost = calculateGearCost(this.character);
+
+        if (this.character.gearTabMode === 'starting') {
+          lines.push(`Currency will be <strong>set to ${startingFunds - gearCost} ${currencyName}</strong>.`);
+          hasRiskyChange = true;
+        } else {
+          const delta = gearCost - (this.character.gearCostAtOpen ?? 0);
+          if (delta > 0) {
+            lines.push(`Currency will be <strong>charged ${delta} ${currencyName}</strong>.`);
+            hasRiskyChange = true;
+          } else if (delta < 0) {
+            lines.push(`Currency will be <strong>refunded ${Math.abs(delta)} ${currencyName}</strong>.`);
+            hasRiskyChange = true;
+          } else {
+            lines.push('Currency will <strong>not</strong> change (no gear cost change this session).');
+          }
+        }
+      }
+    }
+
     const snapshot = this._budgetSnapshot || {};
     const unspent = [];
     if ((snapshot.attributePointsRemaining ?? 0) > 0) {
@@ -1204,15 +1240,19 @@ export class CharacterManager extends FormApplication {
     if ((snapshot.edgePointsRemaining ?? 0) > 0) {
       unspent.push(`${snapshot.edgePointsRemaining} edge point${snapshot.edgePointsRemaining === 1 ? '' : 's'}`);
     }
+    if (unspent.length > 0) {
+      lines.push(`This character still has unspent ${unspent.join(', ')}.`);
+      hasRiskyChange = true;
+    }
 
-    if (unspent.length === 0) return true;
+    if (lines.length === 0) return true;
 
     const result = await Dialog.confirm({
-      title: 'Unspent Points',
-      content: `<p>This character still has unspent ${unspent.join(', ')}. Save anyway?</p>`,
+      title: 'Confirm Save',
+      content: `${lines.map((line) => `<p>${line}</p>`).join('')}<p>Continue saving?</p>`,
       yes: () => true,
       no: () => false,
-      defaultYes: false,
+      defaultYes: !hasRiskyChange,
     });
 
     return result === true;
