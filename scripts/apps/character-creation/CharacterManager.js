@@ -126,7 +126,7 @@ export class CharacterManager extends FormApplication {
       title: 'SWADE Character Manager',
       template: 'modules/swade-fantasy-world-kit/templates/character-creation/character-manager.hbs',
       width: 600,
-      height: 500,
+      height: 700,
       left: 100,
       top: 100,
       resizable: true,
@@ -804,19 +804,19 @@ export class CharacterManager extends FormApplication {
   /**
    * Detect existing advances straight from SWADE's real schema (`actor.system.advances.list`)
    * — no separate flag/ledger, since that array already has everything Character Manager
-   * needs (type + notes; no target field, matching how native SWADE tracks advances too).
-   * Entries with `planned: true` are excluded — those represent an advance sketched but not
-   * actually taken yet, which this tool doesn't model (no planning state, see the roadmap doc).
+   * needs (type + notes + planned; no target field, matching how native SWADE tracks
+   * advances too). Planned entries are kept, not filtered out — same "Planned" toggle as
+   * SWADE's own Advances tab, mirrored here; they display but don't count toward Rank/budgets
+   * (see calculateAdvanceTypeCounts/calculateTotalAdvanceCount in calculator.js).
    */
   _detectAdvancesFromActor(actor) {
     const list = actor.system?.advances?.list || [];
-    return list
-      .filter((entry) => !entry.planned)
-      .map((entry) => ({
-        id: entry.id || foundry.utils.randomID(),
-        type: ADVANCE_TYPE_ENUM_REVERSE[entry.type] ?? 'edge',
-        notes: entry.notes || '',
-      }));
+    return list.map((entry) => ({
+      id: entry.id || foundry.utils.randomID(),
+      type: ADVANCE_TYPE_ENUM_REVERSE[entry.type] ?? 'edge',
+      notes: entry.notes || '',
+      planned: !!entry.planned,
+    }));
   }
 
   async _updateObject(event, formData) {
@@ -1129,9 +1129,12 @@ export class CharacterManager extends FormApplication {
    * confirmed in systems/swade/swade.js) — its own rank derivation (getRankFromAdvance) bands
    * directly off this number (≤3 Novice, 4-7 Seasoned, ...), so a 0-based sort would put the
    * 4th advance back in Novice instead of Seasoned. `rank` mirrors the same banding via
-   * getRankIndexFromAdvanceNumber() rather than being user-entered. `mode` is forced to
-   * 'expanded' (SWADE's own default) so the system's own rank/value derivation stays active
-   * regardless of what the actor had before.
+   * getRankIndexFromAdvanceNumber() rather than being user-entered. `planned` carries through
+   * the Advancement tab's own "Planned" toggle — SWADE excludes planned entries from
+   * `advances.value`/`.rank` (`activeAdvances = list.filter(a => !a.planned)`), which
+   * calculateTotalAdvanceCount() mirrors. `mode` is forced to 'expanded' (SWADE's own default)
+   * so the system's own rank/value derivation stays active regardless of what the actor had
+   * before.
    */
   _advancesToUpdateData(advances) {
     const list = (advances || []).map((advance, index) => ({
@@ -1140,7 +1143,7 @@ export class CharacterManager extends FormApplication {
       notes: advance.notes || '',
       sort: index + 1,
       rank: getRankIndexFromAdvanceNumber(index + 1),
-      planned: false,
+      planned: !!advance.planned,
     }));
     return { mode: 'expanded', list };
   }

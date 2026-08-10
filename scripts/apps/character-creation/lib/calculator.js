@@ -178,7 +178,9 @@ export const RANK_NAMES = ['Novice', 'Seasoned', 'Veteran', 'Heroic', 'Legendary
 /**
  * Count character.advances[] entries by type. Advances are fungible within a type — there's
  * no per-advance target/ledger, just a count — so this is the sole input to every advancement
- * budget bonus below.
+ * budget bonus below. Planned advances (SWADE's own "Planned" toggle, mirrored here) are
+ * excluded — they're recorded but not yet taken, so they don't unlock budget yet, matching
+ * SWADE's own `activeAdvances = list.filter(a => !a.planned)` derivation.
  *
  * @param {Object} character - Character object with an `advances` array
  * @returns {Object} {edge, singleSkill, twoSkills, attribute, hindrance}
@@ -186,6 +188,7 @@ export const RANK_NAMES = ['Novice', 'Seasoned', 'Veteran', 'Heroic', 'Legendary
 export function calculateAdvanceTypeCounts(character) {
   const counts = { edge: 0, singleSkill: 0, twoSkills: 0, attribute: 0, hindrance: 0 };
   for (const advance of character.advances || []) {
+    if (advance?.planned) continue;
     if (advance?.type in counts) counts[advance.type] += 1;
   }
   return counts;
@@ -215,19 +218,20 @@ export function calculateBonusAttributePointsFromAdvances(character) {
 /**
  * Each Hindrance-buyoff advance grants 1 bonus perk-point slot — compensating for the fact
  * that removing a hindrance elsewhere reduces the Hindrances tab's live-derived perk-point
- * count (which isn't tied to any specific hindrance). This can grant a perk point beyond what
- * the character's current hindrance total would otherwise allow, an accepted trade-off.
+ * count (which isn't tied to any specific hindrance). Consumers (getAvailablePerkPoints/
+ * generatePerkSlots) still cap the combined total at 4, so this only ever restores points
+ * lost to a buyoff — it never pushes the character above the normal 4-point perk cap.
  */
 export function calculateBonusPerkPointsFromAdvances(character) {
   return calculateAdvanceTypeCounts(character).hindrance;
 }
 
 /**
- * Total advances taken (all types) — this is what actually drives Rank in SWADE, regardless
- * of which advance type each one was.
+ * Total advances actually taken (all types, excluding planned) — this is what drives Rank in
+ * SWADE (`advances.value`), regardless of which advance type each one was.
  */
 export function calculateTotalAdvanceCount(character) {
-  return (character.advances || []).length;
+  return (character.advances || []).filter((advance) => !advance?.planned).length;
 }
 
 /**
@@ -266,7 +270,9 @@ export function getCharacterRank(character) {
  * only 3, then 4 apiece). Only tiers that actually contain an advance are returned (no empty
  * "Legendary" header on a 2-advance character), in Rank order, each advance keeping its
  * original array index (needed so edit/remove buttons still target the right entry in
- * character.advances).
+ * character.advances). Planned advances are grouped by raw list position same as taken ones
+ * (matching SWADE's own per-row Rank label, which uses raw `sort` regardless of `planned`) —
+ * only the aggregate Rank/budget functions above exclude them.
  *
  * @param {Object} character - Character object with an `advances` array
  * @returns {Array<{rankIndex: number, rankName: string, advances: Array}>}
@@ -547,22 +553,23 @@ export function validateHindranceTotalPoints(character) {
 
 /**
  * Get available perk points from hindrances, plus any bonus perk-point slots granted by
- * Hindrance-buyoff advances (see calculateBonusPerkPointsFromAdvances) — those bonus slots
- * are added on top of the 4-point hindrance cap, not folded into it, since they're a
- * deliberate exception rather than part of the hindrance-point budget itself.
+ * Hindrance-buyoff advances (see calculateBonusPerkPointsFromAdvances) — the bonus can bring
+ * the total back up to the 4-point cap (compensating for a buyoff reducing hindrance points
+ * below what a perk was already chosen against), but the combined total is still capped at 4
+ * overall, same as hindrance points alone always were.
  *
  * @param {Object} character - Character object
  * @param {number} [bonusPerkPoints] - Extra perk-point slots from Hindrance-buyoff advances
- * @returns {number} Available perk points
+ * @returns {number} Available perk points (0-4)
  */
 export function getAvailablePerkPoints(character, bonusPerkPoints = 0) {
   const hindrancePoints = calculateTotalHindrancePoints(character);
-  return Math.min(hindrancePoints, 4) + bonusPerkPoints;
+  return Math.min(hindrancePoints + bonusPerkPoints, 4);
 }
 
 /**
- * Generate perk point allocation slots based on total hindrance points (capped at 4), plus
- * any bonus slots from Hindrance-buyoff advances (uncapped — see getAvailablePerkPoints).
+ * Generate perk point allocation slots based on total hindrance points plus any bonus slots
+ * from Hindrance-buyoff advances, capped at 4 overall (see getAvailablePerkPoints).
  *
  * @param {Object} character - Character object with hindrances and perkPointAllocations
  * @param {number} [bonusPerkPoints] - Extra perk-point slots from Hindrance-buyoff advances
@@ -570,7 +577,7 @@ export function getAvailablePerkPoints(character, bonusPerkPoints = 0) {
  */
 export function generatePerkSlots(character, bonusPerkPoints = 0) {
   const hindrancePoints = calculateTotalHindrancePoints(character);
-  const availablePerkPoints = Math.min(hindrancePoints, 4) + bonusPerkPoints;
+  const availablePerkPoints = Math.min(hindrancePoints + bonusPerkPoints, 4);
   const existingSlots = character.perkPointAllocations || [];
 
   const slots = [];

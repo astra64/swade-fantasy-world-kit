@@ -30,6 +30,11 @@ export class AdvancementTabHandler {
       this._setAdvanceNotes(index, e.target.value);
     });
 
+    html.find('input[data-action="set-advance-planned"]').on('change', (e) => {
+      const index = parseInt(e.target.dataset.index, 10);
+      this._setAdvancePlanned(index, e.target.checked);
+    });
+
     html.find('button[data-action="remove-advance"]').on('click', (e) => {
       e.preventDefault();
       const index = parseInt(e.target.dataset.index, 10);
@@ -45,6 +50,7 @@ export class AdvancementTabHandler {
       id: foundry.utils.randomID(),
       type: 'edge',
       notes: '',
+      planned: false,
     });
     this.characterManager.render();
   }
@@ -60,6 +66,18 @@ export class AdvancementTabHandler {
     const advance = this.characterManager.character.advances?.[index];
     if (!advance) return;
     advance.notes = notes;
+  }
+
+  /**
+   * Mirrors SWADE's own Advances tab "Planned" toggle — a planned advance is recorded but
+   * not yet taken, so it's excluded from Rank/budget calculations (see
+   * calculateAdvanceTypeCounts/calculateTotalAdvanceCount in calculator.js) until unchecked.
+   */
+  _setAdvancePlanned(index, planned) {
+    const advance = this.characterManager.character.advances?.[index];
+    if (!advance) return;
+    advance.planned = planned;
+    this.characterManager.render();
   }
 
   _removeAdvance(index) {

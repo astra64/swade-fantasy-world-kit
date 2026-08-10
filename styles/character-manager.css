@@ -98,6 +98,10 @@
   font-size: 11px;
 }
 
+.swade-character-manager .guidance-box p + p {
+  margin-top: 0.5rem;
+}
+
 .swade-character-manager .guidance-box .advance-type-list {
   margin: 0.4rem 0;
   padding-left: 1.1rem;
@@ -162,6 +166,25 @@
 .swade-character-manager .advance-card .item-card-controls {
   margin-left: 0;
   flex-shrink: 0;
+}
+
+.swade-character-manager .advance-planned-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 70%, transparent);
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.swade-character-manager .advance-card.planned {
+  opacity: 0.65;
+}
+
+.swade-character-manager .advance-card.planned .item-card-info select {
+  font-style: italic;
 }
 
 /* ===== Form Groups - More Spacious ===== */

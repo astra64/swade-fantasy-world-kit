@@ -235,6 +235,11 @@ export class HindrancesTabHandler extends BaseTabHandler {
 
     // Update selected perk allocation
     this.characterManager.character.perkPointAllocations[slotIndex].selected = selectedValue || null;
+
+    // Without an explicit scroll target, the <select> losing focus when its DOM is replaced
+    // by render() causes the browser to fall back to scrolling the tab to the top — same fix
+    // as the other toggle handlers below use their own pendingScrollTarget for.
+    this.characterManager.pendingScrollTarget = `[data-tradeoff-slot="${slotIndex}"]`;
     this.characterManager.render();
   }
 
