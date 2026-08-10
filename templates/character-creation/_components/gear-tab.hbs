@@ -86,8 +86,11 @@
     <p class="hint-text">No gear selected yet.</p>
     {{/each}}
 
-    {{#if @root.usesCurrency}}
     <div class="gear-tab-pinned-footer">
+      <span class="budget-label">Carried:</span>
+      <span class="budget-value {{#if @root.overEncumbered}}over-budget{{/if}}">{{@root.carriedWeight}} / {{@root.maxCarryWeight}} {{@root.weightUnitLabel}}</span>
+
+      {{#if @root.usesCurrency}}
       {{#if (eq @root.character.gearTabMode 'starting')}}
       <span class="budget-label">Starting {{@root.currencyName}}:</span>
       <span class="budget-value {{#if (lt @root.gearRemaining 0)}}over-budget{{/if}}">{{@root.gearRemaining}} / {{@root.gearBudget}}</span>
@@ -108,7 +111,11 @@
       <span class="budget-label">Current {{@root.currencyName}}:</span>
       <span class="budget-value">{{@root.currentCurrency}}</span>
       {{/if}}
+      <label class="gear-currency-apply-toggle" title="Currency only changes on Save if this is checked">
+        <input type="checkbox" data-action="toggle-apply-currency-on-save" {{#if @root.character.applyCurrencyOnSave}}checked{{/if}}>
+        Apply to currency on Save — {{@root.gearCurrencyPreviewText}}
+      </label>
+      {{/if}}
     </div>
-    {{/if}}
   </div>
 </div>

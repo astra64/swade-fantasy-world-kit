@@ -740,6 +740,38 @@ export function calculateGearCost(character) {
 }
 
 /**
+ * Resolve a gear item's price/minStr/armor/weight fields from two possible sources, one
+ * shared fallback chain used everywhere a `character.gear[uuid]` entry gets built: a
+ * "preferred" source (a compendium-list entry, already shaped with these fields) checked
+ * first, falling back to a real Item document's raw `system` fields, then a hardcoded
+ * default. Centralizing this avoids the fields drifting out of sync across the several call
+ * sites that build gear entries (adding via dropdown, drag-drop, and detecting from an
+ * existing actor).
+ *
+ * Known trade-off: when detecting from an existing actor, `preferred` (the compendium match)
+ * wins over the actor's own stored value whenever a name match exists — so a GM-customized
+ * price on an item that still name-matches a compendium entry (a discounted or marked-up
+ * homebrew variant) gets silently overridden by the compendium's price here. This used to only
+ * skew a display number; it now also feeds `character.gearCostAtOpen`, the baseline Gear
+ * Management mode's currency debit/credit is computed against, so a customized price can throw
+ * off that calculation too. Accepted for now, consistent with this tab's other "compendium is
+ * a suggestion, not tracked per-instance" simplifications — flagging here since the stakes
+ * changed once currency math started depending on it.
+ *
+ * @param {Object} [preferred] - A compendium-list-shaped object with price/minStr/armor/weight, or null
+ * @param {Object} [itemData] - A real Item document (or preview) with a `system` object
+ * @returns {{price: number, minStr: (string|null), armor: number, weight: number}}
+ */
+export function resolveGearFields(preferred, itemData) {
+  return {
+    price: preferred?.price ?? itemData?.system?.price ?? 0,
+    minStr: preferred?.minStr ?? itemData?.system?.minStr ?? null,
+    armor: preferred?.armor ?? itemData?.system?.armor ?? 0,
+    weight: preferred?.weight ?? itemData?.system?.weight ?? 0,
+  };
+}
+
+/**
  * Get the count of hindrance perk-allocation slots that chose "Extra Funds".
  * Each allocated point grants a bonus equal to twice the setting's starting currency.
  *
@@ -816,6 +848,55 @@ export function calculateStartingFunds(character, { pcStartingCurrency = 0, rich
   const richMultiplier = calculateRichFundsMultiplier(character, richFundsMultipliers);
   const extraFundsBonus = calculateExtraFundsBonusCount(character) * (pcStartingCurrency * 2);
   return (pcStartingCurrency * richMultiplier) + extraFundsBonus;
+}
+
+/**
+ * Total weight currently carried on the Gear tab (selected gear, weapons, armor & shields).
+ *
+ * Known approximation vs. SWADE's own `Actor.calcInventoryWeight()`: that method also counts
+ * Consumable-type items and excludes anything with `equipStatus === STORED` (backpacked, not
+ * carried). This tool has no Consumable support (no compendium pack, drag-drop rejects the
+ * type) and no equip-status concept, so this total can both under-count (missing consumables)
+ * and over-count (counting stored gear) relative to what the actor's real sheet would show.
+ * Acceptable for an informational-only tool, but worth knowing if the two numbers disagree.
+ *
+ * @param {Object} character - Character object with gear
+ * @returns {number} Total weight
+ */
+export function calculateCarriedWeight(character) {
+  if (!character.gear || typeof character.gear !== 'object') return 0;
+
+  const total = Object.values(character.gear).reduce((sum, item) => {
+    const weight = Number(item.weight) || 0;
+    const quantity = Number(item.quantity) || 1;
+    return sum + weight * quantity;
+  }, 0);
+
+  // Round to one decimal to avoid floating-point noise (e.g. 0.1 + 0.2 items) in the display.
+  return Math.round(total * 10) / 10;
+}
+
+/**
+ * Maximum carry capacity, mirroring SWADE's own `Actor.calcMaxCarryCapacity()`:
+ * `(strength die sides / 2 - 1) × 20` (imperial, lbs) or `× 10` (metric, kg), stepped up by
+ * any `encumbranceSteps` the actor already has from Active Effects (e.g. Packrat, racial
+ * size). Does not model SWADE's above-d12 modifier-instead-of-a-bigger-die rule — this tool
+ * never tracks a die modifier for attributes, only the die itself, so a character advanced
+ * past d12 Strength is simply treated as capped at d12 here (an accepted approximation, same
+ * spirit as other informational-only derived stats in this tool).
+ *
+ * @param {Object} character - Character object with attributes.strength.die
+ * @param {Object} options
+ * @param {string} [options.weightUnit] - SWADE's `weightUnit` world setting ('imperial' or 'metric')
+ * @param {number} [options.encumbranceSteps] - The actor's current Strength encumbranceSteps
+ * @returns {number} Max carry capacity
+ */
+export function calculateMaxCarryCapacity(character, { weightUnit = 'imperial', encumbranceSteps = 0 } = {}) {
+  const dieSides = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12 };
+  const baseSides = dieSides[character?.attributes?.strength?.die] || 4;
+  const steppedSides = Math.min(baseSides + Math.max(encumbranceSteps, 0) * 2, 12);
+  const multiplier = weightUnit === 'metric' ? 10 : 20;
+  return Math.max((steppedSides / 2 - 1) * multiplier, 0);
 }
 
 /**

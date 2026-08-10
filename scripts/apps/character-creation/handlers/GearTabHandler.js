@@ -1,6 +1,6 @@
 import { BaseTabHandler } from './BaseTabHandler.js';
 import { getItemPreview } from '../lib/compendium-utils.js';
-import { calculateGearCost, isUnderMinStrength } from '../lib/calculator.js';
+import { calculateGearCost, isUnderMinStrength, resolveGearFields } from '../lib/calculator.js';
 
 export class GearTabHandler extends BaseTabHandler {
   getTabName() {
@@ -107,38 +107,67 @@ export class GearTabHandler extends BaseTabHandler {
       this.characterManager.character.gearTabMode = mode;
       this.characterManager.render();
     });
+
+    this.html.find('[data-action="toggle-apply-currency-on-save"]').on('change', (e) => {
+      this.characterManager.character.applyCurrencyOnSave = $(e.currentTarget).is(':checked');
+    });
   }
 
-  async _addGear(item) {
+  /**
+   * Find an existing `character.gear` entry by name rather than by key. Entries can be keyed
+   * under two different UUID spaces depending on how they got there — the compendium item's
+   * UUID (added via dropdown/drag-drop) or the actor's own embedded item UUID (detected from
+   * an already-saved actor) — so a key-based lookup misses whenever those two differ for what
+   * is, conceptually, the same item. Matching by name instead is what actually reflects the
+   * "same item picked again" rule this tab promises.
+   */
+  _findExistingGearKeyByName(name) {
+    const lowerName = name.toLowerCase();
+    for (const [key, entry] of Object.entries(this.characterManager.character.gear || {})) {
+      if (entry.name?.toLowerCase() === lowerName) return key;
+    }
+    return null;
+  }
+
+  /**
+   * @param {Object} item - A compendium-list-shaped entry (has uuid/name, may have
+   * price/minStr/armor/weight already) to add or bump.
+   * @param {Object} [preFetchedItemData] - The full Item document, if the caller already
+   * fetched it (e.g. drag-drop resolving the dropped item's type) — avoids re-fetching here.
+   */
+  async _addGear(item, preFetchedItemData = null) {
     if (!item || !item.uuid) return;
 
     // Same item picked again just bumps quantity — gear allows duplicates.
-    if (this.characterManager.character.gear?.[item.uuid]) {
-      this._adjustQuantity(item.uuid, 1);
+    const existingKey = this._findExistingGearKeyByName(item.name);
+    if (existingKey) {
+      this._adjustQuantity(existingKey, 1);
       return;
     }
 
-    let itemData = null;
-    try {
-      itemData = await getItemPreview(item.uuid);
-    } catch (e) {
-      console.warn('[Gear] Failed to fetch full item data:', e);
+    let itemData = preFetchedItemData;
+    if (itemData === null) {
+      try {
+        itemData = await getItemPreview(item.uuid);
+      } catch (e) {
+        console.warn('[Gear] Failed to fetch full item data:', e);
+      }
     }
 
     if (!this.characterManager.character.gear) {
       this.characterManager.character.gear = {};
     }
 
-    const minStr = item.minStr ?? itemData?.system?.minStr ?? null;
-    const armor = item.armor ?? itemData?.system?.armor ?? 0;
+    const { price, minStr, armor, weight } = resolveGearFields(item, itemData);
 
     this.characterManager.character.gear[item.uuid] = {
       uuid: item.uuid,
       name: item.name,
-      price: item.price ?? itemData?.system?.price ?? 0,
+      price,
       quantity: 1,
       minStr,
       armor,
+      weight,
       expanded: false,
       img: itemData?.img || '',
       description: itemData?.system?.description ?
@@ -174,9 +203,11 @@ export class GearTabHandler extends BaseTabHandler {
       (g) => g.name.toLowerCase() === item.name.toLowerCase()
     );
 
-    const gearEntry = compendiumItem
-      || { uuid, name: item.name, price: item.system?.price ?? 0, minStr: item.system?.minStr ?? null, armor: item.system?.armor ?? 0 };
-    this._addGear(gearEntry);
+    // Fields default to null/0 here rather than repeating the price/minStr/armor/weight
+    // fallback chain — _addGear() already resolves them from `item` (the already-fetched
+    // Item document passed below) via resolveGearFields() when the compendium doesn't cover it.
+    const gearEntry = compendiumItem || { uuid, name: item.name };
+    this._addGear(gearEntry, item);
   }
 
   _adjustQuantity(uuid, delta) {

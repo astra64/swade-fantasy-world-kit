@@ -274,6 +274,7 @@
   color: color-mix(in srgb, #7a9928 85%, black 15%);
   min-width: 35px;
   text-align: right;
+  padding-right: 1rem;
 }
 
 .swade-character-manager .budget-value.over-budget {
@@ -331,6 +332,7 @@
   border-top: 1px solid var(--color-border-light-primary);
   padding: 0.5rem 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
   box-shadow: 0 -1px 3px color-mix(in srgb, black 10%, transparent);
@@ -1037,6 +1039,26 @@
   background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
   color: var(--color-text-dark-primary);
   box-sizing: border-box;
+}
+
+.swade-character-manager .gear-currency-apply-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-basis: 100%;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border-light-primary) 60%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 80%, transparent);
+  cursor: pointer;
+}
+
+.swade-character-manager .gear-currency-apply-toggle input[type="checkbox"] {
+  margin: 0;
+  width: 11px;
+  height: 11px;
 }
 
 .swade-character-manager .hindrance-major-minor {

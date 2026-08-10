@@ -34,6 +34,9 @@ import {
   calculateAncestryBonusEdgePoints,
   calculateGearCost,
   calculateStartingFunds,
+  calculateCarriedWeight,
+  calculateMaxCarryCapacity,
+  resolveGearFields,
   parseRichFundsMultipliers,
   ADVANCE_TYPE_ENUM,
   ADVANCE_TYPE_ENUM_REVERSE,
@@ -249,13 +252,20 @@ export class CharacterManager extends FormApplication {
             // "management" (plain current-currency footer, for an established character).
             // Once a GM/player has set this explicitly it's remembered via actor flag;
             // otherwise default by whether the actor looks already-established.
-            gearTabMode: this.actor.getFlag(MODULE_ID, 'gearTabMode') ?? (
-              (this.actor.system?.advances?.list?.length > 0
-                || this.actor.items.some((item) => ['gear', 'weapon', 'armor', 'shield'].includes(item.type)))
-                ? 'management'
-                : 'starting'
-            ),
+            gearTabMode: this.actor.getFlag(MODULE_ID, 'gearTabMode')
+              ?? (this._actorLooksEstablished(this.actor) ? 'management' : 'starting'),
+            // UI-only, always starts unchecked — currency only changes on Save if explicitly
+            // opted into this session, never as a silent side effect of whichever Gear tab
+            // mode happens to be selected. See the live preview text next to this checkbox.
+            applyCurrencyOnSave: false,
           };
+
+          // Snapshot of gear cost as it actually exists on the actor right now, before this
+          // session's edits — Gear Management mode's currency reconciliation debits/credits
+          // only the *change* in gear cost since this snapshot, so it never touches currency
+          // for gear the actor already owned coming in. Fixed for the life of this session;
+          // recomputed fresh (from the actor's then-current real items) on next open.
+          this.character.gearCostAtOpen = calculateGearCost(this.character);
         }
 
         // Convert actor attribute format (die.sides) to our format (die: "d4")
@@ -395,12 +405,37 @@ export class CharacterManager extends FormApplication {
       // from the Gear tab's shopping budget above, which only tracks this session's spend.
       const currentCurrency = this.actor?.system?.details?.currency ?? 0;
 
+      // Encumbrance — mirrors SWADE's own carry-capacity formula (see calculateMaxCarryCapacity),
+      // reading encumbranceSteps straight off the live actor since that field already reflects
+      // any Active Effects (Packrat, racial size, etc.) without this tool needing to re-derive them.
+      const weightUnit = game.settings.get('swade', 'weightUnit') || 'imperial';
+      const weightUnitLabel = weightUnit === 'metric' ? 'kg' : 'lbs';
+      const encumbranceSteps = this.actor?.system?.attributes?.strength?.encumbranceSteps ?? 0;
+      const carriedWeight = calculateCarriedWeight(this.character);
+      const maxCarryWeight = calculateMaxCarryCapacity(this.character, { weightUnit, encumbranceSteps });
+      const overEncumbered = carriedWeight > maxCarryWeight;
+
       const attributePointsMax = 5 + bonusAttributePoints;
       const skillPointsMax = 12 + bonusSkillPoints;
       const attributePointsRemaining = attributePointsMax - attributePointsUsed;
       const skillPointsRemaining = skillPointsMax - skillPointsUsed;
       const edgePointsRemaining = edgePointsAvailable - edgePointsUsed;
       const gearRemaining = startingFunds - gearCost;
+
+      // Live preview text for the Gear tab's "Apply to currency on Save" checkbox — shown
+      // whether or not the box is checked, so the exact number is visible before opting in.
+      // Save only ever touches currency if that checkbox is checked; see _saveActor().
+      let gearCurrencyPreviewText = '';
+      if (usesCurrency) {
+        if (this.character.gearTabMode === 'starting') {
+          gearCurrencyPreviewText = `sets currency to ${gearRemaining} ${currencyName}`;
+        } else {
+          const managementDelta = gearCost - (this.character.gearCostAtOpen ?? 0);
+          if (managementDelta > 0) gearCurrencyPreviewText = `charges ${managementDelta} ${currencyName}`;
+          else if (managementDelta < 0) gearCurrencyPreviewText = `refunds ${Math.abs(managementDelta)} ${currencyName}`;
+          else gearCurrencyPreviewText = 'no change';
+        }
+      }
 
       // Flattened "Name dX" list for the Summary tab's compact skills line — precomputed here
       // rather than fought for in Handlebars, since skillsByAttribute is grouped by attribute
@@ -457,6 +492,11 @@ export class CharacterManager extends FormApplication {
         currencyName: currencyName,
         currencyAmount: currencyAmount,
         currentCurrency: currentCurrency,
+        carriedWeight: carriedWeight,
+        maxCarryWeight: maxCarryWeight,
+        weightUnitLabel: weightUnitLabel,
+        overEncumbered: overEncumbered,
+        gearCurrencyPreviewText: gearCurrencyPreviewText,
         attributes: DEFAULT_ATTRIBUTES,
         FREE_CORE_SKILLS: FREE_CORE_SKILLS,
         ancestryBonuses: ancestryBonuses,
@@ -797,13 +837,15 @@ export class CharacterManager extends FormApplication {
       // and made _saveGearToActor's existing-item lookup miss, deleting and recreating
       // the item on every save (losing any per-item edits) instead of patching quantity.
       const key = gearItem.uuid;
+      const { price, minStr, armor, weight } = resolveGearFields(compendiumGear, gearItem);
       return [key, {
         uuid: key,
         name: compendiumGear?.name || gearItem.name,
-        price: compendiumGear?.price ?? gearItem.system?.price ?? 0,
+        price,
         quantity: gearItem.system?.quantity ?? 1,
-        minStr: compendiumGear?.minStr ?? gearItem.system?.minStr ?? null,
-        armor: compendiumGear?.armor ?? gearItem.system?.armor ?? 0,
+        minStr,
+        armor,
+        weight,
         expanded: false,
         img: gearItem.img || compendiumGear?.img || '',
         description: gearItem.system?.description
@@ -1066,24 +1108,37 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
-   * Credit any leftover gear-shopping currency to the actor without overwriting unrelated
-   * wealth: track only what Character Manager itself previously credited (via the
-   * `gearFundsCredited` actor flag) and write just the delta each save. Re-saving with no
-   * changes → delta = 0. No-op when SWADE's wealth type isn't numeric currency.
+   * "Starting Equipment" mode: currency is a creation budget, not pre-existing wealth to
+   * protect — Save simply sets it to the budget minus what's been spent. A direct set, not a
+   * delta credit, so re-saving the same gear list is naturally idempotent and a truly-fresh
+   * actor (SWADE's own `_preCreate` already seeded it with `pcStartingCurrency`) ends up at
+   * the correct leftover instead of double-counted. Safe specifically because the mode is an
+   * explicit, visible choice — Gear Management mode (below) never touches currency this way.
+   * No-op when SWADE's wealth type isn't numeric currency.
    */
-  async _reconcileGearFunds(actor, startingFunds, gearCost) {
+  async _reconcileStartingFunds(actor, startingFunds, gearCost) {
+    if (game.settings.get('swade', 'wealthType') !== 'currency') return;
+    await actor.update({ 'system.details.currency': startingFunds - gearCost });
+  }
+
+  /**
+   * "Gear Management" mode: there's no creation budget here, just an established character's
+   * actual wealth — so Save debits/credits only the *change* in gear cost since this session
+   * opened (`character.gearCostAtOpen`, snapshotted from the actor's real items at open time),
+   * same mental model as a shopping trip: buy something, pay for it; return something, get
+   * refunded. Gear the actor already owned coming in is never charged for again. No hard floor
+   * at 0 — an overspend just leaves currency negative, consistent with this tool's "warn, don't
+   * block" philosophy elsewhere. No-op when SWADE's wealth type isn't numeric currency.
+   */
+  async _reconcileGearManagementFunds(actor, gearCost) {
     if (game.settings.get('swade', 'wealthType') !== 'currency') return;
 
-    const previouslyCredited = actor.getFlag(MODULE_ID, 'gearFundsCredited') ?? 0;
-    const leftover = startingFunds - gearCost;
-    const delta = leftover - previouslyCredited;
+    const gearCostAtOpen = this.character.gearCostAtOpen ?? 0;
+    const costDelta = gearCost - gearCostAtOpen;
+    if (costDelta === 0) return;
 
-    if (delta !== 0) {
-      const currentCurrency = actor.system?.details?.currency ?? 0;
-      await actor.update({ 'system.details.currency': currentCurrency + delta });
-    }
-
-    await actor.setFlag(MODULE_ID, 'gearFundsCredited', leftover);
+    const currentCurrency = actor.system?.details?.currency ?? 0;
+    await actor.update({ 'system.details.currency': currentCurrency - costDelta });
   }
 
   /**
@@ -1112,6 +1167,20 @@ export class CharacterManager extends FormApplication {
    */
   async _persistGearTabMode(actor) {
     await actor.setFlag(MODULE_ID, 'gearTabMode', this.character.gearTabMode);
+  }
+
+  /**
+   * Shared "does this actor look like it's already been played, not just created" signal —
+   * used both to pick the Gear tab's default mode and to decide whether Starting Equipment
+   * mode's Save needs a confirmation warning. Kept in one place so the two never drift out of
+   * sync with each other. Checks the actor's real state, not the staged `character` object,
+   * since this is specifically about protecting real data the actor already has.
+   *
+   * @returns {boolean}
+   */
+  _actorLooksEstablished(actor) {
+    return actor.system?.advances?.list?.length > 0
+      || actor.items.some((item) => ['gear', 'weapon', 'armor', 'shield'].includes(item.type));
   }
 
   /**
@@ -1245,8 +1314,12 @@ export class CharacterManager extends FormApplication {
       await this._saveHindrancesToActor(this.actor);
       await this._saveGearToActor(this.actor);
       if (this.character.gearTabMode === 'starting') {
-        await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
+        if (this.character.applyCurrencyOnSave) {
+          await this._reconcileStartingFunds(this.actor, startingFunds, gearCost);
+        }
         await this._persistGearFundsOverride(this.actor);
+      } else if (this.character.applyCurrencyOnSave) {
+        await this._reconcileGearManagementFunds(this.actor, gearCost);
       }
       await this._persistGearTabMode(this.actor);
 

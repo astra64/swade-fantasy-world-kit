@@ -143,7 +143,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 - [x] Lock minimums if ancestry bonus present (e.g., d6 Vigor locked to d6+)
 
 **Skills Section (grouped under each attribute):**
-- [ ] Each skill: Name, die buttons [d4 d6 d8 d10 d12], modifier display (+X text)
+- [x] Each skill: Name, die selector, cost/point display
 - [x] Core skills (Athletics, Common Knowledge, Notice, Persuasion, Stealth): marked with star icon, free at d4
 - [x] Non-core skills cost points to use
 
@@ -177,16 +177,17 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 
 #### Tab 6: Gear
 - [x] Drag-drop zone for items from compendiums (gear, weapons, armor & shields — same search dropdown + drag-drop pattern as Edges/Hindrances)
-- [x] List items with individual cost, quantity (+/- controls), running total — duplicates allowed by design (picking the same item again just bumps quantity instead of adding a second card)
+- [x] List items with individual cost, quantity (+/- controls), running total — duplicates allowed by design (picking the same item again just bumps quantity instead of adding a second card). **Bug fixed 2026-08-10:** the duplicate check originally compared internal IDs, which differ between a compendium entry and an already-saved actor item for the same conceptual item — so re-adding something you already owned (the common "reopen an established character, buy one more") silently created a second, separate item instead of bumping quantity. Now matches by name via `resolveGearFields()`'s shared entry-building path and a name-based lookup in `GearTabHandler`, regardless of which internal ID space either side is keyed under.
 - [x] Show remaining budget, displayed in the sticky footer while on the Gear tab. Budget is **not** the original spec's hardcoded 300 — it reads SWADE's native `pcStartingCurrency` world setting, so it tracks whatever a GM has that set to for their table. Now computed via `calculateStartingFunds()` — `(pcStartingCurrency × richMultiplier) + extraFundsBonus`, or the GM's manual override — rather than an unconditional `× 2`. See "Planned: Currency Reconciliation..." below.
-- [x] Customization-safe saves: an item already on the actor is never deleted/recreated on save, only its quantity is patched in place — homebrew tweaks always survive, at the cost of not auto-syncing later compendium edits (deliberate simplification, see "Gear Tab — Final Behavior Contract" below). Currency leftover is credited to the actor via a flag-tracked delta, not a raw overwrite.
+- [x] Customization-safe saves: an item already on the actor is never deleted/recreated on save, only its quantity is patched in place — homebrew tweaks always survive, at the cost of not auto-syncing later compendium edits (deliberate simplification, see "Gear Tab — Final Behavior Contract" below). Currency changes on save now go through `_reconcileStartingFunds()`/`_reconcileGearManagementFunds()` (mode-dependent, see the mode-split note above), not a flag-tracked delta.
 - [x] Remove item button
 - [x] **New Player Guidance:** (uses existing `TAB_GUIDANCE.gear` text)
 - [x] **Validation:** Non-blocking; footer budget value turns red when over budget (no hard block, consistent with Edges/Hindrances)
 - [x] **Min-Strength warning:** items with a `system.minStr` value (weapons and armor) show an inline "Requires Strength dX to use without penalty" hint, in `warning-text` red when the character's current Strength die is below it, plus a toast on add. Informational only — SWADE's actual penalty is a -1 die step on the relevant roll, not "can't use," so this never blocks adding the item.
 - [x] Save button now appears on every tab, not just Gear/Summary — see "Save button & unspent-points confirmation" below.
-
-**Not yet done:** Weight/encumbrance tracking (not in original spec — only silver cost is budgeted)
+- [x] **Starting Equipment / Gear Management mode toggle:** a compact toggle inline in the tab's guidance box switches the pinned footer between the creation-time shopping budget (remaining/total funds, override) and a plain current-currency readout, so an established character's Gear tab doesn't keep showing a stale "starting funds" budget. Defaults to Starting Equipment for a fresh actor, Gear Management for one with existing advances or gear; remembered per-actor via a `gearTabMode` flag once explicitly set. Currency itself only ever changes via the separate "Apply to currency on Save" checkbox below — see "Final safety mechanism" under Problem 1 above.
+- [x] **Encumbrance tracking:** pinned footer always shows Carried/Max weight (independent of the currency setting), turning red when over. Carried weight sums each gear item's `weight × quantity`; max carry capacity mirrors SWADE's own `Actor.calcMaxCarryCapacity()` formula (`(Strength die sides / 2 - 1) × 20 lbs` or `× 10 kg`, stepped by the actor's live `encumbranceSteps` from Active Effects like Packrat or racial size) via `calculateMaxCarryCapacity()` in `calculator.js`. Approximations, both accepted: (1) this tool doesn't track a die modifier for attributes past d12, so a Strength advanced beyond d12 is simply capped there rather than modeling SWADE's above-d12 modifier rule; (2) SWADE's own `calcInventoryWeight()` also counts Consumable-type items and excludes anything `equipStatus === STORED` — this tool tracks neither (no Consumable support, no equip-status concept), so Carried can drift from what the actor's real sheet shows.
+- [x] **Known trade-off (2026-08-10 review):** detecting gear from an existing actor prefers a name-matched compendium entry's price/weight/armor/minStr over the actor's own stored value — previously only skewed a display number, now also feeds `character.gearCostAtOpen`, the baseline Gear Management mode's currency math is computed against. A GM-customized price on a name-matching item (discounted/marked-up homebrew) can throw off that calculation. Accepted, consistent with this tab's other "compendium is a suggestion, not tracked per-instance" simplifications — see `resolveGearFields()` in `calculator.js`.
 
 **Estimated Lines:** 150-200 (template + handler)
 
@@ -240,7 +241,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
   - [x] Register any new Handlebars helpers needed
   - [x] Add a button to open Character Manager from the actor sheet — `injectCharacterManagerButton()` in `main.js`, added to the sheet header rather than a settings-menu entry (a more discoverable equivalent to the originally-planned "menu item")
   - [x] Expose window.CharacterManager for console access
-- [ ] **Macro Creation** — `CHARACTER_MANAGER_MACRO.js` never built. Lower priority now that the actor-sheet header button covers the main access path; a hotbar macro would just be a convenience, not a blocker.
+- [x] ~~**Macro Creation**~~ — Cut. The actor-sheet header button already covers the main access path; a hotbar macro would only be a minor convenience, not worth building.
 - [x] **CSS Refinement** — `character-manager.css` has gone through many polish passes across every tab (colors, spacing, typography, budget color-coding). Responsive/mobile behavior and tab transition animations were never a focus — Foundry app windows aren't typically resized to mobile widths, so this was deprioritized rather than deferred by oversight.
 - [ ] **Documentation**
   - [ ] `CHARACTER_MANAGER_QUICKSTART.md` — never written.
@@ -266,7 +267,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
   - [ ] Attribute point budgets enforced (5 max)
   - [ ] Skill point budgets enforced (12 + hindrances)
   - [ ] Edge point budgets enforced
-  - [ ] Gear budget enforced (300 silver)
+  - [ ] Gear budget enforced (real `calculateStartingFunds()` formula, not a hardcoded amount)
   - [ ] Derived stats calculate correctly
   - [ ] Skill costs follow rules (1pt up to attribute, 2pts above)
 
@@ -286,7 +287,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 - [ ] **CharacterManager.js Updates**
   - [x] `getData()` detects and prepopulates Name, Archetype, Concept, Ancestry, and Attributes from an existing actor
   - [x] Detection extended to Skills, Edges, Hindrances via `_detectSkillsFromActor()` / `_detectEdgesFromActor()` / `_detectHindrancesFromActor()` — read from `actor.itemTypes.skill/edge/hindrance` (embedded Items), matched to compendium entries by name (no `compendiumUuid` flag exists yet for these three since real save hasn't landed — see Note below)
-  - [ ] Add change detection: Highlight which fields have been modified since open
+  - [x] ~~Add change detection: Highlight which fields have been modified since open~~ — Cut, not worth the complexity for this tool's scope.
   - [ ] Add validation for mid-edit states (e.g., character with advances)
 
 - [x] **Data Detection Logic**
@@ -296,7 +297,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
   - [x] Skill values extraction from actor Items (`actor.itemTypes.skill`)
   - [x] Gear detection from actor inventory (`_detectGearFromActor()` — reads `gear`/`weapon`/`armor`/`shield` type Items, matched to the gear/weapons/armor compendiums by name, same fallback pattern as Edges/Hindrances)
 
-**Note (updated — the note below was stale):** Save is real for every tab now, not just Gear. `_saveSkillsToActor()`, `_saveEdgesToActor()`, and `_saveHindrancesToActor()` all reconcile actual embedded Items on the actor (patched in place for existing items, created fresh for new selections, deleted on explicit removal) — the "still writes raw `system.skills`/`system.edges`/`system.hindrances`" gap this note used to describe was closed in the same pass that fixed a real data-loss bug in Gear's own save (see "Suggested implementation order" step 4 below). The only two genuinely open items in this milestone are change-detection highlighting and mid-edit validation, both listed above.
+**Note (updated — the note below was stale):** Save is real for every tab now, not just Gear. `_saveSkillsToActor()`, `_saveEdgesToActor()`, and `_saveHindrancesToActor()` all reconcile actual embedded Items on the actor (patched in place for existing items, created fresh for new selections, deleted on explicit removal) — the "still writes raw `system.skills`/`system.edges`/`system.hindrances`" gap this note used to describe was closed in the same pass that fixed a real data-loss bug in Gear's own save (see "Suggested implementation order" step 4 below). The only genuinely open item left in this milestone is mid-edit validation, listed above — change-detection highlighting was cut.
 
 **Estimated Scope:** 200-300 lines (detection + prepopulation logic)
 
@@ -326,9 +327,17 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 
 **Status: Problems 1 and 3 implemented for the Gear tab (this session); Problem 2 (Advancement as a Tab) still design-only.** Converged on across a design discussion after the Gear tab landed. Recorded here so the reasoning survives past the chat that produced it. **Revised once already** — an earlier draft of this section scoped Character Manager to pre-advancement only and pushed advancement into a separate `AdvancementManager` tool; that was corrected (see Problem 2 below) once it turned out to conflict with wanting to rebuild a character at any point in its lifecycle.
 
-**Implemented (Problem 1 — currency):** `calculateStartingFunds()`/`calculateRichFundsMultiplier()`/`calculateExtraFundsBonusCount()`/`parseRichFundsMultipliers()` in `calculator.js`; new `richFundsMultipliers` world setting (default `"Rich:3,Filthy Rich:5"`); Gear tab's `gearBudget` now uses this formula instead of the old unconditional `pcStartingCurrency × 2`. `CharacterManager._reconcileGearFunds()` credits only the flag-tracked delta (`gearFundsCredited` actor flag), gated on `game.settings.get('swade', 'wealthType') === 'currency'`. A new "Override Starting Funds" input on the Gear tab persists as the `gearFundsOverride` actor flag via `CharacterManager._persistGearFundsOverride()`. The `characterCreatorMenu` no-actor entry point and the `!this.actor` branch in `_createActor()` were left as-is — still an open decision, noted below.
+**Implemented (Problem 1 — currency):** `calculateStartingFunds()`/`calculateRichFundsMultiplier()`/`calculateExtraFundsBonusCount()`/`parseRichFundsMultipliers()` in `calculator.js`; new `richFundsMultipliers` world setting (default `"Rich:3,Filthy Rich:5"`); Gear tab's `gearBudget` now uses this formula instead of the old unconditional `pcStartingCurrency × 2`. A new "Override Starting Funds" input on the Gear tab persists as the `gearFundsOverride` actor flag via `CharacterManager._persistGearFundsOverride()`. The `characterCreatorMenu` no-actor entry point and the `!this.actor` branch in `_createActor()` were left as-is — still an open decision, noted below.
 
-**Wealth Die / no-currency tables (uncommon setting rule):** rather than building parallel logic for SWADE's `wealthType: wealthDie`/`none` setting rules, all currency-tracking UI is simply hidden when `wealthType !== 'currency'` (a `usesCurrency` flag from `getData()`): the Gear tab's per-item price line, the pinned budget footer (see below), and the Hindrances tab's "Extra Funds" perk option (shown disabled instead). `_reconcileGearFunds()` and `_persistGearFundsOverride()` both no-op under this setting too. Tables using those setting rules handle starting funds/gear cost manually — Character Manager still tracks gear selection and quantity, just not against a numeric budget.
+**Revised again (2026-08-10) — Starting Equipment / Gear Management mode split:** the original single reconciliation scheme (`_reconcileGearFunds()`, a flag-tracked additive delta via `gearFundsCredited`) is gone. It's replaced by two mode-specific methods matched to the Gear tab's `gearTabMode` toggle (see "Starting Equipment / Gear Management mode toggle" under Tab 6 above):
+- **Starting Equipment mode** — `_reconcileStartingFunds()`: `actor.currency = startingFunds − gearCost`, a direct set, not a delta credit. This actually fixes the "fresh actor double-counted" discrepancy noted below (now resolved, not just accepted) — a truly-fresh actor's SWADE-seeded `pcStartingCurrency` gets replaced by the correct leftover instead of having a delta added on top of it.
+- **Gear Management mode** — `_reconcileGearManagementFunds()`: debits/credits only the *change* in gear cost since the session opened (`character.gearCostAtOpen`, a snapshot of `calculateGearCost()` taken right after actor detection), same mental model as a shopping trip — buy something, pay for it; return something, get refunded. Gear the actor already owned coming in is never re-charged. No floor at 0; an overspend just goes negative, per this tool's "warn, don't block" philosophy.
+
+An `currency + gearValue == startingFunds` equality check was considered as a way to gate which mode is even available, and rejected: `currentCurrency` doesn't change during live editing (only on Save), so the sum has no principled reason to equal `startingFunds` outside of coincidence, and legitimate mid-creation states (spent some silver already via other play, or picked a Rich edge partway through shopping) would false-negative it. A softer alternative — Starting mode's Save formula subtracting `gearCost` from `currentCurrency` instead of resetting to `startingFunds − gearCost` — was also considered and rejected: it would avoid overwriting an established character's wealth if the wrong mode were left on, but it silently breaks the Rich/Filthy-Rich-edge and Extra-Funds-perk bonus application for a genuinely fresh character, since those bonuses only ever get applied to currency via the reset formula (the SWADE-seeded `currentCurrency` has no idea about a Rich edge picked mid-creation).
+
+**Final safety mechanism (superseding an earlier confirmation-dialog approach):** rather than warn on Save when Starting mode looks risky, currency simply **never** changes on Save unless the Gear tab's "Apply to currency on Save" checkbox is explicitly checked (unchecked by default every session). A live preview next to the checkbox always shows the exact effect before it's opted into — "sets currency to 300" in Starting mode, "charges 200 Silver" / "refunds 50 Silver" / "no change" in Gear Management mode — computed by `gearCurrencyPreviewText` in `getData()`. `_saveActor()` only calls `_reconcileStartingFunds()`/`_reconcileGearManagementFunds()` when `character.applyCurrencyOnSave` is true; otherwise Save proceeds normally (gear, attributes, everything else) with currency untouched. This is stronger than the confirmation dialog it replaced: instead of warning about a risky *default*, there is no automatic currency-changing default at all — every currency change is a deliberate, visible choice, so `_confirmStartingModeOnEstablishedActor()` (which used to gate this) was removed as no longer necessary.
+
+**Wealth Die / no-currency tables (uncommon setting rule):** rather than building parallel logic for SWADE's `wealthType: wealthDie`/`none` setting rules, all currency-tracking UI is simply hidden when `wealthType !== 'currency'` (a `usesCurrency` flag from `getData()`): the Gear tab's per-item price line, the pinned budget footer (see below), and the Hindrances tab's "Extra Funds" perk option (shown disabled instead). Both `_reconcileStartingFunds()`/`_reconcileGearManagementFunds()` and `_persistGearFundsOverride()` no-op under this setting too. Tables using those setting rules handle starting funds/gear cost manually — Character Manager still tracks gear selection, quantity, and carried weight, just not against a numeric currency budget.
 
 **Gear tab budget UI, moved and reworked after initial landing:** the budget display and override input started out in the *global* sticky footer and a labeled form field at the top of the tab, then moved to a **tab-scoped pinned footer** (`.gear-tab-pinned-footer`, sticky to the bottom of the Gear tab's own scroll area, not the app-wide footer) reading `Starting {currencyName}: {gearRemaining} / {gearBudget}` — a countdown (budget minus spend) rather than a spent-so-far total, so it reads the way a player actually tracks shopping money. The override input moved into that same footer behind a small "Override" checkbox (unchecked by default unless the actor already has a saved override) — checking it reveals a compact number input; unchecking clears the override and reverts to the formula. The now-redundant cost total was dropped from the "Selected Gear" section header, and the per-item price line was simplified to just `{price} {currencyName}` (quantity is already visible via the +/- controls, so "each × qty = total" was dropped too).
 
@@ -340,19 +349,13 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 
 Gear tab spending should leave any leftover starting funds on the actor as cash, without overwriting money the actor already has from other sources (loot, GM adjustments, prior play). A naive `actor.currency = startingFunds − gearCost` overwrites; a naive `actor.currency += (startingFunds − gearCost)` double-credits on every re-save.
 
-**Resolved approach:** track only what Character Manager itself has previously credited, via a small actor flag (e.g. `gearFundsCredited`), and write just the delta on each save:
-```
-delta = (startingFunds − gearCost) − previouslyCredited
-actor.currency += delta
-previouslyCredited = startingFunds − gearCost   // store for next time
-```
-Re-saving with no changes → delta = 0. This only ever touches the portion of currency Character Manager itself contributed — never the actor's unrelated wealth.
+**Original approach (superseded 2026-08-10):** track only what Character Manager itself had previously credited, via a small actor flag (`gearFundsCredited`), and write just the delta on each save (`delta = (startingFunds − gearCost) − previouslyCredited`). This worked for re-saving an unchanged character but, as the note below already flagged, double-counted a truly-fresh actor's SWADE-seeded starting currency. **Current approach:** see the "Starting Equipment / Gear Management mode split" note above — Starting Equipment mode now directly sets currency to the leftover instead of crediting a delta, which resolves the double-counting rather than just accepting it.
 
 Only run this when SWADE's `settingRules.wealthType === 'currency'` — no-op for `wealthDie`/`none` modes, since there's no numeric field to credit.
 
 **Character Manager does not create actors (corrected).** An earlier draft of this plan had Character Manager creating blank actors itself (a `!this.actor` branch in `_createActor()`), which turned out to be unneeded complexity for little benefit — Character Manager should always receive an actor to work on, matching its stated design ("always opens from an actor sheet"). This removes a whole parallel code path (most of the ancestry/gear/currency logic was duplicated across a "new actor" branch and an "existing actor" branch for no real gain). The one place that relied on the old behavior — the `characterCreatorMenu` settings-menu entry in `scripts/settings.js`, which instantiates `CharacterManager` with no actor — needs to either be removed, or changed to create a blank actor via a plain `Actor.create()` call first and open Character Manager pointed at the result. **Decide which when implementing.**
 
-This also means there's no special "just-created-by-Character-Manager" moment to hook into for currency seeding — every actor Character Manager ever touches already exists. SWADE's own `_preCreate` hook still auto-sets a truly fresh actor's `system.details.currency` to `pcStartingCurrency` the instant it's created (via whatever normal Foundry flow made it), so a brand-new blank actor opened in Character Manager for the first time will show that amount already sitting there before any Gear tab shopping happens. Rather than build a heuristic to detect "is this actor's current currency actually the still-untouched SWADE default, or genuine established wealth" (not reliably distinguishable in general), this is left as an accepted, minor discrepancy — the manual **override starting funds** input already in the design (see below) is the transparent fix if a GM cares to correct for it, rather than a clever auto-detection that could get it wrong the other direction. `previouslyCredited` simply always starts at 0 for an actor Character Manager hasn't touched before, full stop, no special-casing.
+This also means there's no special "just-created-by-Character-Manager" moment to hook into for currency seeding — every actor Character Manager ever touches already exists. SWADE's own `_preCreate` hook still auto-sets a truly fresh actor's `system.details.currency` to `pcStartingCurrency` the instant it's created (via whatever normal Foundry flow made it), so a brand-new blank actor opened in Character Manager for the first time will show that amount already sitting there before any Gear tab shopping happens. **Resolved (2026-08-10), not just accepted:** rather than build a heuristic to detect "is this actor's current currency actually the still-untouched SWADE default, or genuine established wealth" (still not reliably distinguishable in general, and rejected again when reconsidered as an `currency + gearValue == startingFunds` equality gate — see above), the fix instead came from the mode split: Starting Equipment mode directly *sets* currency to the leftover rather than adding a delta on top of whatever's already there, so the SWADE-seeded default gets correctly replaced instead of double-counted. The manual **override starting funds** input remains as the escape hatch for anything the formula itself doesn't cover.
 
 **`startingFunds` formula (corrected — no unconditional creation-doubling):**
 ```
@@ -425,10 +428,10 @@ Precise Open/Edit/Save behavior, incorporating everything above. This is the con
 - Min-Strength warning → unchanged (informational hint + toast).
 - Override starting funds: a small checkbox in the pinned footer (`character.showGearFundsOverride`, UI-only, not persisted itself) reveals a compact number input when checked; the typed value is stored in `character.gearFundsOverride` for the session. Unchecking clears it back to `null`, reverting to the formula.
 
-**On Save** (`_saveGearToActor()` + `_reconcileGearFunds()`):
+**On Save** (`_saveGearToActor()` + `_reconcileStartingFunds()`/`_reconcileGearManagementFunds()`):
 1. For each entry in `character.gear`: if an embedded item with that uuid already exists on the actor, patch only its `quantity` field in place (`updateEmbeddedDocuments`) — never delete/recreate it. Otherwise, create a fresh copy from its source item with `quantity` set and the `compendiumUuid` flag.
 2. Any gear-type item that was on the actor but is no longer in `character.gear` (explicitly removed via the tab) → deleted.
-3. Compute `startingFunds` (override or formula) and `gearCost`, apply the flag-tracked currency delta from Problem 1 (only if `wealthType === 'currency'`), and persist the `gearFundsOverride` flag if the GM set one this session.
+3. Compute `startingFunds` (override or formula) and `gearCost`; persist the `gearFundsOverride` flag if the GM set one this session (regardless of mode or the checkbox below). Currency itself only changes if `character.applyCurrencyOnSave` is checked: if `gearTabMode === 'starting'`, set currency to `startingFunds − gearCost` directly; otherwise (`'management'`), debit/credit currency by the change in `gearCost` since the session opened (`character.gearCostAtOpen`). Both no-op if `wealthType !== 'currency'`, and neither runs at all if the checkbox is unchecked.
 
 **Why the customization-detection layer got dropped:** it only existed to let *unmodified* items pick up later compendium edits (a price tweak, a typo fix) on save — the "customized" flag was purely the exception carve-out to protect modified items from that same refresh. Once "auto-sync with the compendium" isn't a goal, patching in place unconditionally gets the identical "never destroys homebrew" guarantee with no per-item source fetch and no bookkeeping. Traded away deliberately: (a) an unmodified item's price/description no longer follows a later compendium edit — accepted; (b) **loses the self-healing property** wipe-and-recreate had for free — a bad field value from a past bug on an "should be vanilla" item, or a missing/wrong `compendiumUuid` flag, now persists forever instead of auto-correcting on next save; recovery requires a manual Remove-and-re-Add. Worth remembering given this module is still under active development. (c) `updateEmbeddedDocuments` vs. delete+create aren't guaranteed identical for any create-only side effects some other module might hook — low risk, not verified in-app.
 
@@ -470,6 +473,53 @@ Key test categories:
 - Integration (macro access) (1 test)
 
 **Total Tests:** 22-25
+
+### Gear Tab — Concrete Test Cases (2026-08-10 session)
+
+The generic categories above predate the Gear tab's currency/encumbrance/mode-toggle work — none of it has a formal test pass yet. Concrete cases to run before considering this tab done:
+
+**Current currency display**
+- [ ] Open an actor with nonzero `system.details.currency` — footer/guidance area shows the real current amount, separate from any budget number.
+- [ ] Hidden entirely on a world using Wealth Die or no-currency setting rules.
+
+**Starting Equipment / Gear Management mode toggle**
+- [ ] Fresh actor (no advances, no gear) defaults to Starting Equipment.
+- [ ] Established actor (has advances or existing gear) defaults to Gear Management.
+- [ ] Manually toggling switches the footer content (budget/override vs. plain current currency) immediately.
+- [ ] Toggle choice persists across close/reopen (`gearTabMode` actor flag).
+
+**Apply-to-currency-on-Save checkbox (both modes)**
+- [ ] Checkbox starts unchecked every time the tool is opened, regardless of mode or actor state.
+- [ ] With it unchecked, Save proceeds normally (gear, attributes, everything else) and currency is completely untouched, in either mode.
+- [ ] Live preview text next to the checkbox updates immediately as gear is added/removed/quantity-adjusted, before ever checking the box.
+
+**Starting Equipment mode currency**
+- [ ] Preview text reads "sets currency to X" where X matches the footer's remaining/budget number.
+- [ ] Brand-new actor: buy gear, check the box, Save — currency ends up at exactly `startingFunds − gearCost`, not the SWADE-seeded amount plus that (the double-counting bug this session's redesign fixed).
+- [ ] Select a Rich/Filthy Rich-type edge, then buy gear, check the box, Save — the multiplier is correctly reflected in the resulting currency.
+- [ ] Set a manual "Override Starting Funds" value — Save uses the override instead of the formula, both for the footer and the preview text.
+- [ ] Re-save (box still checked) with no gear changes — currency recomputes to the same value (idempotent).
+
+**Gear Management mode currency**
+- [ ] Preview text reads "charges X" / "refunds X" / "no change" matching the actual marginal cost delta since the tab opened.
+- [ ] Established actor, note current currency, buy an item worth X, check the box, Save — currency drops by exactly X.
+- [ ] Remove that item, check the box, Save again — currency goes back up by X (refund).
+- [ ] Buy something costing more than current currency, check the box — saves fine with currency negative, no block.
+- [ ] Reopen after a save — the next session's baseline is the actor's now-updated real gear (no re-charging for items already owned), and the checkbox is unchecked again by default.
+- [ ] On an established actor left in Starting mode by mistake, Save with the box **unchecked** — currency is untouched (no confirmation dialog needed anymore, since nothing happens without explicit opt-in).
+
+**Encumbrance**
+- [ ] Footer always shows `Carried: X / Y {lbs|kg}`, independent of the currency setting.
+- [ ] Adding/removing gear updates Carried live.
+- [ ] Exceeding capacity turns the value red.
+- [ ] Raising Strength die increases max capacity.
+- [ ] An encumbrance-step-granting effect (e.g. Packrat) increases max capacity.
+
+**Duplicate-item fix (2026-08-10)**
+- [ ] Established actor with existing gear (e.g. "5 Arrows") — adding "Arrows" again via the search dropdown bumps to 10 in one stack, not a second row.
+- [ ] Dragging an item already embedded on the actor onto the Gear tab bumps quantity rather than duplicating.
+- [ ] A genuinely new item (never seen before) still creates one fresh entry.
+- [ ] After Save, the actor sheet's own inventory shows no duplicate rows for either case above.
 
 ---
 
