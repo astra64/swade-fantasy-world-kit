@@ -245,6 +245,16 @@ export class CharacterManager extends FormApplication {
             // UI-only toggle for the Gear tab's override input, not persisted itself — starts
             // revealed if the actor already has an override flag set from a previous save.
             showGearFundsOverride: (this.actor.getFlag(MODULE_ID, 'gearFundsOverride') ?? null) !== null,
+            // Gear tab has two modes: "starting" (shopping-budget footer, for creation) and
+            // "management" (plain current-currency footer, for an established character).
+            // Once a GM/player has set this explicitly it's remembered via actor flag;
+            // otherwise default by whether the actor looks already-established.
+            gearTabMode: this.actor.getFlag(MODULE_ID, 'gearTabMode') ?? (
+              (this.actor.system?.advances?.list?.length > 0
+                || this.actor.items.some((item) => ['gear', 'weapon', 'armor', 'shield'].includes(item.type)))
+                ? 'management'
+                : 'starting'
+            ),
           };
         }
 
@@ -381,6 +391,9 @@ export class CharacterManager extends FormApplication {
         game.settings.get(MODULE_ID, 'richFundsMultipliers')
       );
       const startingFunds = calculateStartingFunds(this.character, { pcStartingCurrency, richFundsMultipliers });
+      // The actor's actual banked currency (pre-existing gold, GM awards, etc.) — separate
+      // from the Gear tab's shopping budget above, which only tracks this session's spend.
+      const currentCurrency = this.actor?.system?.details?.currency ?? 0;
 
       const attributePointsMax = 5 + bonusAttributePoints;
       const skillPointsMax = 12 + bonusSkillPoints;
@@ -443,6 +456,7 @@ export class CharacterManager extends FormApplication {
         tabGuidance: this._getTabGuidance(),
         currencyName: currencyName,
         currencyAmount: currencyAmount,
+        currentCurrency: currentCurrency,
         attributes: DEFAULT_ATTRIBUTES,
         FREE_CORE_SKILLS: FREE_CORE_SKILLS,
         ancestryBonuses: ancestryBonuses,
@@ -814,9 +828,31 @@ export class CharacterManager extends FormApplication {
     return list.map((entry) => ({
       id: entry.id || foundry.utils.randomID(),
       type: ADVANCE_TYPE_ENUM_REVERSE[entry.type] ?? 'edge',
-      notes: entry.notes || '',
+      // SWADE's `notes` field is an HTMLField (rich text, editable via the vanilla actor
+      // sheet's ProseMirror editor) — this tab's notes field is a plain <input>, so any tags
+      // need stripping on read or they'd show up literally (e.g. "<p>Fast Draw</p>").
+      notes: this._stripHtmlToPlainText(entry.notes),
       planned: !!entry.planned,
     }));
+  }
+
+  /**
+   * Convert a rich-text HTML string (e.g. SWADE's advances `notes` HTMLField) to plain text
+   * for display in a plain <input> — strips tags and decodes entities via a detached element
+   * (rather than a regex strip, which wouldn't decode entities like &amp;). Block-level breaks
+   * (<p>, <div>, <li>, <br>) are converted to a space first, since `textContent` inserts no
+   * separator of its own between block elements — without this, a multi-paragraph note like
+   * "<p>Line one</p><p>Line two</p>" would collapse into "Line oneLine two". A space rather
+   * than a newline, since the target field here is single-line.
+   */
+  _stripHtmlToPlainText(html) {
+    if (typeof html !== 'string' || !html) return '';
+    const withSeparators = html
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<\/(p|div|li)\s*>/gi, ' ');
+    const div = document.createElement('div');
+    div.innerHTML = withSeparators;
+    return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
   }
 
   async _updateObject(event, formData) {
@@ -1071,6 +1107,14 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
+   * Persist the Gear tab's "Starting Equipment" vs "Gear Management" toggle so it survives
+   * reopening Character Manager instead of re-defaulting from advances/existing-gear every time.
+   */
+  async _persistGearTabMode(actor) {
+    await actor.setFlag(MODULE_ID, 'gearTabMode', this.character.gearTabMode);
+  }
+
+  /**
    * Block the save with a confirmation dialog if the character still has unspent Attribute,
    * Skill, or Edge points — a likely mistake worth catching before it's written to the actor.
    * Leftover Hindrance points and gear silver are intentionally NOT checked here: taking
@@ -1200,8 +1244,11 @@ export class CharacterManager extends FormApplication {
       await this._saveEdgesToActor(this.actor);
       await this._saveHindrancesToActor(this.actor);
       await this._saveGearToActor(this.actor);
-      await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
-      await this._persistGearFundsOverride(this.actor);
+      if (this.character.gearTabMode === 'starting') {
+        await this._reconcileGearFunds(this.actor, startingFunds, gearCost);
+        await this._persistGearFundsOverride(this.actor);
+      }
+      await this._persistGearTabMode(this.actor);
 
       ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
       this.close();

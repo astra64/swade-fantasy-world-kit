@@ -280,6 +280,47 @@
   color: #ef5350;
 }
 
+/* ===== Gear Tab - Mode Toggle (inline in the guidance box) ===== */
+
+.swade-character-manager .gear-tab-guidance-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.swade-character-manager .gear-tab-guidance-box p {
+  flex: 1;
+}
+
+.swade-character-manager .gear-tab-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.swade-character-manager .gear-tab-mode-toggle button {
+  padding: 5px 12px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-cool-2) 40%, white 60%);
+  color: var(--color-text-dark-primary);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.swade-character-manager .gear-tab-mode-toggle button.active {
+  background: color-mix(in srgb, var(--color-cool-2) 60%, white 40%);
+}
+
+.swade-character-manager .gear-tab-mode-toggle button:hover:not(.active) {
+  background: color-mix(in srgb, var(--color-cool-2) 60%, white 40%);
+}
+
 /* ===== Gear Tab - Pinned Budget Footer (tab-scoped, not the global footer) ===== */
 
 .swade-character-manager .gear-tab-pinned-footer {

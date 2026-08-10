@@ -100,6 +100,13 @@ export class GearTabHandler extends BaseTabHandler {
       }
       this.characterManager.render();
     });
+
+    this.html.find('[data-action="set-gear-tab-mode"]').on('click', (e) => {
+      e.preventDefault();
+      const mode = $(e.currentTarget).attr('data-mode');
+      this.characterManager.character.gearTabMode = mode;
+      this.characterManager.render();
+    });
   }
 
   async _addGear(item) {

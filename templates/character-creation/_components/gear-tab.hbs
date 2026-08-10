@@ -2,8 +2,12 @@
   <h3>Gear</h3>
 
   <div class="tab-content">
-    <div class="guidance-box">
+    <div class="guidance-box gear-tab-guidance-box">
       <p>{{@root.tabGuidance.gear}}</p>
+      <div class="gear-tab-mode-toggle">
+        <button type="button" class="{{#if (eq @root.character.gearTabMode 'starting')}}active{{/if}}" data-action="set-gear-tab-mode" data-mode="starting">Starting Equipment</button>
+        <button type="button" class="{{#if (eq @root.character.gearTabMode 'management')}}active{{/if}}" data-action="set-gear-tab-mode" data-mode="management">Gear Management</button>
+      </div>
     </div>
 
     <!-- Add Gear Section -->
@@ -84,6 +88,7 @@
 
     {{#if @root.usesCurrency}}
     <div class="gear-tab-pinned-footer">
+      {{#if (eq @root.character.gearTabMode 'starting')}}
       <span class="budget-label">Starting {{@root.currencyName}}:</span>
       <span class="budget-value {{#if (lt @root.gearRemaining 0)}}over-budget{{/if}}">{{@root.gearRemaining}} / {{@root.gearBudget}}</span>
       <label class="gear-funds-override-toggle" title="Replace the calculated starting funds with a manual number">
@@ -98,6 +103,10 @@
         placeholder="{{@root.gearBudget}}"
         value="{{@root.gearFundsOverride}}"
       >
+      {{/if}}
+      {{else}}
+      <span class="budget-label">Current {{@root.currencyName}}:</span>
+      <span class="budget-value">{{@root.currentCurrency}}</span>
       {{/if}}
     </div>
     {{/if}}
