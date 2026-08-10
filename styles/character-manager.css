@@ -690,6 +690,17 @@
   background: color-mix(in srgb, var(--color-cool-3) 75%, white 25%);
 }
 
+.swade-character-manager .goto-gear-hint {
+  margin: 1rem 1rem 0.25rem 1rem;
+  display: inline;
+}
+
+.swade-character-manager .goto-gear-hint + .btn-goto-gear {
+  margin: 0 0 0 16px;
+  display: inline;
+  padding: 0 8px;
+}
+
 .swade-character-manager .btn-goto-gear {
   display: block;
   width: auto;
@@ -1482,6 +1493,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 0.75rem;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--color-border-light-primary);
 }
 
 .swade-character-manager .summary-row {
