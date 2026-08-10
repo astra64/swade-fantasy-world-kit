@@ -62,6 +62,19 @@ import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIP
 
 const MODULE_ID = 'swade-fantasy-world-kit';
 
+const GEAR_ITEM_TYPES = ['gear', 'weapon', 'armor', 'shield'];
+
+/**
+ * Excludes coin items created by the "SWADE Fantasy Currencies" module (id `sfc`) — those
+ * are gear-type items flagged `flags.sfc.type` and managed entirely through SFC's own coin
+ * UI/currency total, not something this tab's Gear list should show or touch. Without this,
+ * _saveGearToActor's reconciliation would also delete them on save since they'd never appear
+ * in `this.character.gear`.
+ */
+function isTrackedGearItem(item) {
+  return GEAR_ITEM_TYPES.includes(item.type) && !item.grantedBy && !item.getFlag?.('sfc', 'type');
+}
+
 // Module-level cache: compendium data is identical for every CharacterManager instance
 // within a session (a fresh instance is created on each open, see main.js), so keeping
 // this outside the class lets the expensive per-item fromUuid lookups run only once
@@ -867,7 +880,7 @@ export class CharacterManager extends FormApplication {
    * Edges/Hindrances detection.
    */
   async _detectGearFromActor(actor) {
-    const gearItems = actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy);
+    const gearItems = actor.items.filter(isTrackedGearItem);
 
     const entries = await Promise.all(gearItems.map(async (gearItem) => {
       const compendiumGear = this.compendiumData.gear.find(
@@ -954,7 +967,7 @@ export class CharacterManager extends FormApplication {
    * selection (an explicit Remove) is deleted.
    */
   async _saveGearToActor(actor) {
-    const existingGear = actor.items.filter(item => ['gear', 'weapon', 'armor', 'shield'].includes(item.type) && !item.grantedBy);
+    const existingGear = actor.items.filter(isTrackedGearItem);
     const existingByUuid = new Map(existingGear.map(item => [item.uuid, item]));
     const toDelete = new Set(existingGear.map(item => item.id));
 
@@ -1223,7 +1236,7 @@ export class CharacterManager extends FormApplication {
    */
   _actorLooksEstablished(actor) {
     return actor.system?.advances?.list?.length > 0
-      || actor.items.some((item) => ['gear', 'weapon', 'armor', 'shield'].includes(item.type));
+      || actor.items.some(isTrackedGearItem);
   }
 
   /**
