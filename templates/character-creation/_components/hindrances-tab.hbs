@@ -29,8 +29,9 @@
         </div>
       </div>
 
-      <!-- Selected Hindrances Display -->
-      {{#each @root.character.hindrances}}
+      <!-- Selected Hindrances Display (excludes hindrances granted as a child item by a
+           selected edge — those aren't an independent player choice, see visibleHindrances) -->
+      {{#each @root.visibleHindrances}}
       {{#if @first}}
       <div class="selected-items-section">
         <h4>Selected Hindrances</h4>
@@ -119,12 +120,11 @@
     </div>
 
     <!-- Hindrances Tab Footer: Perk Point Allocation -->
-    {{#if (gt (objLength @root.character.hindrances) 0)}}
+    {{#if (gt (objLength @root.visibleHindrances) 0)}}
     <div class="hindrances-tab-footer">
       <h4>Allocate Perks — {{@root.perkPointsSpent}}/{{@root.availablePerkPoints}}</h4>
       <div class="hindrances-tradeoff-slots">
         {{#each @root.perkSlots}}
-          {{#if (isPerkSlotVisible ../perkSlots @index)}}
           <div class="tradeoff-slot" data-tradeoff-slot="{{@index}}">
             <select class="tradeoff-dropdown" data-slot-index="{{@index}}" data-action="set-slot-tradeoff">
               <option value="" disabled selected>-- Select Perk --</option>
@@ -153,7 +153,6 @@
               {{/if}}
             </select>
           </div>
-          {{/if}}
         {{/each}}
       </div>
     </div>

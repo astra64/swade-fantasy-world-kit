@@ -579,56 +579,33 @@ export function generatePerkSlots(character, bonusPerkPoints = 0) {
   const hindrancePoints = calculateTotalHindrancePoints(character);
   const availablePerkPoints = Math.min(hindrancePoints + bonusPerkPoints, 4);
   const existingSlots = character.perkPointAllocations || [];
+  const twoPointOptions = ['attribute-boost', 'edge'];
 
   const slots = [];
   let pointsRemaining = availablePerkPoints;
 
   while (pointsRemaining > 0) {
-    // Get existing slot data if available, or create new
     const slotIndex = slots.length;
     const existingSlot = existingSlots[slotIndex];
+    const selected = existingSlot?.selected || null;
 
-    // Determine pointValue for this slot
-    let pointValue = 1;
+    // Capacity offered to this slot's dropdown (up to 2) — not the same as how many points
+    // its actual selection ends up costing, which is what determines how much is left over
+    // for the next slot.
+    const pointValue = Math.min(2, pointsRemaining);
+    slots.push({ pointValue, selected, index: slotIndex });
 
-    // If previous slot selected a 2-point allocation, this slot is consumed (hidden)
-    const prevSlot = slots[slotIndex - 1];
-    if (prevSlot && ['attribute-boost', 'edge'].includes(prevSlot.selected)) {
-      // Previous slot used 2 points, skip this one
-      pointsRemaining -= 1;
-      continue;
-    }
-
-    // Otherwise, use as many points as available (cap at 2 for this slot)
-    pointValue = Math.min(2, pointsRemaining);
-    pointsRemaining -= pointValue;
-
-    slots.push({
-      pointValue,
-      selected: existingSlot?.selected || null,
-      index: slotIndex
-    });
+    // An unselected slot's eventual cost is unknown, so provisionally assume it'll use its
+    // full capacity (matches the initial "no selections yet" slot count) — this gets
+    // recomputed correctly as soon as a choice is actually made, since `selected` then drives
+    // the real consumption instead.
+    const consumed = selected
+      ? (twoPointOptions.includes(selected) ? 2 : 1)
+      : pointValue;
+    pointsRemaining -= consumed;
   }
 
   return slots;
-}
-
-/**
- * Check if a perk point allocation slot should be visible in the UI.
- * Slots are hidden if the previous slot selected a 2-point allocation.
- *
- * @param {Array} slots - Array of slot objects
- * @param {number} index - Slot index to check
- * @returns {boolean} True if slot should be visible
- */
-export function isPerkSlotVisible(slots, index) {
-  if (index === 0) return true;  // First slot always visible
-
-  const prevSlot = slots[index - 1];
-  if (!prevSlot) return false;
-
-  // If previous slot selected a 2-point allocation, this slot is consumed/hidden
-  return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
 }
 
 /**

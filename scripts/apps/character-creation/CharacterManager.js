@@ -258,6 +258,10 @@ export class CharacterManager extends FormApplication {
             // opted into this session, never as a silent side effect of whichever Gear tab
             // mode happens to be selected. See the live preview text next to this checkbox.
             applyCurrencyOnSave: false,
+            // Which perk each hindrance-point slot was spent on (Attribute/Edge/Skill
+            // Point/Extra Funds) — persisted as its own actor flag since it has no embedded
+            // Item of its own to live on, unlike every other tab's selections.
+            perkPointAllocations: this.actor.getFlag(MODULE_ID, 'perkPointAllocations') || [],
           };
 
           // Snapshot of gear cost as it actually exists on the actor right now, before this
@@ -320,18 +324,45 @@ export class CharacterManager extends FormApplication {
         if (edgeChildResults[i].length) edgeChildItems[uuid] = edgeChildResults[i];
       });
 
-      const hindranceUuids = Object.keys(this.character.hindrances || {});
+      // Hindrances granted as a child item by a selected edge (e.g. an Arcane Background's
+      // downside) are real, narratively-part-of-the-character effects, but shouldn't behave
+      // like an independently-chosen hindrance: they don't grant their own perk points, and
+      // showing them as a normal "Selected Hindrance" card — complete with its own "further
+      // grants" section — is confusing since they were never a player choice on this tab.
+      // Matched by name rather than uuid: `system.grants` descriptors point at the compendium
+      // source item, not whatever uuid this hindrance ended up keyed under in
+      // `character.hindrances` (which is always the actor's own embedded-item uuid — see
+      // _detectHindrancesFromActor), so a uuid-based exclusion would never match.
+      const edgeGrantedHindranceNames = new Set(
+        Object.values(edgeChildItems)
+          .flat()
+          .filter((child) => child.type === 'hindrance')
+          .map((child) => child.name?.toLowerCase())
+      );
+      const visibleHindrances = Object.fromEntries(
+        Object.entries(this.character.hindrances || {})
+          .filter(([, h]) => !edgeGrantedHindranceNames.has(h.name?.toLowerCase()))
+      );
+      // Used only for hindrance-point/perk calculations and the "Selected Hindrances"
+      // display — _saveHindrancesToActor() and detection still operate on the real,
+      // unfiltered character.hindrances, so an edge-granted hindrance's actual embedded
+      // item (if SWADE's own grant automation created one) is never touched by this.
+      const hindranceCharacterView = { ...this.character, hindrances: visibleHindrances };
+
+      const hindranceUuids = Object.keys(visibleHindrances);
       const hindranceChildResults = await Promise.all(hindranceUuids.map((uuid) => this._getGrantedChildItems(uuid)));
       const hindranceChildItems = {};
       hindranceUuids.forEach((uuid, i) => {
         if (hindranceChildResults[i].length) hindranceChildItems[uuid] = hindranceChildResults[i];
       });
 
-      // Pace/Toughness previews need the full item documents (for their Active Effects),
-      // not the trimmed display data character.edges/hindrances/gear already hold.
+      // Pace/Toughness previews need every real hindrance's Active Effects, including
+      // edge-granted ones (their mechanical effects still apply even though they're hidden
+      // from the tab) — so this uses the *unfiltered* list, not visibleHindrances.
+      const allHindranceUuids = Object.keys(this.character.hindrances || {});
       const [edgeItemsFull, hindranceItemsFull] = await Promise.all([
         Promise.all(edgeUuids.map((uuid) => getItemPreview(uuid))),
-        Promise.all(hindranceUuids.map((uuid) => getItemPreview(uuid))),
+        Promise.all(allHindranceUuids.map((uuid) => getItemPreview(uuid))),
       ]);
       const paceModifier = calculatePaceModifier([
         selectedAncestryData,
@@ -360,8 +391,8 @@ export class CharacterManager extends FormApplication {
       const attributeAdvanceWarning = getAttributeAdvanceWarning(this.character);
       const advanceGroups = groupAdvancesByRank(this.character);
 
-      const availablePerkPoints = getAvailablePerkPoints(this.character, bonusPerkPointsFromAdvances);
-      const perkSlots = generatePerkSlots(this.character, bonusPerkPointsFromAdvances);
+      const availablePerkPoints = getAvailablePerkPoints(hindranceCharacterView, bonusPerkPointsFromAdvances);
+      const perkSlots = generatePerkSlots(hindranceCharacterView, bonusPerkPointsFromAdvances);
       const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
       const bonusEdgePointAbilityNames = (game.settings.get(MODULE_ID, 'bonusEdgePointAbilityNames') || '')
         .split(',');
@@ -371,7 +402,7 @@ export class CharacterManager extends FormApplication {
       const bonusAttributePoints = calculateBonusAttributePoints(this.character) + bonusAttributePointsFromAdvances;
       const bonusSkillPoints = calculateBonusSkillPoints(this.character) + bonusSkillPointsFromAdvances;
       const gearCost = calculateGearCost(this.character);
-      const hindrancePointsUsed = calculateTotalHindrancePoints(this.character);
+      const hindrancePointsUsed = calculateTotalHindrancePoints(hindranceCharacterView);
 
       // Calculate perk points spent based on actual option costs
       const perkOptionCosts = {
@@ -451,6 +482,7 @@ export class CharacterManager extends FormApplication {
         childItemsData: childItemsData,
         edgeChildItems: edgeChildItems,
         hindranceChildItems: hindranceChildItems,
+        visibleHindrances: visibleHindrances,
         ancestries: this.compendiumData.ancestries,
         skills: this.compendiumData.skills,
         edges: this.compendiumData.edges,
@@ -1373,6 +1405,7 @@ export class CharacterManager extends FormApplication {
         await this._reconcileGearManagementFunds(this.actor, gearCost);
       }
       await this._persistGearTabMode(this.actor);
+      await this.actor.setFlag(MODULE_ID, 'perkPointAllocations', this.character.perkPointAllocations || []);
 
       ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
       this.close();
@@ -1382,15 +1415,6 @@ export class CharacterManager extends FormApplication {
     }
   }
 }
-
-// Register Handlebars helpers
-Handlebars.registerHelper('isPerkSlotVisible', (slots, index) => {
-  if (index === 0) return true;  // First slot always visible
-  const prevSlot = slots[index - 1];
-  if (!prevSlot) return false;
-  // If previous slot selected a 2-point perk, this slot is hidden
-  return !(['attribute-boost', 'edge'].includes(prevSlot.selected));
-});
 
 Handlebars.registerHelper('objLength', (obj) => {
   if (typeof obj !== 'object' || obj === null) return 0;

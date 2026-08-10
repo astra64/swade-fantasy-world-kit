@@ -822,6 +822,10 @@
   color: var(--color-text-dark-primary);
 }
 
+.swade-character-manager .granted-items-list .expandable-item-name {
+  color: color-mix(in srgb, var(--color-text-dark-primary) 70%, transparent);
+}
+
 .swade-character-manager .expandable-item-description,
 .swade-character-manager .item-card-description {
   padding: 1rem;
@@ -850,7 +854,9 @@
 }
 
 .swade-character-manager .granted-items-list {
-  margin: 0.75rem 0.75rem 0.75rem 0;
+  margin: 0.75rem 0.75rem 0.75rem 1.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid color-mix(in srgb, var(--color-text-dark-primary) 25%, transparent);
   background: color-mix(in srgb, var(--color-cool-2) 10%, transparent);
   display: flex;
   flex-direction: column;
@@ -860,7 +866,7 @@
   margin: 0 0 0.5rem 0;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-text-dark-primary);
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -869,7 +875,7 @@
   margin: 0;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-text-dark-primary);
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
