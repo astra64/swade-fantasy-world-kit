@@ -33,10 +33,10 @@ Ancestry and item descriptions use Foundry's `TextEditor.enrichHTML()` to proces
 ---
 
 ### Phase 1: Character Creation & Editing
-Opens from actor sheet; works identically whether the actor is blank (creation) or already has data (editing). `getData()` reads Name, Archetype, Concept (`system.details.notes`), Ancestry, Attributes, Skills, Edges, and Hindrances off an existing actor on open — Skills/Edges/Hindrances are detected from `actor.itemTypes.skill/edge/hindrance` (embedded Items, matched to compendium entries by name), not from `actor.system.skills/edges/hindrances` (a schema SWADE doesn't actually use for these). **Save is still a scaffold**: `_createActor()`'s Save button exists so individual tabs are testable in isolation as they're built, but real persistence for all fields is intentionally deferred to the Summary tab (Milestone 3, Tab 8), not something to patch mid-tab-development. See Milestone 6 for the remaining prepopulation/detection gaps and the Save follow-up.
+Opens from actor sheet; works identically whether the actor is blank (creation) or already has data (editing). `getData()` reads Name, Archetype, Concept (`system.details.notes`), Ancestry, Attributes, Skills, Edges, Hindrances, Gear, and Advances off an existing actor on open — Skills/Edges/Hindrances are detected from `actor.itemTypes.skill/edge/hindrance` (embedded Items, matched to compendium entries by name), not from `actor.system.skills/edges/hindrances` (a schema SWADE doesn't actually use for these). **Save is real for every tab** (updated — this used to describe a scaffold-only Save deferred to the Summary tab; that landed long ago): `_saveActor()` in `CharacterManager.js` calls `_saveSkillsToActor()`/`_saveEdgesToActor()`/`_saveHindrancesToActor()`/`_saveGearToActor()`, each reconciling real embedded Items (patch in place, create new, delete removed), plus `_advancesToUpdateData()` writing `system.advances.list` directly. See Milestone 5 for what's still genuinely open (testing).
 
 ### Phase 2: Character Advances & Planning
-Add ability to plan and manage character advancement progression (same tool or separate, TBD).
+Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate tool or phase — see "Problem 2: Advancement as a Tab" and "Tab 8: Advancement" below for the full design and implementation.
 
 ---
 
@@ -77,70 +77,21 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 ## Implementation Milestones
 
-**Note:** Milestones 1-6 all build **Phase 1** (Character Creation & Editing) — prepopulation/detection (originally planned as a separate later pass in Milestone 6) shipped incrementally as each tab was built instead, so Milestone 6 now just tracks the remaining detection gaps (Gear) and the Save follow-up. **Phase 2** (Advances) scope TBD.
+**Note:** Milestones 1-6 all build **Phase 1** (Character Creation & Editing) — prepopulation/detection (originally planned as a separate later pass in Milestone 6) shipped incrementally as each tab was built instead, so Milestone 6's only genuinely open items are change-detection highlighting and mid-edit validation. **Phase 2** (Advances) is no longer TBD — it shipped as Tab 9 (Advancement) rather than a separate phase; see "Problem 2: Advancement as a Tab" and "Tab 8: Advancement" below.
 
 ---
 
 ### Milestone 1: Foundation & Data Layer
 **Applies to:** Phase 1 (Character Creation & Editing)
 
-- [ ] **calculator.js Updates**
-  - [ ] Add hindrance trade-off calculation functions
-  - [ ] Add edge point calculation (base + ancestry bonuses like Human)
-  - [ ] Add gear cost tracking
-  - [ ] Add derived stats for gear (Pace from hindrances, Armor bonus tracking)
-  - [ ] Document skill modifier stacking rules
-
-- [ ] **compendium-utils.js Updates**
-  - [ ] Add getHindrances() with Major/Minor type data
-  - [ ] Add getEdges() with prerequisite data
-  - [ ] Add getGear() with cost data
-  - [ ] Ensure alphabetical sorting maintained
-
-- [ ] **Data Structure Definition**
-  - [ ] Character object schema (raw selections only)
-  - [ ] Hindrances trade-off tracking structure
-  - [ ] Ancestry bonus application rules
-
-**Estimated Scope:** 400+ lines (calculator/utils)
+**Status: Done — superseded by the incremental Milestone 3 approach.** This milestone was drafted as an upfront foundation pass before any tab existed. That's not how the build actually happened: calculator.js/compendium-utils.js functions, and the character data structure, were each added incrementally as the tab that needed them was built (see Milestone 3's per-tab checklists, all checked off). Every item originally listed here now exists in `lib/calculator.js` and `lib/compendium-utils.js` — trade-off math, edge point calculation, gear cost tracking, derived stats, Major/Minor hindrance data, prerequisite data, etc. Left unchecked for a long time purely because this section was never revisited after the approach changed, not because the work is outstanding.
 
 ---
 
 ### Milestone 2: UI Scaffold (Main App & Templates)
 **Applies to:** Phase 1 (Character Creation & Editing)
 
-- [ ] **CharacterManager.js (Main FormApplication)**
-  - [ ] Constructor: Accept actor, initialize from existing data
-  - [ ] getData(): Fetch all compendium data, calculate budgets, prepare template context
-  - [ ] activateListeners(): Setup tab system, auto-save handlers
-  - [ ] _setupTabs(), _switchTab(): Tab navigation
-  - [ ] _saveCharacterToActor(): Persist changes to actor
-  - [ ] _validateCharacter(): Check for invalid states
-
-- [ ] **UI Templates & Styling**
-  - [ ] character-manager.hbs (main template with 8 tabs, footer, buttons)
-  - [ ] _concept.hbs through _summary.hbs (individual tab templates)
-  - [ ] character-manager.css (base layout, budget tracker, responsive design)
-
-- [ ] **character-manager.hbs (Main Template)**
-  - [ ] Tab navigation bar
-  - [ ] Tab content containers (initially placeholders)
-  - [ ] Sticky footer with budget tracker
-  - [ ] Action buttons (Save, Export JSON, Cancel)
-
-- [ ] **Individual Tab Templates (_concept.hbs through _summary.hbs)**
-  - [ ] Each tab template includes new player-friendly guidance text (see per-tab specs in Milestone 3 below)
-  - [ ] Guidance is shown prominently at top of each tab
-  - [ ] Clear, conversational tone explaining what the tab does and what choices matter
-
-- [ ] **styles/character-manager.css**
-  - [ ] Base layout (tabs, footer, buttons)
-  - [ ] Budget tracker styling (red over-limit states)
-  - [ ] Guidance text styling (boxed, distinguished from form elements)
-  - [ ] Responsive design for mobile
-  - [ ] Tab transitions/animations
-
-**Estimated Lines of Code:** 400-500 (CharacterManager.js), 100-150 (main template), 100-150 (guidance text across tab templates), 300-400 (CSS)
+**Status: Done — same as Milestone 1.** `CharacterManager.js`, `character-manager.hbs`, and `character-manager.css` all exist and are substantially larger/more capable than this original scaffold envisioned (9 tabs, not 8; real actor persistence; budget tracking with color-coded over/under states; guidance text on every tab). Built incrementally per-tab rather than as a single upfront scaffold — see Milestone 3.
 
 ---
 
@@ -284,25 +235,16 @@ Add ability to plan and manage character advancement progression (same tool or s
 ### Milestone 4: Integration & Polish
 **Applies to:** Phase 1 (Character Creation & Editing)
 
-- [ ] **main.js Integration**
-  - [ ] Import CharacterManager
-  - [ ] Register any new Handlebars helpers needed
-  - [ ] Add menu item to open Character Manager from actor sheet
-  - [ ] Expose window.CharacterManager for console access
-
-- [ ] **Macro Creation**
-  - [ ] CHARACTER_MANAGER_MACRO.js (open from hotbar, auto-select actor)
-
-- [ ] **CSS Refinement**
-  - [ ] Polish colors, spacing, typography
-  - [ ] Test responsive behavior
-  - [ ] Add smooth transitions/animations
-
+- [x] **main.js Integration**
+  - [x] Import CharacterManager
+  - [x] Register any new Handlebars helpers needed
+  - [x] Add a button to open Character Manager from the actor sheet — `injectCharacterManagerButton()` in `main.js`, added to the sheet header rather than a settings-menu entry (a more discoverable equivalent to the originally-planned "menu item")
+  - [x] Expose window.CharacterManager for console access
+- [ ] **Macro Creation** — `CHARACTER_MANAGER_MACRO.js` never built. Lower priority now that the actor-sheet header button covers the main access path; a hotbar macro would just be a convenience, not a blocker.
+- [x] **CSS Refinement** — `character-manager.css` has gone through many polish passes across every tab (colors, spacing, typography, budget color-coding). Responsive/mobile behavior and tab transition animations were never a focus — Foundry app windows aren't typically resized to mobile widths, so this was deprioritized rather than deferred by oversight.
 - [ ] **Documentation**
-  - [ ] CHARACTER_MANAGER_QUICKSTART.md
-  - [ ] In-app tooltips (if time allows)
-
-**Estimated Scope:** 100-200 lines (main.js + macros)
+  - [ ] `CHARACTER_MANAGER_QUICKSTART.md` — never written.
+  - [x] In-app tooltips — attribute/skill hover descriptions and one-line attribute tips exist (`ATTRIBUTE_DESCRIPTIONS`/`ATTRIBUTE_TIPS` in `constants.js`), plus a guidance box on every tab.
 
 ---
 
@@ -347,14 +289,14 @@ Add ability to plan and manage character advancement progression (same tool or s
   - [ ] Add change detection: Highlight which fields have been modified since open
   - [ ] Add validation for mid-edit states (e.g., character with advances)
 
-- [ ] **Data Detection Logic**
+- [x] **Data Detection Logic**
   - [x] Ancestry detection from actor items
   - [x] Hindrances/edges detection from actor Items (`actor.itemTypes.hindrance` / `actor.itemTypes.edge`)
   - [x] Attribute values extraction from actor system data
   - [x] Skill values extraction from actor Items (`actor.itemTypes.skill`)
   - [x] Gear detection from actor inventory (`_detectGearFromActor()` — reads `gear`/`weapon`/`armor`/`shield` type Items, matched to the gear/weapons/armor compendiums by name, same fallback pattern as Edges/Hindrances)
 
-**Note:** Prepopulation (read side) for Skills/Edges/Hindrances is now implemented per-tab, ahead of Save (write side) as originally planned — reads work by matching item names against the compendium, same fallback pattern Ancestry already used. Save (`_createActor()`) still writes Skills/Edges/Hindrances as raw `system.skills`/`system.edges`/`system.hindrances` data rather than real embedded Items (a scaffold gap, since SWADE actually reads these from `actor.itemTypes.*`, not that schema) — this is the one piece still deferred to the Summary tab. Gear is the exception: `_saveGearToActor()` (added with the Gear tab) already creates real embedded Items with the `compendiumUuid` flag, same pattern as Ancestry, so it isn't blocked on Summary landing.
+**Note (updated — the note below was stale):** Save is real for every tab now, not just Gear. `_saveSkillsToActor()`, `_saveEdgesToActor()`, and `_saveHindrancesToActor()` all reconcile actual embedded Items on the actor (patched in place for existing items, created fresh for new selections, deleted on explicit removal) — the "still writes raw `system.skills`/`system.edges`/`system.hindrances`" gap this note used to describe was closed in the same pass that fixed a real data-loss bug in Gear's own save (see "Suggested implementation order" step 4 below). The only two genuinely open items in this milestone are change-detection highlighting and mid-edit validation, both listed above.
 
 **Estimated Scope:** 200-300 lines (detection + prepopulation logic)
 
@@ -516,7 +458,7 @@ Precise Open/Edit/Save behavior, incorporating everything above. This is the con
 
 ## Testing Checklist (v0.6.2)
 
-See [TESTING_CHECKLIST_v0.6.2.md](TESTING_CHECKLIST_v0.6.2.md) for comprehensive test cases.
+**Note:** this file (and DEVELOPMENT.md's reference to `docs/v0.6.0/TESTING.md`) point at a testing checklist doc that was never actually created — no separate test-case file exists yet. The categories below are the plan; Milestone 5 above is the authoritative "has this been tested" status.
 
 Key test categories:
 - UI Navigation (8 tests)
@@ -532,6 +474,8 @@ Key test categories:
 ---
 
 ## File Structure
+
+**Note:** this tree is the original pre-build plan and doesn't match actual structure in a few places — Attributes/Skills were merged into a single `traits-tab.hbs`/`TraitsTabHandler.js` rather than split, actual partials live under `templates/character-creation/_components/`, `CHARACTER_MANAGER_MACRO.js` and `CHARACTER_MANAGER_QUICKSTART.md` were never created (see Milestone 4), and there's no `source/macros/` entry for this tool. Left as historical context rather than rewritten wholesale.
 
 ```
 scripts/apps/character-creation/
@@ -568,29 +512,30 @@ Root:
 
 ## Success Criteria
 
-**v0.6.2 Release Ready When:**
-1. ✅ All 8 tabs implemented and functional
+**v0.6.2 Release Ready When:** (corrected — items 7-9 below were previously marked ✅ inaccurately; no formal test pass has actually happened yet, see Milestone 5)
+1. ✅ All 9 tabs implemented and functional
 2. ✅ Budget tracking accurate across all tabs
 3. ✅ Ancestry bonuses auto-applied correctly
 4. ✅ Hindrance trade-off system working
 5. ✅ Gear drag-drop functional
 6. ✅ Save to actor working
-7. ✅ All 22-25 tests passing
-8. ✅ No console errors in Foundry v14
-9. ✅ Documentation complete
+7. ⬜ All Milestone 5 tests passing — not yet run in-Foundry
+8. ⬜ No console errors in Foundry v14 — not yet verified
+9. ⬜ Documentation complete — roadmap/design docs are current, but `CHARACTER_MANAGER_QUICKSTART.md` was never written
 
 ---
 
 ## Estimated Timeline
 
+**Status (corrected):** everything below "Testing" is done — this table is historical planning, not a live tracker. The only real remaining stage is Testing (Milestone 5).
+
 | Build Stage | Estimate | Status |
 |-------|----------|--------|
-| Foundation | 4-6 hours | Pending |
-| UI Foundation | 4-6 hours | Pending |
-| Tabs (8 tabs) | 8-12 hours | Pending |
-| Integration | 2-3 hours | Pending |
+| Foundation | 4-6 hours | Done |
+| UI Foundation | 4-6 hours | Done |
+| Tabs (9 tabs) | 8-12 hours | Done |
+| Integration | 2-3 hours | Done |
 | Testing | 3-5 hours | Pending |
-| **Total** | **21-32 hours** | Pending |
 
 ---
 
