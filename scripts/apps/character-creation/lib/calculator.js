@@ -463,9 +463,12 @@ export function calculateTotalSkillPoints(character, skillCompendiumData = {}) {
  * Calculate total attribute points spent.
  *
  * @param {Object} character - Character object with attributes
+ * @param {Object} [ancestryBonuses] - Map of attrName to {die} from getAncestryAttributeBonuses.
+ *   An ancestry-granted die is a free floor, not a purchase — steps up to that floor don't
+ *   count against the player's budget, only steps raised beyond it.
  * @returns {number} Total points spent on attributes (each step above d4 = 1pt)
  */
-export function calculateTotalAttributePoints(character) {
+export function calculateTotalAttributePoints(character, ancestryBonuses = {}) {
   let totalSpent = 0;
 
   if (!character.attributes || typeof character.attributes !== 'object') {
@@ -474,10 +477,11 @@ export function calculateTotalAttributePoints(character) {
 
   for (const [attrName, attrData] of Object.entries(character.attributes)) {
     const attrValue = DIE_VALUES[attrData.die] ?? 4;
-    // Each step above d4 costs 1 point (d6=1, d8=2, d10=3, d12=4)
+    const floorValue = DIE_VALUES[ancestryBonuses?.[attrName]?.die] ?? 4;
+    // Each step above the free floor costs 1 point (d6=1, d8=2, d10=3, d12=4 above d4).
     // Dice values increase by 2: d4(4), d6(6), d8(8), d10(10), d12(12)
-    if (attrValue > 4) {
-      const steps = (attrValue - 4) / 2;
+    if (attrValue > floorValue) {
+      const steps = (attrValue - floorValue) / 2;
       totalSpent += steps;
     }
   }
@@ -487,12 +491,13 @@ export function calculateTotalAttributePoints(character) {
 
 /**
  * Get remaining attribute points for character creation.
- * 
+ *
  * @param {Object} character - Character object
+ * @param {Object} [ancestryBonuses] - See calculateTotalAttributePoints
  * @returns {number} Remaining points (0-5)
  */
-export function getRemainingAttributePoints(character) {
-  const spent = calculateTotalAttributePoints(character);
+export function getRemainingAttributePoints(character, ancestryBonuses = {}) {
+  const spent = calculateTotalAttributePoints(character, ancestryBonuses);
   return Math.max(0, 5 - spent);
 }
 
@@ -642,6 +647,41 @@ export function calculateBonusAttributePoints(character) {
 export function calculateBonusSkillPoints(character) {
   const allocations = character.perkPointAllocations || [];
   return allocations.filter((a) => a?.selected === 'skill-point').length;
+}
+
+/**
+ * Bonus points from a manual choice the player made on an ancestral ability's card — for
+ * abilities whose compendium entry carries no mechanical grants/effects of its own (e.g.
+ * Half-Elf's Heritage: pick either a free Edge or a free Attribute point), so nothing else
+ * in the app would otherwise apply either benefit. Uses the same option vocabulary as
+ * hindrance perk-point allocations ('edge' / 'attribute-boost' / 'skill-point') for consistency,
+ * keyed by the granting ability's own uuid so each ability contributes at most once.
+ *
+ * @param {Object} character - Character object with ancestryAbilityChoices
+ * @returns {{edgePoints: number, attributePoints: number, skillPoints: number}}
+ */
+export function calculateAncestryChoiceBonuses(character) {
+  const choices = Object.values(character.ancestryAbilityChoices || {});
+  return {
+    edgePoints: choices.filter((c) => c === 'edge').length,
+    attributePoints: choices.filter((c) => c === 'attribute-boost').length,
+    skillPoints: choices.filter((c) => c === 'skill-point').length,
+  };
+}
+
+/**
+ * Manual GM/player-entered budget adjustment for a single pool — an escape hatch for setting
+ * rules or ancestral quirks this app has no built-in support for (see character.ancestry's
+ * "Manual Adjustments" section). Purely additive on top of every other bonus source, and can
+ * be negative. Stored per pool alongside a freeform note explaining why it's there.
+ *
+ * @param {Object} character - Character object with manualBudgetOverrides
+ * @param {'attribute'|'skill'|'edge'|'perk'} pool
+ * @returns {number}
+ */
+export function getManualBudgetOverrideAmount(character, pool) {
+  const amount = Number(character.manualBudgetOverrides?.[pool]?.amount);
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 /**

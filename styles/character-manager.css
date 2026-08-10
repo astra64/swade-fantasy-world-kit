@@ -853,6 +853,73 @@
   margin-bottom: 0;
 }
 
+.swade-character-manager .expandable-item-choice {
+  padding: 0 0.5rem 0.5rem 0.5rem;
+  font-size: 10px;
+}
+
+.swade-character-manager .expandable-item-choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 70%, transparent);
+}
+
+.swade-character-manager .manual-budget-overrides {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border-light-primary);
+}
+
+.swade-character-manager .manual-budget-overrides-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.swade-character-manager .manual-budget-override-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.swade-character-manager .manual-budget-override-label {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 150px;
+  font-size: 10px;
+}
+
+.swade-character-manager .manual-budget-override-label-name {
+  font-weight: 600;
+}
+
+.swade-character-manager .manual-budget-override-label-hint {
+  font-size: 9px;
+  color: color-mix(in srgb, var(--color-text-dark-primary) 60%, transparent);
+}
+
+.swade-character-manager .manual-budget-override-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.swade-character-manager .manual-budget-override-amount-value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.swade-character-manager .manual-budget-override-note {
+  flex: 1 1 auto;
+}
+
 .swade-character-manager .granted-items-list {
   margin: 0.75rem 0.75rem 0.75rem 1.5rem;
   padding-left: 0.75rem;

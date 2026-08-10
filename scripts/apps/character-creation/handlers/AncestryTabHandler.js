@@ -77,6 +77,65 @@ export class AncestryTabHandler extends BaseTabHandler {
 
     // Setup open child item button
     this._setupOpenItemHandler('[data-action="open-child-item"]');
+
+    // Ancestral-ability bonus choice (e.g. Half-Elf's Heritage: pick a free Edge or
+    // Attribute point) — lives inside the same clickable card as toggle-child-expand, so its
+    // own clicks need to stop propagating or interacting with it would also toggle the card.
+    this.html.find('[data-action="set-ancestry-ability-choice"]')
+      .on('click', (e) => e.stopPropagation())
+      .on('change', (e) => {
+        e.stopPropagation();
+        const uuid = $(e.currentTarget).attr('data-item-uuid');
+        const value = $(e.currentTarget).val();
+        if (!this.characterManager.character.ancestryAbilityChoices) {
+          this.characterManager.character.ancestryAbilityChoices = {};
+        }
+        if (value) {
+          this.characterManager.character.ancestryAbilityChoices[uuid] = value;
+        } else {
+          delete this.characterManager.character.ancestryAbilityChoices[uuid];
+        }
+        this.characterManager.render();
+      });
+
+    // Manual Adjustments — freeform per-pool budget overrides for setting rules/edge cases
+    // this app has no built-in support for. Same checkbox-reveal convention as
+    // showGearFundsOverride on the Gear tab.
+    this.html.find('[data-action="toggle-manual-budget-overrides"]').on('change', (e) => {
+      this.characterManager.character.showManualBudgetOverrides = $(e.currentTarget).is(':checked');
+      this.characterManager.render();
+    });
+
+    this._setupEventHandler('[data-action="increment-manual-override"]', 'click', (e) => {
+      this._adjustManualOverrideAmount($(e.currentTarget).attr('data-pool'), 1);
+    });
+
+    this._setupEventHandler('[data-action="decrement-manual-override"]', 'click', (e) => {
+      this._adjustManualOverrideAmount($(e.currentTarget).attr('data-pool'), -1);
+    });
+
+    this.html.find('[data-action="set-manual-override-note"]').on('change', (e) => {
+      const pool = $(e.currentTarget).attr('data-pool');
+      const value = $(e.currentTarget).val();
+      this._getManualOverridePool(pool).note = value;
+      this.characterManager.render();
+    });
+  }
+
+  _getManualOverridePool(pool) {
+    if (!this.characterManager.character.manualBudgetOverrides) {
+      this.characterManager.character.manualBudgetOverrides = {};
+    }
+    if (!this.characterManager.character.manualBudgetOverrides[pool]) {
+      this.characterManager.character.manualBudgetOverrides[pool] = {};
+    }
+    return this.characterManager.character.manualBudgetOverrides[pool];
+  }
+
+  _adjustManualOverrideAmount(pool, delta) {
+    const override = this._getManualOverridePool(pool);
+    override.amount = (Number(override.amount) || 0) + delta;
+    this.characterManager.render();
   }
 
   async _selectAncestry(ancestry) {

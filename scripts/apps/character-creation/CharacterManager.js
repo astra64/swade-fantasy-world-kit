@@ -31,6 +31,8 @@ import {
   calculateUsedEdgePoints,
   calculateBonusAttributePoints,
   calculateBonusSkillPoints,
+  calculateAncestryChoiceBonuses,
+  getManualBudgetOverrideAmount,
   calculateAncestryBonusEdgePoints,
   calculateGearCost,
   calculateStartingFunds,
@@ -275,7 +277,17 @@ export class CharacterManager extends FormApplication {
             // Point/Extra Funds) — persisted as its own actor flag since it has no embedded
             // Item of its own to live on, unlike every other tab's selections.
             perkPointAllocations: this.actor.getFlag(MODULE_ID, 'perkPointAllocations') || [],
+            // Manual choice made on an ancestral ability's card (e.g. Half-Elf's Heritage),
+            // keyed by the granting ability's own uuid — see calculateAncestryChoiceBonuses.
+            ancestryAbilityChoices: this.actor.getFlag(MODULE_ID, 'ancestryAbilityChoices') || {},
+            // Freeform "Manual Adjustments" overrides for setting rules/edge cases the app has
+            // no built-in support for — see getManualBudgetOverrideAmount.
+            manualBudgetOverrides: this.actor.getFlag(MODULE_ID, 'manualBudgetOverrides') || {},
           };
+          // UI-only reveal toggle, not persisted itself — starts open if a previous session
+          // already left a non-zero override in place, same convention as showGearFundsOverride.
+          this.character.showManualBudgetOverrides = Object.values(this.character.manualBudgetOverrides)
+            .some((o) => (Number(o?.amount) || 0) !== 0 || !!o?.note);
 
           // Snapshot of gear cost as it actually exists on the actor right now, before this
           // session's edits — Gear Management mode's currency reconciliation debits/credits
@@ -325,7 +337,25 @@ export class CharacterManager extends FormApplication {
         if (selectedAncestryData?.system?.description) {
           selectedAncestryData.system.description = await TextEditor.enrichHTML(selectedAncestryData.system.description, { async: true });
         }
+
+        // The bonus-choice dropdown (see ancestryAbilityChoices) only shows on abilities
+        // configured by name — matched the same way as bonusEdgePointAbilityNames, so this
+        // works with any compendium/setting without hardcoding "Half-Elves-Heritage" itself.
+        const ancestryChoiceAbilityNames = new Set(
+          (game.settings.get(MODULE_ID, 'ancestryChoiceAbilityNames') || '')
+            .split(',')
+            .map((n) => n.toLowerCase().trim())
+            .filter(Boolean)
+        );
+        for (const child of childItemsData) {
+          child.offersAncestryChoice = ancestryChoiceAbilityNames.has(child.name?.toLowerCase());
+        }
       }
+
+      // Ancestry-granted attribute floors (e.g. "+1 die to Vigor") are free — computed here,
+      // ahead of attributePointsUsed below, so the points spent by the player never include
+      // whatever die steps the ancestry already grants for nothing. See calculateTotalAttributePoints.
+      const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
 
       // Some edges (e.g. Arcane Backgrounds) and hindrances grant other edges/hindrances as
       // child items, the same way an ancestry grants ancestral abilities. Build the same kind
@@ -387,7 +417,7 @@ export class CharacterManager extends FormApplication {
         .reduce((sum, gearData) => sum + (gearData.armor || 0), 0);
 
       const derivedStats = calculateDerivedStats(this.character, { armorBonus, paceModifier });
-      const attributePointsUsed = calculateTotalAttributePoints(this.character);
+      const attributePointsUsed = calculateTotalAttributePoints(this.character, ancestryBonuses);
       const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
       const skillPointBreakdown = getSkillPointBreakdown(this.character, this._getSkillCompendiumMap());
 
@@ -404,16 +434,29 @@ export class CharacterManager extends FormApplication {
       const attributeAdvanceWarning = getAttributeAdvanceWarning(this.character);
       const advanceGroups = groupAdvancesByRank(this.character);
 
-      const availablePerkPoints = getAvailablePerkPoints(hindranceCharacterView, bonusPerkPointsFromAdvances);
-      const perkSlots = generatePerkSlots(hindranceCharacterView, bonusPerkPointsFromAdvances);
-      const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
+      // Manual choices on ancestral-ability cards (e.g. Half-Elf's Heritage) and the freeform
+      // "Manual Adjustments" overrides both feed into the same budget pools as every other
+      // bonus source below — see calculateAncestryChoiceBonuses / getManualBudgetOverrideAmount.
+      const ancestryChoiceBonuses = calculateAncestryChoiceBonuses(this.character);
+      const manualPerkOverride = getManualBudgetOverrideAmount(this.character, 'perk');
+      const manualEdgeOverride = getManualBudgetOverrideAmount(this.character, 'edge');
+      const manualAttributeOverride = getManualBudgetOverrideAmount(this.character, 'attribute');
+      const manualSkillOverride = getManualBudgetOverrideAmount(this.character, 'skill');
+
+      const totalBonusPerkPoints = bonusPerkPointsFromAdvances + manualPerkOverride;
+      const availablePerkPoints = getAvailablePerkPoints(hindranceCharacterView, totalBonusPerkPoints);
+      const perkSlots = generatePerkSlots(hindranceCharacterView, totalBonusPerkPoints);
       const bonusEdgePointAbilityNames = (game.settings.get(MODULE_ID, 'bonusEdgePointAbilityNames') || '')
         .split(',');
-      const ancestryBonusEdgePoints = calculateAncestryBonusEdgePoints(childItemsData, bonusEdgePointAbilityNames);
-      const edgePointsAvailable = calculateAvailableEdgePoints(this.character) + ancestryBonusEdgePoints + bonusEdgePointsFromAdvances;
+      const ancestryBonusEdgePoints = calculateAncestryBonusEdgePoints(childItemsData, bonusEdgePointAbilityNames)
+        + ancestryChoiceBonuses.edgePoints;
+      const edgePointsAvailable = calculateAvailableEdgePoints(this.character) + ancestryBonusEdgePoints
+        + bonusEdgePointsFromAdvances + manualEdgeOverride;
       const edgePointsUsed = calculateUsedEdgePoints(this.character);
-      const bonusAttributePoints = calculateBonusAttributePoints(this.character) + bonusAttributePointsFromAdvances;
-      const bonusSkillPoints = calculateBonusSkillPoints(this.character) + bonusSkillPointsFromAdvances;
+      const bonusAttributePoints = calculateBonusAttributePoints(this.character) + bonusAttributePointsFromAdvances
+        + ancestryChoiceBonuses.attributePoints + manualAttributeOverride;
+      const bonusSkillPoints = calculateBonusSkillPoints(this.character) + bonusSkillPointsFromAdvances
+        + ancestryChoiceBonuses.skillPoints + manualSkillOverride;
       const gearCost = calculateGearCost(this.character);
       const hindrancePointsUsed = calculateTotalHindrancePoints(hindranceCharacterView);
 
@@ -489,6 +532,24 @@ export class CharacterManager extends FormApplication {
         .filter((skill) => skill.die)
         .map((skill) => `${skill.name} ${skill.die}`);
 
+      // Manual Adjustments rows — one per budget pool the tool tracks, each naming which
+      // tab/budget it actually feeds so the Ancestry tab's stepper controls are unambiguous.
+      // Built here rather than in Handlebars so both the tab's rows and the Summary tab's
+      // compact note line read from the same list.
+      const manualOverridePools = [
+        { pool: 'attribute', label: 'Attribute Points', hint: 'Traits tab attribute budget' },
+        { pool: 'skill', label: 'Skill Points', hint: 'Traits tab skill budget' },
+        { pool: 'edge', label: 'Edge Points', hint: 'Edges tab budget' },
+        { pool: 'perk', label: 'Hindrance/Perk Points', hint: 'earned from Hindrances, capped at 4' },
+      ];
+      const manualOverrideRows = manualOverridePools.map((row) => ({
+        ...row,
+        amount: getManualBudgetOverrideAmount(this.character, row.pool),
+        note: this.character.manualBudgetOverrides?.[row.pool]?.note || '',
+      }));
+      // Only pools that actually have a non-zero amount show up on the Summary tab.
+      const activeManualOverrides = manualOverrideRows.filter((o) => o.amount !== 0);
+
       const data = {
         character: this.character,
         selectedAncestryData: selectedAncestryData,
@@ -528,6 +589,10 @@ export class CharacterManager extends FormApplication {
         gearRemaining: gearRemaining,
         gearFundsOverride: this.character.gearFundsOverride ?? '',
         summarySkills: summarySkills,
+        ancestryAbilityChoices: this.character.ancestryAbilityChoices || {},
+        showManualBudgetOverrides: this.character.showManualBudgetOverrides,
+        activeManualOverrides: activeManualOverrides,
+        manualOverrideRows: manualOverrideRows,
         usesCurrency: usesCurrency,
         currentTab: this.currentTab,
         expandedAncestry: this.character.expandedAncestry,
@@ -1419,6 +1484,8 @@ export class CharacterManager extends FormApplication {
       }
       await this._persistGearTabMode(this.actor);
       await this.actor.setFlag(MODULE_ID, 'perkPointAllocations', this.character.perkPointAllocations || []);
+      await this.actor.setFlag(MODULE_ID, 'ancestryAbilityChoices', this.character.ancestryAbilityChoices || {});
+      await this.actor.setFlag(MODULE_ID, 'manualBudgetOverrides', this.character.manualBudgetOverrides || {});
 
       ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);
       this.close();

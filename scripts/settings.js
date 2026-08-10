@@ -173,6 +173,15 @@ export function setupSettings(config) {
     default: "Adaptable"
   });
 
+  game.settings.register(MODULE_ID, "ancestryChoiceAbilityNames", {
+    name: "Bonus-Choice Ancestral Ability Names",
+    hint: "Comma-separated ancestral ability names (e.g. 'Half-Elves-Heritage') that let the player pick a bonus (Edge/Attribute/Skill point) on the Ancestry tab, for abilities whose compendium entry has no mechanical effects of its own. Matched by name — add more here for other settings' similar \"choose one\" heritage abilities.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "Half-Elves-Heritage"
+  });
+
   // Character Manager: additional compendium packs, merged in alongside this module's
   // built-in Fantasy packs (not a replacement for them). Comma/semicolon/whitespace-separated
   // pack IDs, e.g. "my-module.custom-edges". Each is scoped to the data type it feeds.

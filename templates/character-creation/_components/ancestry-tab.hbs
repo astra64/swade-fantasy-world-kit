@@ -60,6 +60,18 @@
             </div>
             <button type="button" class="btn-open-item" data-action="open-child-item" data-uuid="{{this.uuid}}" title="Open item"></button>
           </div>
+          {{#if this.offersAncestryChoice}}
+          <div class="expandable-item-choice">
+            <label>Bonus granted by this ability:
+              <select data-action="set-ancestry-ability-choice" data-item-uuid="{{this.uuid}}">
+                <option value="" {{#unless (lookup @root.ancestryAbilityChoices this.uuid)}}selected{{/unless}}>None selected yet</option>
+                <option value="edge" {{#if (eq (lookup @root.ancestryAbilityChoices this.uuid) "edge")}}selected{{/if}}>+1 Edge Point</option>
+                <option value="attribute-boost" {{#if (eq (lookup @root.ancestryAbilityChoices this.uuid) "attribute-boost")}}selected{{/if}}>+1 Attribute Point</option>
+                <option value="skill-point" {{#if (eq (lookup @root.ancestryAbilityChoices this.uuid) "skill-point")}}selected{{/if}}>+1 Skill Point</option>
+              </select>
+            </label>
+          </div>
+          {{/if}}
           {{#if this.isExpanded}}
           <div class="expandable-item-description">
             {{#if this.system.description}}
@@ -76,5 +88,38 @@
       {{/if}}
     </div>
     {{/if}}
+
+    <!-- Manual Adjustments: freeform budget overrides for setting rules/ancestral quirks this
+         app has no built-in support for (e.g. a heritage ability offering a choice of bonuses). -->
+    <div class="manual-budget-overrides">
+      <label class="manual-budget-overrides-toggle">
+        <input type="checkbox" data-action="toggle-manual-budget-overrides" {{#if @root.character.showManualBudgetOverrides}}checked{{/if}}>
+        Manual Adjustments
+      </label>
+      {{#if @root.character.showManualBudgetOverrides}}
+      <p class="hint-text">Add or subtract points from any budget for cases this tool doesn't otherwise handle. Notes appear on the Summary tab.</p>
+      {{#each @root.manualOverrideRows as |row|}}
+      <div class="manual-budget-override-row">
+        <div class="manual-budget-override-label">
+          <span class="manual-budget-override-label-name">{{row.label}}</span>
+          <span class="manual-budget-override-label-hint">({{row.hint}})</span>
+        </div>
+        <div class="manual-budget-override-stepper">
+          <button type="button" class="btn-qty-adjust" data-action="decrement-manual-override" data-pool="{{row.pool}}" title="Subtract one">-</button>
+          <span class="manual-budget-override-amount-value">{{row.amount}}</span>
+          <button type="button" class="btn-qty-adjust" data-action="increment-manual-override" data-pool="{{row.pool}}" title="Add one">+</button>
+        </div>
+        <input
+          type="text"
+          class="manual-budget-override-note"
+          data-action="set-manual-override-note"
+          data-pool="{{row.pool}}"
+          placeholder="Reason (optional)"
+          value="{{row.note}}"
+        >
+      </div>
+      {{/each}}
+      {{/if}}
+    </div>
   </div>
 </div>

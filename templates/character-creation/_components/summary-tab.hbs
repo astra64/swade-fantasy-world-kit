@@ -59,6 +59,15 @@
         </span>
       </div>
 
+      {{#if @root.activeManualOverrides.length}}
+      <div class="summary-row">
+        <span class="summary-row-label">Manual Adjustments</span>
+        <span class="summary-row-value">
+          {{#each @root.activeManualOverrides}}{{this.label}} {{#if (gt this.amount 0)}}+{{/if}}{{this.amount}}{{#if this.note}} ({{this.note}}){{/if}}{{#unless @last}}, {{/unless}}{{/each}}
+        </span>
+      </div>
+      {{/if}}
+
       <div class="summary-row">
         <span class="summary-row-label">Derived Stats</span>
         <span class="summary-row-value">Pace {{@root.derivedStats.pace}}, Parry {{@root.derivedStats.parry}}, Toughness {{@root.derivedStats.toughness}}</span>

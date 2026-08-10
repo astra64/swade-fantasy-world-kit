@@ -116,6 +116,9 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 - [x] **New Player Guidance:**
   > "Pick your character's ancestry (like Human, Dwarf, Elf). Each ancestry gives you starting bonuses to skills and stats. The bonuses automatically apply to later tabs—don't worry about adding them yourself."
 - [x] **Validation:** Inform only if not selected
+- [x] Ancestry-granted attribute die is a free floor, not counted against the player's 5 attribute points (not yet tested in-Foundry)
+- [x] Ability Bonus Choice: for ancestral abilities with no mechanical effects of their own (e.g. Half-Elf's Heritage), a dropdown lets the player pick a bonus (Edge/Attribute/Skill point) — only shown for abilities matching the `ancestryChoiceAbilityNames` world setting (default: "Half-Elves-Heritage") (not yet tested in-Foundry)
+- [x] Manual Adjustments: collapsible section with +/- steppers and a note per budget (Attribute/Skill/Edge/Hindrance-Perk), for setting rules this tool has no built-in support for; non-zero adjustments show on the Summary tab (not yet tested in-Foundry)
 
 #### Tab 3: Hindrances
 - [x] List of hindrances from compendium (Major/Minor labeled)
@@ -528,6 +531,31 @@ The generic categories above predate the Gear tab's currency/encumbrance/mode-to
 - [ ] Dragging an item already embedded on the actor onto the Gear tab bumps quantity rather than duplicating.
 - [ ] A genuinely new item (never seen before) still creates one fresh entry.
 - [ ] After Save, the actor sheet's own inventory shows no duplicate rows for either case above.
+
+**SWADE Fantasy Currencies coin exclusion (2026-08-11)**
+- [ ] Actor with `sfc`-module coin items — they don't appear in the Gear tab's list.
+- [ ] Save with those coin items present — they're still on the actor afterward (not deleted).
+- [ ] An actor whose only gear-type items are coin items still defaults to Starting Equipment mode (not misread as "established").
+
+### Ancestry Tab — Concrete Test Cases (2026-08-11 session)
+
+**Ancestry-granted attribute floor no longer costs points**
+- [ ] Select an ancestry with an attribute bonus (e.g. Elf's +1 die to Agility) — Traits tab shows the full 5 attribute points still available before spending anything.
+- [ ] Raise that same attribute further — only the steps *above* the ancestry floor consume points.
+
+**Ancestral ability bonus-choice dropdown**
+- [ ] An ability matching the `ancestryChoiceAbilityNames` setting (default "Half-Elves-Heritage") shows the bonus dropdown; other ancestral abilities on the same or a different ancestry do not.
+- [ ] Selecting "+1 Edge Point" increases the Edges tab's available edge points by 1; switching to "+1 Attribute Point" moves that bonus to the Traits tab instead and removes it from Edges.
+- [ ] Setting the dropdown back to "None selected yet" removes the bonus entirely.
+- [ ] Choice persists across close/reopen (`ancestryAbilityChoices` actor flag).
+- [ ] Adding a second name to the setting makes a second ability's dropdown appear; clearing the setting entirely hides all of them.
+
+**Manual Adjustments**
+- [ ] Checking "Manual Adjustments" reveals the four budget rows (Attribute/Skill/Edge/Hindrance-Perk Points), each labeled with which tab's budget it feeds.
+- [ ] Clicking `+`/`-` on a row's stepper increments/decrements the displayed amount and the corresponding tab's budget immediately.
+- [ ] A negative amount correctly reduces the budget (can go below the normal total).
+- [ ] Typing a note and leaving the field — note persists and shows next to that row's amount on the Summary tab, only for rows with a non-zero amount.
+- [ ] Amounts and notes persist across close/reopen (`manualBudgetOverrides` actor flag).
 
 ---
 
