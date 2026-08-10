@@ -98,10 +98,70 @@
   font-size: 11px;
 }
 
+.swade-character-manager .guidance-box .advance-type-list {
+  margin: 0.4rem 0;
+  padding-left: 1.1rem;
+  font-size: 11px;
+  line-height: 1.4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1rem;
+  row-gap: 0.15rem;
+}
+
 .swade-character-manager .info-box.warning {
   background: #ffebee;
   border-color: #ef5350;
   color: #c62828;
+}
+
+.swade-character-manager .advancement-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.swade-character-manager .advancement-rank-row .summary-row {
+  flex: 1;
+}
+
+.swade-character-manager .advancement-rank-row .btn-add-item {
+  flex-shrink: 0;
+}
+
+/* Advancement tab's advance rows: type select, notes, and remove button all in one row,
+   rather than the header-on-top/description-below stacking other item-cards use. */
+.swade-character-manager .item-card.advance-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: visible;
+  border: none;
+  background: transparent;
+  margin-bottom: 8px;
+}
+
+.swade-character-manager .advance-card .item-card-header {
+  padding: 0;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.swade-character-manager .advance-card .item-card-info {
+  margin: 0;
+  min-width: 180px;
+}
+
+.swade-character-manager .advance-card .item-card-description {
+  flex: 1;
+  padding: 0;
+  background: transparent;
+  margin: 0;
+}
+
+.swade-character-manager .advance-card .item-card-controls {
+  margin-left: 0;
+  flex-shrink: 0;
 }
 
 /* ===== Form Groups - More Spacious ===== */
@@ -751,7 +811,7 @@
 }
 
 .swade-character-manager .selected-items-section {
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .swade-character-manager .selected-items-section h4 {

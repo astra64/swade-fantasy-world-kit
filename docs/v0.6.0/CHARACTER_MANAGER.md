@@ -1,6 +1,6 @@
 # Character Manager v0.6.0 Implementation Roadmap
 
-**Status:** Character Creation & Editing In Progress | All 8 tabs implemented (Concept, Ancestry, Hindrances, Traits, Edges, Gear, Summary) — Gear and Summary tabs not yet tested in-Foundry (implemented but unverified)
+**Status:** Character Creation & Editing In Progress | All 9 tabs implemented (Concept, Ancestry, Hindrances, Traits, Edges, Gear, Summary, Advancement) — Gear, Summary, and Advancement not yet tested in-Foundry (implemented but unverified)
 
 ## Overview
 
@@ -51,6 +51,7 @@ Add ability to plan and manage character advancement progression (same tool or s
 6. **Edges** — Select from available (spends edge points from hindrances)
 7. **Gear** — Drag-drop items from compendiums, 300 silver budget
 8. **Summary** — Final review with Pace, Parry, Toughness calculations
+9. **Advancement** — Post-creation Advance tracking; feeds bonus budget into Attributes/Skills/Edges/Hindrances tabs (see Problem 2 below). Always visible, including on a blank/not-yet-saved actor — no gating on character completeness.
 
 ### Budget Tracking (Sticky Footer)
 - **Always Visible:** Attribute Points (X/5), Skill Points (Y/12), Edge Points (Z/?)
@@ -253,7 +254,29 @@ Add ability to plan and manage character advancement progression (same tool or s
 
 **Estimated Lines:** 100-150 (template + handler)
 
-**Total Milestone 3:** ~1600-1900 lines of code
+#### Tab 8: Advancement
+
+**Status: Implemented, not yet tested in-Foundry.** See "Problem 2: Advancement as a Tab" below for the full design discussion and rationale — this checklist was the concrete build spec, now built (`AdvancementTabHandler.js`, `advancement-tab.hbs`, calculator.js additions). `AdvancementManager.js` (the old skeletal standalone app) has been deleted along with its dead references in `main.js`/`index.js`.
+
+- [x] **Data model — no separate ledger.** Reads and writes `actor.system.advances.list[]` directly; no new actor flag. Each row maps 1:1 onto SWADE's real schema (`id`, `type`, `notes`, `rank`, `sort`) using the system's own `ADVANCE_TYPE` enum (`EDGE:0, SINGLE_SKILL:1, TWO_SKILLS:2, ATTRIBUTE:3, HINDRANCE:4`). No target/provenance field — matches native SWADE, where the advance choice and the specific thing it bought are tracked separately (the `notes` field is the same freeform reminder text the vanilla actor sheet already relies on).
+- [x] **Add/remove list UI** — same pattern as Edges/Hindrances/Gear's "selected items" lists: a type dropdown (Edge / Two Skills / One Skill / Attribute / Hindrance Buyoff — five distinct entries, kept separate even though Two Skills and One Skill currently resolve to the same point value, to mirror the rules as written) + a freeform notes text input, add/remove buttons. No target picker — the player spends the resulting budget on the existing Edges/Traits/Hindrances tabs, same as they already do for creation points.
+- [x] **Prepopulation** — on open, read existing `actor.system.advances.list[]` rows into the tab (same "every tab prepopulates" pattern the rest of Character Manager follows) so advances added via the vanilla SWADE sheet before Character Manager ever touched the actor still show up correctly.
+- [x] **Rank display** — read-only, auto-derived from position in the list (every 4 advances = next rank tier, matching SWADE's own Novice/Seasoned/Veteran/Heroic/Legendary bands). Not user-editable; also written back into each row's `rank` field on save.
+- [x] **Budget integration** — additive terms threaded into `CharacterManager.getData()` alongside the existing ancestry/hindrance-derived bonuses (`calculator.js:357-361` today):
+  - Edge → +1 `edgePointsAvailable`
+  - Two Skills → +2 `skillPointsMax`
+  - One Skill → +2 `skillPointsMax`
+  - Attribute → +1 `attributePointsMax`
+  - Hindrance Buyoff → +1 available perk-point slot (compensates for the fact that removing a hindrance elsewhere reduces the tab's live-derived perk-point count; deliberately allows an extra perk point if the character hadn't already earned the max — an accepted edge-case trade-off, not worth building special-casing for)
+- [x] **Attribute once-per-Rank check** — a dedicated warning message (not folded into the generic over-budget red styling, since new players benefit from seeing the actual rule named): compare Attribute-advance count taken against Ranks reached, and surface something like "You've taken 2 Attribute advances but have only reached Rank 1 (Veteran) — Attributes can only be raised once per Rank." Informational only, never blocks Save, consistent with the rest of the tool.
+- [x] **No enforcement elsewhere** — spending the resulting budget in Traits/Edges/Hindrances uses those tabs' existing pickers and existing "warn, don't block" over-budget styling unchanged. Removing an advance row just lowers the relevant max; if the player already spent past the new lower max, that tab goes red exactly like any other over-budget state today — no unwind/reversal logic needed.
+- [x] **Full edit/remove of past advances** — since there's no ledger, editing means changing a row's type/notes and removing means deleting the row; both are trivial list operations already used throughout the tool (each just changes what feeds a downstream budget number, and any resulting overspend surfaces the normal way).
+- [x] **New Player Guidance:** explain what an Advance is (something a GM typically awards at the end of a session, roughly every other session) and that picking a type here unlocks the actual choice on the relevant tab (raising a skill/attribute, taking an edge, or freeing up a perk point after buying off a hindrance).
+- [x] **Validation:** none blocking, per the tool's established philosophy — only the Attribute once-per-Rank message above.
+
+**Estimated Lines:** 200-300 (template + handler + calculator additions)
+
+**Total Milestone 3:** ~1800-2200 lines of code
 
 ---
 
@@ -407,11 +430,19 @@ There is **no general "everyone gets double starting funds for creation shopping
 
 ### Problem 2: Advancement is a tab in Character Manager, not a separate tool
 
-**Corrected direction:** Character Manager should stay the single tool across a character's whole lifecycle — creation, editing, *and* advancement — via an Advancement tab (Tab 8, or wherever it lands in the tab order), not a standalone `AdvancementManager` app. The standalone `AdvancementManager.js` file already in this repo (skeletal/non-functional — uses flat `system?.experience`/`system?.advances`, not the real `advances.rank`/`.value` schema) should eventually be folded into Character Manager's tab-handler architecture (an `AdvancementTabHandler.js` + `advancement-tab.hbs`, reusing whatever logic in the standalone file is salvageable) rather than kept as a separate app to maintain in parallel.
+**Status: Design complete (this session) — see Tab 8: Advancement above for the concrete build spec.** Converged on across a follow-up design discussion, recorded here for the reasoning; the checklist above is the source of truth for implementation.
 
-An earlier draft of this section used `actor.system.advances.value` (SWADE's real native rank/XP field, confirmed in the system source) to gate Character Manager into "blocks or redirects once the character has advanced." That's wrong given the stated goal: a GM/player should be able to fully rebuild a character at any point in its life, not just before its first Advance. `advances.value`/`.rank` still matters for the Advancement tab's own logic (what advances are available, current rank), just not as a lock on the rest of the tool.
+**Corrected direction:** Character Manager stays the single tool across a character's whole lifecycle — creation, editing, *and* advancement — via an Advancement tab (Tab 8/9, always visible, even on a blank actor), not a standalone `AdvancementManager` app. The standalone `AdvancementManager.js` file already in this repo (skeletal/non-functional — uses flat `system?.experience`/`system?.advances`, neither of which exist in the real schema) is superseded by this design rather than extended; it should be deleted once the new tab lands rather than folded forward.
 
-**What actually needs deciding** is the *default* Save behavior — see Problem 3, which turns out to be the piece that actually matters here, independent of advancement state.
+**Real SWADE schema, confirmed from `systems/swade/swade.js`:** there is no XP field at all — SWADE tracks advancement as a raw count (`system.advances.value`), with `.rank` auto-derived (Novice 0-3, Seasoned 4-7, Veteran 8-11, Heroic 12-15, Legendary 16+) and a `.list[]` array of individual advance entries (`id`, `type` via the `ADVANCE_TYPE` enum — `EDGE:0, SINGLE_SKILL:1, TWO_SKILLS:2, ATTRIBUTE:3, HINDRANCE:4` — `notes`, `rank`, `sort`, `planned`). Critically, the *native* SWADE actor sheet only records the category and a freeform note — it does not track which specific skill/edge/attribute/hindrance an advance bought. Applying the actual mechanical effect is a separate manual step the player does elsewhere on the sheet.
+
+**Two design options were weighed:**
+1. A self-contained Advancement tab with its own pickers (duplicate the Edges/Traits/Hindrances tabs' picker UI inside Advancement, store a per-advance target).
+2. Advancement tracks only *category counts*, which feed as additive budget into the existing Edges/Traits/Hindrances tabs — reusing their pickers entirely, no duplicate UI.
+
+**(2) won**, once it became clear that within a category, advances are fungible — an Edge-advance is an Edge-advance regardless of which one — so there's nothing for a per-advance target/ledger to protect that a simple count doesn't already cover. This also means **no new actor flag or ledger is needed at all**: since native SWADE's own record is already just `type` + `notes` with no target field, Character Manager's Advancement tab can read and write `actor.system.advances.list[]` directly as its sole data store. Editing/removing an advance is then a trivial list operation (delete or change a row); any resulting overspend in the tab that received that budget surfaces via the same "warn, don't block" red-over-budget styling every other tab already uses — no reversal/unwind logic required.
+
+`advances.value`/`.rank` matters for the tab's own Rank display (and the informational once-per-Rank Attribute check) but is not a gate on the rest of the tool — a GM/player can fully rebuild a character at any point in its life, advanced or not.
 
 ### Problem 3: Customization-safe saves are the permanent default — no separate "rebuild" action needed
 
@@ -464,7 +495,7 @@ Precise Open/Edit/Save behavior, incorporating everything above. This is the con
 2. Customization-detection helper, wired into Gear's existing save path as the new default (smallest surface — already has a real embedded-item save to retrofit).
 3. Extend the same customization check to Ancestry's save (already has a real embedded-item save path too).
 4. ✅ **Done.** Real embedded-item save built for Skills/Edges/Hindrances, closing the `system.skills`/`system.edges`/`system.hindrances` scaffold gap (that field isn't part of the SWADE actor schema and was silently discarded by Foundry). Ended up using the same unconditional-patch pattern Gear settled on (see the "why customization-detection got dropped" note above), not the customization-check pattern originally suggested here — existing items are patched in place (die/advances for skills, major/minor for hindrances), never deleted and recreated. This also surfaced and fixed a real data-loss bug in Gear's own save: detection was keying by a shared compendium uuid instead of the actor's own item uuid, so any item that matched a compendium entry by name was deleted and recreated (and two same-named items collapsed into one) on every save. Same identity fix applied to Edges/Hindrances/Skills detection and their tab pickers' "already selected" checks.
-5. Fold `AdvancementManager.js` into Character Manager as a new Advancement tab (`AdvancementTabHandler.js` + `advancement-tab.hbs`), fixing its `advances.rank`/`.value` schema mismatch along the way. This is the biggest single piece and probably deserves its own dedicated design pass rather than being scoped in detail here.
+5. Build the Advancement tab (`AdvancementTabHandler.js` + `advancement-tab.hbs`) per the Tab 8 spec above, reading/writing `actor.system.advances.list[]` directly. Thread its four additive budget terms (Edge/Two Skills/One Skill/Attribute) into `CharacterManager.getData()` alongside the existing ancestry/hindrance-derived bonuses, plus the Hindrance-buyoff perk-point bonus. Delete `AdvancementManager.js` and its menu entry once the tab is live — it's superseded, not extended.
 
 ---
 

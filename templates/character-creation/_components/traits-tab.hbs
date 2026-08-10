@@ -17,18 +17,6 @@
     </div>
     {{/if}}
 
-    <!-- TEMP DEBUG: remove once skill point cost issues are confirmed fixed -->
-    {{#if @root.skillPointBreakdown.length}}
-    <details class="info-box" style="font-family: monospace; font-size: 0.8em; text-align: left;">
-      <summary style="cursor: pointer; font-family: var(--font-primary, sans-serif); font-weight: bold;">DEBUG — Skill Point Breakdown (Total spent: {{@root.skillPointsUsed}} / 12)</summary>
-      <div style="white-space: pre-wrap; margin-top: 0.5em;">
-        {{#each @root.skillPointBreakdown}}
-          {{this.name}} [{{this.die}}]{{#if this.isCore}} CORE{{/if}}{{#if this.fromAncestry}} ANCESTRY(granted {{this.grantedDie}}){{/if}} — linked attr die {{this.linkedAttrDie}} — cost {{this.cost}}<br>
-        {{/each}}
-      </div>
-    </details>
-    {{/if}}
-
     <div class="swade-traits-container">
       <!-- Left Column: Strength, Agility, Spirit -->
       <div class="traits-column traits-column-left">

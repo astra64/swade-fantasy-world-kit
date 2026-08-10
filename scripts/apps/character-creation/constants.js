@@ -22,6 +22,8 @@ export const TAB_GUIDANCE = {
   edges: "Edges are special abilities and perks that set your character apart. You get edge points from taking hindrances, and some ancestries grant a free edge (Humans, for instance). You'll gain more edges as you advance. Pick abilities that fit your character—a rogue might grab Fast Draw or Luck, a mage looks at spellcasting edges. Check prerequisites first—some edges require certain skills or attributes.",
   gear: 'Pick your starting equipment. You have 300 silver to spend.',
   summary: "Here's your final character. You can reopen this tool at any point if you change your mind or make a mistake.",
+  advancement: "Log each Advance here, then choose what to spend it on:",
+  advancementUnlocks: "Each one adds points to the corresponding tab — Edges, Traits, or Hindrances — where you then pick the specific skill, edge, attribute, or hindrance.",
   derivedStats: 'Pace is how fast your character moves in a fight. Parry (2 + half Fighting die) is the Target Number to hit your hero in melee. Toughness (2 + half Vigor, + Armor) is your hero\'s damage threshold—rolls at or above it cause harm.',
 };
 

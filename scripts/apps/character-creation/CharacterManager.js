@@ -35,6 +35,17 @@ import {
   calculateGearCost,
   calculateStartingFunds,
   parseRichFundsMultipliers,
+  ADVANCE_TYPE_ENUM,
+  ADVANCE_TYPE_ENUM_REVERSE,
+  calculateBonusEdgePointsFromAdvances,
+  calculateBonusSkillPointsFromAdvances,
+  calculateBonusAttributePointsFromAdvances,
+  calculateBonusPerkPointsFromAdvances,
+  calculateTotalAdvanceCount,
+  getCharacterRank,
+  getAttributeAdvanceWarning,
+  groupAdvancesByRank,
+  getRankIndexFromAdvanceNumber,
 } from './lib/calculator.js';
 import { TabManager } from './components/TabManager.js';
 import { ConceptTabHandler } from './handlers/ConceptTabHandler.js';
@@ -43,6 +54,7 @@ import { HindrancesTabHandler } from './handlers/HindrancesTabHandler.js';
 import { TraitsTabHandler } from './handlers/TraitsTabHandler.js';
 import { EdgesTabHandler } from './handlers/EdgesTabHandler.js';
 import { GearTabHandler } from './handlers/GearTabHandler.js';
+import { AdvancementTabHandler } from './handlers/AdvancementTabHandler.js';
 import { TAB_GUIDANCE, DEFAULT_ATTRIBUTES, ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_TIPS } from './constants.js';
 
 const MODULE_ID = 'swade-fantasy-world-kit';
@@ -77,6 +89,7 @@ export class CharacterManager extends FormApplication {
     traits: TraitsTabHandler,
     edges: EdgesTabHandler,
     gear: GearTabHandler,
+    advancement: AdvancementTabHandler,
     // No handler for 'summary' — it's a read-only recap with no interactive elements,
     // so there's nothing for a tab handler to wire up. Tab nav/switching works regardless,
     // since TabManager auto-generates nav buttons from .tab elements, not the handler map.
@@ -227,6 +240,7 @@ export class CharacterManager extends FormApplication {
             edges: await this._detectEdgesFromActor(this.actor),
             hindrances: await this._detectHindrancesFromActor(this.actor),
             gear: await this._detectGearFromActor(this.actor),
+            advances: this._detectAdvancesFromActor(this.actor),
             gearFundsOverride: this.actor.getFlag(MODULE_ID, 'gearFundsOverride') ?? null,
             // UI-only toggle for the Gear tab's override input, not persisted itself — starts
             // revealed if the actor already has an override flag set from a previous save.
@@ -312,16 +326,30 @@ export class CharacterManager extends FormApplication {
       const attributePointsUsed = calculateTotalAttributePoints(this.character);
       const skillPointsUsed = calculateTotalSkillPoints(this.character, this._getSkillCompendiumMap());
       const skillPointBreakdown = getSkillPointBreakdown(this.character, this._getSkillCompendiumMap());
-      const availablePerkPoints = getAvailablePerkPoints(this.character);
-      const perkSlots = generatePerkSlots(this.character);
+
+      // Advancement tab: each recorded advance grants additive budget into the pool its
+      // type maps to, reusing the same pools ancestry/hindrance bonuses already flow into
+      // (no separate advancement-specific budget UI) — see docs/v0.6.0/CHARACTER_MANAGER.md,
+      // "Tab 8: Advancement". Computed before the pools below so they can be folded in.
+      const bonusEdgePointsFromAdvances = calculateBonusEdgePointsFromAdvances(this.character);
+      const bonusSkillPointsFromAdvances = calculateBonusSkillPointsFromAdvances(this.character);
+      const bonusAttributePointsFromAdvances = calculateBonusAttributePointsFromAdvances(this.character);
+      const bonusPerkPointsFromAdvances = calculateBonusPerkPointsFromAdvances(this.character);
+      const totalAdvanceCount = calculateTotalAdvanceCount(this.character);
+      const characterRank = getCharacterRank(this.character);
+      const attributeAdvanceWarning = getAttributeAdvanceWarning(this.character);
+      const advanceGroups = groupAdvancesByRank(this.character);
+
+      const availablePerkPoints = getAvailablePerkPoints(this.character, bonusPerkPointsFromAdvances);
+      const perkSlots = generatePerkSlots(this.character, bonusPerkPointsFromAdvances);
       const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
       const bonusEdgePointAbilityNames = (game.settings.get(MODULE_ID, 'bonusEdgePointAbilityNames') || '')
         .split(',');
       const ancestryBonusEdgePoints = calculateAncestryBonusEdgePoints(childItemsData, bonusEdgePointAbilityNames);
-      const edgePointsAvailable = calculateAvailableEdgePoints(this.character) + ancestryBonusEdgePoints;
+      const edgePointsAvailable = calculateAvailableEdgePoints(this.character) + ancestryBonusEdgePoints + bonusEdgePointsFromAdvances;
       const edgePointsUsed = calculateUsedEdgePoints(this.character);
-      const bonusAttributePoints = calculateBonusAttributePoints(this.character);
-      const bonusSkillPoints = calculateBonusSkillPoints(this.character);
+      const bonusAttributePoints = calculateBonusAttributePoints(this.character) + bonusAttributePointsFromAdvances;
+      const bonusSkillPoints = calculateBonusSkillPoints(this.character) + bonusSkillPointsFromAdvances;
       const gearCost = calculateGearCost(this.character);
       const hindrancePointsUsed = calculateTotalHindrancePoints(this.character);
 
@@ -420,6 +448,10 @@ export class CharacterManager extends FormApplication {
         ancestryBonuses: ancestryBonuses,
         attributeDescriptions: ATTRIBUTE_DESCRIPTIONS,
         attributeTips: ATTRIBUTE_TIPS,
+        characterRank: characterRank,
+        totalAdvanceCount: totalAdvanceCount,
+        attributeAdvanceWarning: attributeAdvanceWarning,
+        advanceGroups: advanceGroups,
       };
 
       // Snapshot for the Save confirmation check — cheaper to read back here than to
@@ -769,6 +801,24 @@ export class CharacterManager extends FormApplication {
     return Object.fromEntries(entries);
   }
 
+  /**
+   * Detect existing advances straight from SWADE's real schema (`actor.system.advances.list`)
+   * — no separate flag/ledger, since that array already has everything Character Manager
+   * needs (type + notes; no target field, matching how native SWADE tracks advances too).
+   * Entries with `planned: true` are excluded — those represent an advance sketched but not
+   * actually taken yet, which this tool doesn't model (no planning state, see the roadmap doc).
+   */
+  _detectAdvancesFromActor(actor) {
+    const list = actor.system?.advances?.list || [];
+    return list
+      .filter((entry) => !entry.planned)
+      .map((entry) => ({
+        id: entry.id || foundry.utils.randomID(),
+        type: ADVANCE_TYPE_ENUM_REVERSE[entry.type] ?? 'edge',
+        notes: entry.notes || '',
+      }));
+  }
+
   async _updateObject(event, formData) {
     // No-op on standard form submission
     return;
@@ -1074,6 +1124,28 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
+   * Convert character.advances[] into SWADE's real `system.advances.list` shape. `sort` must
+   * be 1-based (matching SWADE's own `advances.size + 1` when it creates a new advance,
+   * confirmed in systems/swade/swade.js) — its own rank derivation (getRankFromAdvance) bands
+   * directly off this number (≤3 Novice, 4-7 Seasoned, ...), so a 0-based sort would put the
+   * 4th advance back in Novice instead of Seasoned. `rank` mirrors the same banding via
+   * getRankIndexFromAdvanceNumber() rather than being user-entered. `mode` is forced to
+   * 'expanded' (SWADE's own default) so the system's own rank/value derivation stays active
+   * regardless of what the actor had before.
+   */
+  _advancesToUpdateData(advances) {
+    const list = (advances || []).map((advance, index) => ({
+      id: advance.id || foundry.utils.randomID(),
+      type: ADVANCE_TYPE_ENUM[advance.type] ?? 0,
+      notes: advance.notes || '',
+      sort: index + 1,
+      rank: getRankIndexFromAdvanceNumber(index + 1),
+      planned: false,
+    }));
+    return { mode: 'expanded', list };
+  }
+
+  /**
    * Save the current selections onto the actor this Character Manager was opened for.
    * This tool only ever edits an existing actor — it doesn't create new characters — so
    * there's no "no actor" branch here.
@@ -1092,6 +1164,7 @@ export class CharacterManager extends FormApplication {
             archetype: this.character.archetype,
             notes: this.character.concept,
           },
+          advances: this._advancesToUpdateData(this.character.advances),
         },
         ...this._attributesToUpdateData(this.character.attributes),
       };

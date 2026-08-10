@@ -151,96 +151,159 @@ export function validateEdgePrerequisites(edge, character) {
 }
 
 /**
- * Apply an advancement (XP spend, skill increase, etc.).
- * Updates character object in-place and returns updated version.
- * 
- * @param {Object} character - Character object to update
- * @param {Object} advancement - Advancement action {type, target, value}
- * @returns {Object} Updated character object
+ * Advancement tab — SWADE's real ADVANCE_TYPE enum values (from systems/swade/swade.js),
+ * used when writing character.advances[] back to actor.system.advances.list. Kept as our
+ * own string keys internally (easier to bind in templates/handlers) and mapped to/from this
+ * enum only at the actor boundary (detection on open, save on write).
  */
-export function applyAdvancement(character, advancement) {
-  if (!advancement || !advancement.type) {
-    console.warn("[Character Creation] Invalid advancement:", advancement);
-    return character;
+export const ADVANCE_TYPE_ENUM = {
+  edge: 0,
+  singleSkill: 1,
+  twoSkills: 2,
+  attribute: 3,
+  hindrance: 4,
+};
+
+export const ADVANCE_TYPE_ENUM_REVERSE = {
+  0: 'edge',
+  1: 'singleSkill',
+  2: 'twoSkills',
+  3: 'attribute',
+  4: 'hindrance',
+};
+
+/** SWADE Rank tiers, in order — index = how many rank-ups have been reached. */
+export const RANK_NAMES = ['Novice', 'Seasoned', 'Veteran', 'Heroic', 'Legendary'];
+
+/**
+ * Count character.advances[] entries by type. Advances are fungible within a type — there's
+ * no per-advance target/ledger, just a count — so this is the sole input to every advancement
+ * budget bonus below.
+ *
+ * @param {Object} character - Character object with an `advances` array
+ * @returns {Object} {edge, singleSkill, twoSkills, attribute, hindrance}
+ */
+export function calculateAdvanceTypeCounts(character) {
+  const counts = { edge: 0, singleSkill: 0, twoSkills: 0, attribute: 0, hindrance: 0 };
+  for (const advance of character.advances || []) {
+    if (advance?.type in counts) counts[advance.type] += 1;
   }
-  
-  const updated = foundry.utils.deepClone(character);
-  
-  try {
-    switch (advancement.type) {
-      case "skill-increase": {
-        // Increase skill die or add rank
-        const skillKey = advancement.target; // e.g., "fighting"
-        if (updated.skills?.[skillKey]) {
-          updated.skills[skillKey].advances = (updated.skills[skillKey].advances ?? 0) + 1;
-        }
-        break;
-      }
-      
-      case "attribute-increase": {
-        // Increase attribute die
-        const attrKey = advancement.target; // e.g., "strength"
-        if (updated.attributes?.[attrKey]) {
-          updated.attributes[attrKey].advances = (updated.attributes[attrKey].advances ?? 0) + 1;
-        }
-        break;
-      }
-      
-      case "add-edge": {
-        // Add edge to character
-        if (!updated.edges) updated.edges = [];
-        updated.edges.push(advancement.target);
-        break;
-      }
-      
-      case "add-hindrance": {
-        // Add hindrance to character
-        if (!updated.hindrances) updated.hindrances = [];
-        updated.hindrances.push(advancement.target);
-        break;
-      }
-      
-      case "spend-xp": {
-        // Spend experience points
-        const amount = advancement.value ?? 0;
-        updated.experience = Math.max(0, (updated.experience ?? 0) - amount);
-        break;
-      }
-      
-      case "gain-xp": {
-        // Gain experience points
-        const amount = advancement.value ?? 0;
-        updated.experience = (updated.experience ?? 0) + amount;
-        break;
-      }
-      
-      default:
-        console.warn("[Character Creation] Unknown advancement type:", advancement.type);
-    }
-  } catch (error) {
-    console.warn("[Character Creation] Failed to apply advancement:", error);
-  }
-  
-  return updated;
+  return counts;
+}
+
+/** Each Edge-type advance grants 1 bonus edge point, same pool as hindrance/ancestry bonuses. */
+export function calculateBonusEdgePointsFromAdvances(character) {
+  return calculateAdvanceTypeCounts(character).edge;
 }
 
 /**
- * Calculate point cost for attribute/skill advancement.
- * Used to validate character creation budget and advancement costs.
- * 
- * @param {string} type - "attribute" or "skill"
- * @param {number} currentAdvances - Current number of advances
- * @returns {number} Cost in creation points
+ * Each Two-Skills or One-Skill advance grants 2 bonus skill points — both types resolve to
+ * the same value under this app's existing skill-cost formula (2 steps at/below the linked
+ * attribute, or 1 step above it, both cost 2 total) — but are kept as distinct advance types
+ * in the UI to mirror the rules as written.
  */
-export function calculateAdvancementCost(type, currentAdvances = 0) {
-  // Placeholder cost structure (can be refined with actual SWADE rules)
-  // In actual SWADE, costs scale based on current die and type
-  if (type === "attribute") {
-    return 5 * (currentAdvances + 1); // Attributes cost 5pts, 10pts, 15pts, etc.
-  } else if (type === "skill") {
-    return 1 * (currentAdvances + 1); // Skills cost 1pt, 2pts, 3pts, etc.
-  }
-  return 0;
+export function calculateBonusSkillPointsFromAdvances(character) {
+  const counts = calculateAdvanceTypeCounts(character);
+  return (counts.singleSkill + counts.twoSkills) * 2;
+}
+
+/** Each Attribute-type advance grants 1 bonus attribute point. */
+export function calculateBonusAttributePointsFromAdvances(character) {
+  return calculateAdvanceTypeCounts(character).attribute;
+}
+
+/**
+ * Each Hindrance-buyoff advance grants 1 bonus perk-point slot — compensating for the fact
+ * that removing a hindrance elsewhere reduces the Hindrances tab's live-derived perk-point
+ * count (which isn't tied to any specific hindrance). This can grant a perk point beyond what
+ * the character's current hindrance total would otherwise allow, an accepted trade-off.
+ */
+export function calculateBonusPerkPointsFromAdvances(character) {
+  return calculateAdvanceTypeCounts(character).hindrance;
+}
+
+/**
+ * Total advances taken (all types) — this is what actually drives Rank in SWADE, regardless
+ * of which advance type each one was.
+ */
+export function calculateTotalAdvanceCount(character) {
+  return (character.advances || []).length;
+}
+
+/**
+ * Derive a Rank tier index (0-4) from a 1-based advance number, matching SWADE's own
+ * `getRankFromAdvance()` banding exactly (confirmed from systems/swade/swade.js): Novice
+ * covers advances 1-3 (only 3, not 4 — SWADE's own `sort` field starts at 1, so the Novice
+ * band is whatever's ≤3), then Seasoned 4-7, Veteran 8-11, Heroic 12-15, Legendary 16+.
+ *
+ * @param {number} advanceNumber - 1-based position (1st advance, 2nd advance, ...)
+ * @returns {number} Rank tier index (0-4)
+ */
+export function getRankIndexFromAdvanceNumber(advanceNumber) {
+  if (advanceNumber <= 3) return 0;
+  if (advanceNumber <= 7) return 1;
+  if (advanceNumber <= 11) return 2;
+  if (advanceNumber <= 15) return 3;
+  return 4;
+}
+
+/**
+ * Derive the character's current Rank from total advance count, using the same banding as
+ * SWADE's own advances.rank derivation (see getRankIndexFromAdvanceNumber).
+ *
+ * @param {Object} character - Character object with an `advances` array
+ * @returns {{index: number, name: string}} Rank tier index (0-4) and display name
+ */
+export function getCharacterRank(character) {
+  const count = calculateTotalAdvanceCount(character);
+  const index = getRankIndexFromAdvanceNumber(count);
+  return { index, name: RANK_NAMES[index] };
+}
+
+/**
+ * Group character.advances[] by the Rank tier each was taken at, for the Advancement tab's
+ * display — same per-advance-number banding as getRankIndexFromAdvanceNumber (Novice gets
+ * only 3, then 4 apiece). Only tiers that actually contain an advance are returned (no empty
+ * "Legendary" header on a 2-advance character), in Rank order, each advance keeping its
+ * original array index (needed so edit/remove buttons still target the right entry in
+ * character.advances).
+ *
+ * @param {Object} character - Character object with an `advances` array
+ * @returns {Array<{rankIndex: number, rankName: string, advances: Array}>}
+ */
+export function groupAdvancesByRank(character) {
+  const advances = character.advances || [];
+  const groups = [];
+
+  advances.forEach((advance, index) => {
+    const rankIndex = getRankIndexFromAdvanceNumber(index + 1);
+    let group = groups[groups.length - 1];
+    if (!group || group.rankIndex !== rankIndex) {
+      group = { rankIndex, rankName: RANK_NAMES[rankIndex], advances: [] };
+      groups.push(group);
+    }
+    group.advances.push({ ...advance, index });
+  });
+
+  return groups;
+}
+
+/**
+ * Informational-only check for the real "Attributes can only be raised once per Rank" rule.
+ * Allowed count is approximated as (rank tier index + 1) — one Attribute advance per Rank
+ * tier reached so far, including Novice. Never blocks Save; just returns a message to display,
+ * or null if within the expected count.
+ *
+ * @param {Object} character - Character object with an `advances` array
+ * @returns {string|null} Warning message, or null if not over the once-per-Rank guideline
+ */
+export function getAttributeAdvanceWarning(character) {
+  const counts = calculateAdvanceTypeCounts(character);
+  const rank = getCharacterRank(character);
+  const allowed = rank.index + 1;
+  if (counts.attribute <= allowed) return null;
+
+  return `You've taken ${counts.attribute} Attribute advance${counts.attribute === 1 ? '' : 's'}, but Attributes can only be raised once per Rank.`;
 }
 
 /**
@@ -483,28 +546,31 @@ export function validateHindranceTotalPoints(character) {
 }
 
 /**
- * Get available perk points from hindrances.
- * Maximum of 4 perk points, regardless of total hindrance points.
+ * Get available perk points from hindrances, plus any bonus perk-point slots granted by
+ * Hindrance-buyoff advances (see calculateBonusPerkPointsFromAdvances) — those bonus slots
+ * are added on top of the 4-point hindrance cap, not folded into it, since they're a
+ * deliberate exception rather than part of the hindrance-point budget itself.
  *
  * @param {Object} character - Character object
- * @returns {number} Available perk points (0-4)
+ * @param {number} [bonusPerkPoints] - Extra perk-point slots from Hindrance-buyoff advances
+ * @returns {number} Available perk points
  */
-export function getAvailablePerkPoints(character) {
+export function getAvailablePerkPoints(character, bonusPerkPoints = 0) {
   const hindrancePoints = calculateTotalHindrancePoints(character);
-  return Math.min(hindrancePoints, 4);
+  return Math.min(hindrancePoints, 4) + bonusPerkPoints;
 }
 
 /**
- * Generate perk point allocation slots based on total hindrance points.
- * Each slot can hold a 1-point or 2-point perk allocation.
- * Capped at 4 maximum slots regardless of total hindrance points.
+ * Generate perk point allocation slots based on total hindrance points (capped at 4), plus
+ * any bonus slots from Hindrance-buyoff advances (uncapped — see getAvailablePerkPoints).
  *
  * @param {Object} character - Character object with hindrances and perkPointAllocations
+ * @param {number} [bonusPerkPoints] - Extra perk-point slots from Hindrance-buyoff advances
  * @returns {Array} Array of slot objects: { pointValue, selected }
  */
-export function generatePerkSlots(character) {
+export function generatePerkSlots(character, bonusPerkPoints = 0) {
   const hindrancePoints = calculateTotalHindrancePoints(character);
-  const availablePerkPoints = Math.min(hindrancePoints, 4);  // Cap at 4
+  const availablePerkPoints = Math.min(hindrancePoints, 4) + bonusPerkPoints;
   const existingSlots = character.perkPointAllocations || [];
 
   const slots = [];

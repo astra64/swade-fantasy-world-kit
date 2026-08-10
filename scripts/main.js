@@ -11,7 +11,7 @@ import { setupMigrations } from "./migrations.js";
 import { setupUI } from "./ui.js";
 import { createIconRemapper } from "./lib/icon-remapper.js";
 import { pathMappings, nameMappings, fallbackIconMappings } from "./lib/icon-mappings.js";
-import { setupCharacterCreationTools, CharacterManager, AdvancementManager, invalidateCompendiumCache } from "./apps/character-creation/index.js";
+import { setupCharacterCreationTools, CharacterManager, invalidateCompendiumCache } from "./apps/character-creation/index.js";
 
 // Expose icon remapping utilities immediately
 window.swadeFwkIconRemapper = createIconRemapper(pathMappings, nameMappings, fallbackIconMappings);
@@ -533,7 +533,6 @@ Hooks.once("init", () => {
     BaselineModulesManager,
     ExtraVisiblePacksSelector,
     CharacterManager,
-    AdvancementManager,
     handleVisibilitySettingsChanged
   });
 
@@ -620,7 +619,6 @@ Hooks.once("init", () => {
   window.BaselineModulesManager = BaselineModulesManager;
   window.ExtraVisiblePacksSelector = ExtraVisiblePacksSelector;
   window.CharacterManager = CharacterManager;
-  window.AdvancementManager = AdvancementManager;
 });
 
 async function registerTemplatePartials() {
@@ -630,7 +628,7 @@ async function registerTemplatePartials() {
     // 2. Include it in templates/character-creation/character-manager.hbs with {{> partial-name}}
     // 3. ADD THE PARTIAL NAME TO THIS ARRAY so it gets registered with Handlebars
     // Without this registration step, the partial will not load and the template will fail silently
-    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab', 'traits-tab', 'edges-tab', 'gear-tab', 'summary-tab'];
+    const partials = ['concept-tab', 'ancestry-tab', 'hindrances-tab', 'traits-tab', 'edges-tab', 'gear-tab', 'summary-tab', 'advancement-tab'];
     for (const partial of partials) {
       const path = `modules/${MODULE_ID}/templates/character-creation/_components/${partial}.hbs`;
       const html = await fetch(path).then(r => {

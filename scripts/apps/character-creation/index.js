@@ -2,8 +2,8 @@
  * Character Creation Tools - Public API
  *
  * Isolated module for building out an existing SWADE actor's ancestry/skills/edges/
- * hindrances/gear and for advancement. Both tools edit an existing actor only — neither
- * creates a new actor document.
+ * hindrances/gear/advancement, all via CharacterManager's tabs. Edits an existing actor
+ * only — it doesn't create a new actor document.
  * No dependencies on preset system or icon remapper.
  * Read-only access to compendiums.
  *
@@ -18,7 +18,6 @@
  */
 
 import { CharacterManager, invalidateCompendiumCache } from './CharacterManager.js';
-import { AdvancementManager } from './AdvancementManager.js';
 
 /**
  * Factory to create and register character creation UI.
@@ -31,9 +30,8 @@ export function setupCharacterCreationTools() {
   // TODO: Register settings menu entries and global access points
   // For now, available via direct instantiation:
   //   const manager = new CharacterManager({ actor });
-  //   new AdvancementManager({ actor }).render(true);
 
   console.log('[Character Creation Tools] Initialized');
 }
 
-export { CharacterManager, AdvancementManager, invalidateCompendiumCache };
+export { CharacterManager, invalidateCompendiumCache };
