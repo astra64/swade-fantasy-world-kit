@@ -31,6 +31,7 @@ import {
   calculateUsedEdgePoints,
   calculateBonusAttributePoints,
   calculateBonusSkillPoints,
+  applyAncestryAttributeFloors,
   calculateAncestryChoiceBonuses,
   getManualBudgetOverrideAmount,
   calculateAncestryBonusEdgePoints,
@@ -253,7 +254,11 @@ export class CharacterManager extends FormApplication {
             expandedAncestry: false,
             expandedChildItems: {},
             expandedGrantedSections: {},
-            attributes: { ...DEFAULT_ATTRIBUTES, ...(this.actor.system?.attributes || {}) },
+            // Source data (this.actor.toObject() defaults to source=true), not this.actor.system
+            // — the latter is derived/post-Active-Effects, so a temporary condition (e.g. an
+            // injury lowering Agility) would get baked in as the character's permanent die on
+            // open, and then permanently written back to the actor as the new base on Save.
+            attributes: { ...DEFAULT_ATTRIBUTES, ...(this.actor.toObject().system?.attributes || {}) },
             skills: await this._detectSkillsFromActor(this.actor),
             edges: await this._detectEdgesFromActor(this.actor),
             hindrances: await this._detectHindrancesFromActor(this.actor),
@@ -277,9 +282,18 @@ export class CharacterManager extends FormApplication {
             // Point/Extra Funds) — persisted as its own actor flag since it has no embedded
             // Item of its own to live on, unlike every other tab's selections.
             perkPointAllocations: this.actor.getFlag(MODULE_ID, 'perkPointAllocations') || [],
-            // Manual choice made on an ancestral ability's card (e.g. Half-Elf's Heritage),
-            // keyed by the granting ability's own uuid — see calculateAncestryChoiceBonuses.
-            ancestryAbilityChoices: this.actor.getFlag(MODULE_ID, 'ancestryAbilityChoices') || {},
+            // Manual choice made on an ancestral ability's card (e.g. Half-Elf's Heritage) —
+            // see calculateAncestryChoiceBonuses. Kept here as an object keyed by the granting
+            // ability's own uuid for convenient lookups, but persisted as an array of
+            // {uuid, choice} entries (see _saveActor): a compendium uuid contains periods, and
+            // Foundry's flag storage recursively merges objects treating "." as a path
+            // separator, which silently mangles (and loses) a plain object keyed by uuid.
+            // The Array.isArray guard discards any pre-fix value an actor may already have
+            // saved (the old code stored a since-corrupted object here) rather than throwing.
+            ancestryAbilityChoices: (() => {
+              const stored = this.actor.getFlag(MODULE_ID, 'ancestryAbilityChoices');
+              return Object.fromEntries((Array.isArray(stored) ? stored : []).map((e) => [e.uuid, e.choice]));
+            })(),
             // Freeform "Manual Adjustments" overrides for setting rules/edge cases the app has
             // no built-in support for — see getManualBudgetOverrideAmount.
             manualBudgetOverrides: this.actor.getFlag(MODULE_ID, 'manualBudgetOverrides') || {},
@@ -356,6 +370,11 @@ export class CharacterManager extends FormApplication {
       // ahead of attributePointsUsed below, so the points spent by the player never include
       // whatever die steps the ancestry already grants for nothing. See calculateTotalAttributePoints.
       const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
+      // character.attributes was loaded from actor source data (see above), which excludes the
+      // ancestry's own Active Effect along with everything else — re-apply just the ancestry's
+      // floor here so the Traits tab still shows/edits the character's real permanent die,
+      // without reintroducing unrelated temporary effects (e.g. an injury) into that value.
+      applyAncestryAttributeFloors(this.character, ancestryBonuses);
 
       // Some edges (e.g. Arcane Backgrounds) and hindrances grant other edges/hindrances as
       // child items, the same way an ancestry grants ancestral abilities. Build the same kind
@@ -1484,7 +1503,9 @@ export class CharacterManager extends FormApplication {
       }
       await this._persistGearTabMode(this.actor);
       await this.actor.setFlag(MODULE_ID, 'perkPointAllocations', this.character.perkPointAllocations || []);
-      await this.actor.setFlag(MODULE_ID, 'ancestryAbilityChoices', this.character.ancestryAbilityChoices || {});
+      // Stored as an array, not an object keyed by uuid — see the load-side comment above.
+      await this.actor.setFlag(MODULE_ID, 'ancestryAbilityChoices',
+        Object.entries(this.character.ancestryAbilityChoices || {}).map(([uuid, choice]) => ({ uuid, choice })));
       await this.actor.setFlag(MODULE_ID, 'manualBudgetOverrides', this.character.manualBudgetOverrides || {});
 
       ui.notifications.info(`[Character Creation] Saved: ${this.actor.name}`);

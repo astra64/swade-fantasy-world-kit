@@ -490,6 +490,34 @@ export function calculateTotalAttributePoints(character, ancestryBonuses = {}) {
 }
 
 /**
+ * Raise each attribute up to its ancestry-granted floor (see getAncestryAttributeBonuses), for
+ * an attribute value that was read from the actor's *source* data (i.e. excludes every Active
+ * Effect, including the ancestry's own transfer effect and any unrelated temporary condition
+ * like an injury) — see CharacterManager's initial character-state load. Mutates and returns
+ * character.attributes in place. Safe to call on every render: it only ever raises a value,
+ * never lowers one the player explicitly picked above the floor.
+ *
+ * @param {Object} character - Character object with attributes
+ * @param {Object} [ancestryBonuses] - Map of attrName to {die} from getAncestryAttributeBonuses
+ * @returns {Object} character.attributes, for convenience
+ */
+export function applyAncestryAttributeFloors(character, ancestryBonuses = {}) {
+  if (!character.attributes || typeof character.attributes !== 'object') {
+    return character.attributes;
+  }
+
+  for (const [attrName, attrData] of Object.entries(character.attributes)) {
+    const floorDie = ancestryBonuses?.[attrName]?.die;
+    if (!floorDie) continue;
+    if ((DIE_VALUES[floorDie] ?? 0) > (DIE_VALUES[attrData.die] ?? 4)) {
+      attrData.die = floorDie;
+    }
+  }
+
+  return character.attributes;
+}
+
+/**
  * Get remaining attribute points for character creation.
  *
  * @param {Object} character - Character object
