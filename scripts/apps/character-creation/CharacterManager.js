@@ -848,8 +848,14 @@ export class CharacterManager extends FormApplication {
         s => s.name.toLowerCase() === skillItem.name.toLowerCase()
       );
 
+      // Source data, not skillItem.system — the latter is derived/post-Active-Effects, and a
+      // die value read here gets written straight back to the item as its new base on Save
+      // (see _saveSkillsToActor), same risk as the attribute bug this mirrors: a temporary
+      // effect targeting this skill's die would otherwise get permanently baked in.
+      const sourceSystem = skillItem.toObject().system || {};
+
       let die = 'd4';
-      const dieValue = skillItem.system?.die;
+      const dieValue = sourceSystem.die;
       if (dieValue && typeof dieValue === 'object' && dieValue.sides) {
         die = sidesToDie[dieValue.sides] || 'd4';
       } else if (typeof dieValue === 'string') {
@@ -861,7 +867,7 @@ export class CharacterManager extends FormApplication {
       const key = skillItem.uuid;
       skills[key] = {
         die,
-        advances: skillItem.system?.advances ?? 0,
+        advances: sourceSystem.advances ?? 0,
         fromAncestry: grantedByAncestry,
         // Baseline die granted for free; increases above this still cost points
         grantedDie: grantedByAncestry ? die : undefined,
@@ -870,8 +876,8 @@ export class CharacterManager extends FormApplication {
         // cost lookup needs the linked attribute, since the key is the actor's own item uuid
         // rather than any compendium uuid it could otherwise be looked up by.
         name: skillItem.name,
-        attribute: compendiumSkill?.attribute || skillItem.system?.attribute || 'smarts',
-        description: compendiumSkill?.description || skillItem.system?.description || '',
+        attribute: compendiumSkill?.attribute || sourceSystem.attribute || 'smarts',
+        description: compendiumSkill?.description || sourceSystem.description || '',
       };
     }
 
