@@ -13,7 +13,7 @@
       </div>
 
       <div class="summary-row">
-        <span class="summary-row-label">Ancestry</span>
+        <span class="summary-row-label">Ancestry{{#if @root.unassignedAncestryChoices}} (<span class="summary-count under-budget">{{@root.unassignedAncestryChoices}} bonus{{#if (gt @root.unassignedAncestryChoices 1)}}es{{/if}} unassigned</span>){{/if}}</span>
         <span class="summary-row-value">{{#if @root.selectedAncestryData}}{{@root.selectedAncestryData.name}}{{else}}<em>None selected</em>{{/if}}</span>
       </div>
 

@@ -55,6 +55,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 
 ### Budget Tracking (Sticky Footer)
 - **Always Visible:** Attribute Points (X/5), Skill Points (Y/12), Edge Points (Z/?)
+- **Perk Points:** shown in the same always-visible footer once a character has any hindrance-granted perk points (hidden entirely at zero), reading `perkPointsSpent/availablePerkPoints`; unlike the other three counters, it highlights red for *either* over-allocation or leftover unspent perk points, since the latter is the more common mistake for this pool
 - **Gear Tab Only:** Total Cost (X/300 silver)
 - **Summary Tab Only:** Gear Cost + final derived stats
 - **Over-Budget Behavior:** Allowed with red highlighting, never blocked
@@ -66,7 +67,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 - Secondary: JSON export/import (if practical)
 
 ### Key Interactions
-- **Hindrances Trade-Offs:** Dropdown per point → auto-undoes previous selection
+- **Hindrances Trade-Offs:** Dropdown per point → auto-undoes previous selection; the placeholder "-- Select Perk --" option is itself selectable, so re-picking it clears that slot back to unassigned
 - **Ancestry Bonuses:** Auto-applied, locked minimums (e.g., d6 Vigor minimum), message at top of Attributes tab
 - **Skill Modifiers:** Display as "+X modifier" text at end of skill rows (from edges/hindrances)
 - **Edge Prerequisites:** Info-only (no blocking), displayed next to edge name
@@ -196,6 +197,7 @@ Shipped as Tab 9 (Advancement) inside Character Manager rather than a separate t
 
 #### Tab 7: Summary
 - [x] Display all character selections in a compact, read-only recap — deliberately terse (one row per category: Name/Archetype, Ancestry, Attributes, Skills, Hindrances, Edges, then a single "Derived Stats" row for Pace/Parry/Toughness together), not a full re-render of every tab's item cards. No Gear row (dropped per review — gear is already tracked live on its own tab's pinned footer). No per-section "Edit" buttons and no dedicated tab handler — the tab has nothing interactive on it, so there's nothing for a handler to wire up (Tab nav switching works regardless, since `TabManager` auto-generates nav buttons from `.tab` elements, not from a handler registration).
+- [x] **Unassigned ancestry-bonus warning:** the Ancestry row appends an inline `(N bonus(es) unassigned)` count, styled with the same `under-budget` warning class as the other rows' counts, whenever an ancestral ability offering a bonus-choice dropdown (see `ancestryChoiceAbilityNames`) hasn't had a choice made yet. Hidden entirely when there's nothing unassigned.
 - [x] Calculate:
   - Final Pace (base 6 + modifications from hindrances/ancestry/edges — `calculatePaceModifier()` scans `system.pace` Active Effect changes across the selected ancestry, its granted child items, and every selected edge/hindrance's full item document, same scanning pattern as `getAncestryAttributeBonuses()`)
   - Parry (2 + Fighting/2) — unchanged, already existed
@@ -454,9 +456,9 @@ Precise Open/Edit/Save behavior, incorporating everything above. This is the con
 
 ### Save Button & Unspent-Points Confirmation
 - The footer's Save/Cancel buttons now show on every tab, not just Gear/Summary — needed since Summary doesn't exist yet and Save was otherwise unreachable in the running app.
-- Clicking Save now checks for unspent Attribute/Skill/Edge points first. If any exist, a blocking `Dialog.confirm` ("This character still has unspent X. Save anyway?") must be explicitly confirmed before `_createActor()` runs. Cancelling the dialog (or the confirm returning anything but `true`) aborts the save.
+- Clicking Save now checks for unspent Attribute/Skill/Edge/Perk points, plus any ancestry ability with an unassigned bonus-choice dropdown, first. If any exist, a blocking `Dialog.confirm` ("This character still has unspent X. Save anyway?") must be explicitly confirmed before `_createActor()` runs. Cancelling the dialog (or the confirm returning anything but `true`) aborts the save.
 - Deliberately **not** checked: leftover Hindrance points or unspent gear silver — neither is really a "mistake" the way an unspent creation point usually is (fewer hindrances or not spending every coin is a valid choice).
-- Implementation: `CharacterManager._confirmUnspentPoints()`, reading a `this._budgetSnapshot` cached at the end of the last `getData()` call (cheaper than recomputing edge points, which depend on async ancestry child-item data).
+- Implementation: `CharacterManager._confirmSaveEffects()`, reading a `this._budgetSnapshot` cached at the end of the last `getData()` call (cheaper than recomputing edge points, which depend on async ancestry child-item data).
 
 ### Configurable Additional Compendium Packs
 - Five new world settings (`additionalAncestryPacks`, `additionalSkillPacks`, `additionalEdgePacks`, `additionalHindrancePacks`, `additionalGearPacks` in `scripts/settings.js`) let a GM merge in packs from other modules/homebrew alongside the built-in Fantasy packs — comma/semicolon/whitespace-separated pack IDs, same parsing convention as `extraVisiblePacks`.

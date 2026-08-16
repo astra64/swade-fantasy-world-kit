@@ -127,7 +127,7 @@
         {{#each @root.perkSlots}}
           <div class="tradeoff-slot" data-tradeoff-slot="{{@index}}">
             <select class="tradeoff-dropdown" data-slot-index="{{@index}}" data-action="set-slot-tradeoff">
-              <option value="" disabled selected>-- Select Perk --</option>
+              <option value="" {{#unless this.selected}}selected{{/unless}}>-- Select Perk --</option>
 
               {{#if (gte this.pointValue 2)}}
                 <option value="attribute-boost" {{#if (eq this.selected "attribute-boost")}}selected{{/if}}>

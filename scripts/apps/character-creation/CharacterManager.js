@@ -365,6 +365,9 @@ export class CharacterManager extends FormApplication {
           child.offersAncestryChoice = ancestryChoiceAbilityNames.has(child.name?.toLowerCase());
         }
       }
+      const unassignedAncestryChoices = childItemsData.filter(
+        (child) => child.offersAncestryChoice && !this.character.ancestryAbilityChoices?.[child.uuid]
+      ).length;
 
       // Ancestry-granted attribute floors (e.g. "+1 die to Vigor") are free — computed here,
       // ahead of attributePointsUsed below, so the points spent by the player never include
@@ -526,6 +529,7 @@ export class CharacterManager extends FormApplication {
       const attributePointsRemaining = attributePointsMax - attributePointsUsed;
       const skillPointsRemaining = skillPointsMax - skillPointsUsed;
       const edgePointsRemaining = edgePointsAvailable - edgePointsUsed;
+      const perkPointsRemaining = availablePerkPoints - perkPointsSpent;
       const gearRemaining = startingFunds - gearCost;
 
       // Live preview text for the Gear tab's "Apply to currency on Save" checkbox — shown
@@ -594,6 +598,7 @@ export class CharacterManager extends FormApplication {
         skillPointBreakdown: skillPointBreakdown,
         availablePerkPoints: availablePerkPoints,
         perkPointsSpent: perkPointsSpent,
+        perkPointsRemaining: perkPointsRemaining,
         edgePointsAvailable: edgePointsAvailable,
         edgePointsUsed: edgePointsUsed,
         edgePointsRemaining: edgePointsRemaining,
@@ -609,6 +614,7 @@ export class CharacterManager extends FormApplication {
         gearFundsOverride: this.character.gearFundsOverride ?? '',
         summarySkills: summarySkills,
         ancestryAbilityChoices: this.character.ancestryAbilityChoices || {},
+        unassignedAncestryChoices: unassignedAncestryChoices,
         showManualBudgetOverrides: this.character.showManualBudgetOverrides,
         activeManualOverrides: activeManualOverrides,
         manualOverrideRows: manualOverrideRows,
@@ -644,6 +650,8 @@ export class CharacterManager extends FormApplication {
         attributePointsRemaining: data.attributePointsRemaining,
         skillPointsRemaining: data.skillPointsRemaining,
         edgePointsRemaining: edgePointsRemaining,
+        perkPointsRemaining: perkPointsRemaining,
+        unassignedAncestryChoices: unassignedAncestryChoices,
       };
 
       return data;
@@ -1385,6 +1393,12 @@ export class CharacterManager extends FormApplication {
     }
     if ((snapshot.edgePointsRemaining ?? 0) > 0) {
       unspent.push(`${snapshot.edgePointsRemaining} edge point${snapshot.edgePointsRemaining === 1 ? '' : 's'}`);
+    }
+    if ((snapshot.perkPointsRemaining ?? 0) > 0) {
+      unspent.push(`${snapshot.perkPointsRemaining} perk point${snapshot.perkPointsRemaining === 1 ? '' : 's'}`);
+    }
+    if ((snapshot.unassignedAncestryChoices ?? 0) > 0) {
+      unspent.push(`${snapshot.unassignedAncestryChoices} unassigned ancestry bonus${snapshot.unassignedAncestryChoices === 1 ? '' : 'es'}`);
     }
     if (unspent.length > 0) {
       lines.push(`This character still has unspent ${unspent.join(', ')}.`);

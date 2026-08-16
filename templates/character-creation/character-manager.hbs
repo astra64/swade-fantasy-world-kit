@@ -39,6 +39,12 @@
           <span class="budget-label">Edges:</span>
           <span class="budget-value {{#if (gt edgePointsUsed edgePointsAvailable)}}over-budget{{/if}}">{{edgePointsUsed}}/{{edgePointsAvailable}}</span>
         </span>
+        {{#if (gt availablePerkPoints 0)}}
+        <span class="budget-item">
+          <span class="budget-label">Perks:</span>
+          <span class="budget-value {{#if (or (gt perkPointsRemaining 0) (lt perkPointsRemaining 0))}}over-budget{{/if}}">{{perkPointsSpent}}/{{availablePerkPoints}}</span>
+        </span>
+        {{/if}}
       </div>
 
       <div class="form-actions">
