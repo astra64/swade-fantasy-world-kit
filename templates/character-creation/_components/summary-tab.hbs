@@ -38,7 +38,7 @@
       </div>
 
       <div class="summary-row">
-        <span class="summary-row-label">Hindrances (<span class="summary-count {{#if (gt @root.hindrancePointsUsed 4)}}over-budget{{else if (lt @root.hindrancePointsUsed 4)}}under-budget{{/if}}">{{@root.hindrancePointsUsed}}/4</span>)</span>
+        <span class="summary-row-label">Hindrances (<span class="summary-count">{{@root.hindrancePointsUsed}}</span>)</span>
         <span class="summary-row-value">
           {{#if (objLength @root.visibleHindrances)}}
             {{#each @root.visibleHindrances}}{{this.name}} ({{#if this.major}}Major{{else}}Minor{{/if}}){{#unless @last}}, {{/unless}}{{/each}}
