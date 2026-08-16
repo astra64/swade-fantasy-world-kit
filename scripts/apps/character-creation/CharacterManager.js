@@ -373,6 +373,9 @@ export class CharacterManager extends FormApplication {
       // ahead of attributePointsUsed below, so the points spent by the player never include
       // whatever die steps the ancestry already grants for nothing. See calculateTotalAttributePoints.
       const ancestryBonuses = selectedAncestryData ? getAncestryAttributeBonuses(selectedAncestryData, childItemsData) : {};
+      // Cached for _saveActor, which runs from a button click rather than a render and so has
+      // no other way to know which attributes carry an ancestry floor (see _attributesToUpdateData).
+      this._ancestryBonuses = ancestryBonuses;
       // character.attributes was loaded from actor source data (see above), which excludes the
       // ancestry's own Active Effect along with everything else — re-apply just the ancestry's
       // floor here so the Traits tab still shows/edits the character's real permanent die,
@@ -1107,6 +1110,51 @@ export class CharacterManager extends FormApplication {
   }
 
   /**
+   * Reconcile the actor's ancestry item with the current selection. Unlike the other
+   * tabs there's only ever one, scalar selection rather than a keyed set, but the same
+   * "leave it alone if it already matches" principle applies: the existing item is left
+   * completely untouched — preserving any customization (renamed, edited description,
+   * etc.) — whenever it already represents the current selection, whether that's because
+   * it was previously created from this exact compendium uuid, or because it's a
+   * non-compendium ancestry (dragged on, or from an unlisted compendium) that the user
+   * hasn't changed. Only an actual change of ancestry causes a delete+create.
+   */
+  async _saveAncestryToActor(actor) {
+    const existingAncestry = actor.items.find(item => item.type === 'ancestry');
+
+    if (!this.character.ancestry) {
+      if (existingAncestry) {
+        await actor.deleteEmbeddedDocuments('Item', [existingAncestry.id]);
+      }
+      return;
+    }
+
+    if (existingAncestry) {
+      const existingUuid = existingAncestry.getFlag('swade-fantasy-world-kit', 'compendiumUuid') || existingAncestry.uuid;
+      if (existingUuid === this.character.ancestry) {
+        return;
+      }
+    }
+
+    const ancestryItem = await fromUuid(this.character.ancestry);
+    if (!ancestryItem) {
+      ui.notifications.warn('[Character Creation] Could not resolve the selected ancestry; keeping the existing one on the actor.');
+      return;
+    }
+
+    if (existingAncestry) {
+      await actor.deleteEmbeddedDocuments('Item', [existingAncestry.id]);
+    }
+
+    const itemData = ancestryItem.toObject();
+    delete itemData._id;
+    const created = await actor.createEmbeddedDocuments('Item', [itemData]);
+    if (created.length > 0) {
+      await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', this.character.ancestry);
+    }
+  }
+
+  /**
    * Reconcile the actor's edge items with the current selections, same pattern as
    * _saveGearToActor: existing items are matched by their own uuid (never a compendium
    * uuid) and left untouched, new selections are created fresh, anything no longer
@@ -1426,12 +1474,31 @@ export class CharacterManager extends FormApplication {
    * weren't persisting). Dot-notation patches only the `sides` leaf, leaving `modifier` (and
    * any other sibling fields on that attribute, like smarts' `animal`) untouched — a nested
    * {die: {sides}} object risked being treated as a full replacement of the `die` sub-schema.
+   *
+   * `attrData.die` is the character's *effective* die (raw base + any ancestry floor already
+   * folded in by applyAncestryAttributeFloors, for display/editing). When an attribute's floor
+   * comes from an ADD-mode Active Effect (e.g. an ancestry's own transfer effect adding +2
+   * sides), that effect re-applies on top of whatever we write as the base — so writing the
+   * effective die verbatim would double the bonus (source becomes floor, then the effect adds
+   * the floor's worth again). Subtracting the ADD bonus back out here restores the correct base,
+   * so the actor's own effect is the only thing granting it. OVERRIDE-mode (or unrecognized-mode)
+   * bonuses aren't touched — an override ignores the base value entirely, so writing the
+   * effective die there doesn't double anything.
+   *
+   * @param {Object} attributes - this.character.attributes
+   * @param {Object} [ancestryBonuses] - See getAncestryAttributeBonuses; from this._ancestryBonuses
    */
-  _attributesToUpdateData(attributes) {
+  _attributesToUpdateData(attributes, ancestryBonuses = {}) {
     const dieToSides = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12 };
     const result = {};
     for (const [attrName, attrData] of Object.entries(attributes || {})) {
-      result[`system.attributes.${attrName}.die.sides`] = dieToSides[attrData.die] ?? 4;
+      let sides = dieToSides[attrData.die] ?? 4;
+      const bonus = ancestryBonuses?.[attrName];
+      if (bonus?.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
+        const bonusSides = (dieToSides[bonus.die] ?? 4) - 4;
+        sides = Math.max(4, sides - bonusSides);
+      }
+      result[`system.attributes.${attrName}.die.sides`] = sides;
     }
     return result;
   }
@@ -1482,27 +1549,12 @@ export class CharacterManager extends FormApplication {
           },
           advances: this._advancesToUpdateData(this.character.advances),
         },
-        ...this._attributesToUpdateData(this.character.attributes),
+        ...this._attributesToUpdateData(this.character.attributes, this._ancestryBonuses),
       };
 
       await this.actor.update(updateData);
 
-      const existingAncestries = this.actor.items.filter(item => item.type === 'ancestry');
-      if (existingAncestries.length > 0) {
-        await this.actor.deleteEmbeddedDocuments('Item', existingAncestries.map(i => i.id));
-      }
-
-      if (this.character.ancestry) {
-        const ancestryItem = await fromUuid(this.character.ancestry);
-        if (ancestryItem) {
-          const itemData = ancestryItem.toObject();
-          delete itemData._id;
-          const created = await this.actor.createEmbeddedDocuments('Item', [itemData]);
-          if (created.length > 0) {
-            await created[0].setFlag('swade-fantasy-world-kit', 'compendiumUuid', this.character.ancestry);
-          }
-        }
-      }
+      await this._saveAncestryToActor(this.actor);
 
       const pcStartingCurrency = game.settings.get('swade', 'pcStartingCurrency') || 600;
       const richFundsMultipliers = parseRichFundsMultipliers(game.settings.get(MODULE_ID, 'richFundsMultipliers'));

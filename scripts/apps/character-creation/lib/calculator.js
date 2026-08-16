@@ -489,16 +489,35 @@ export function calculateTotalAttributePoints(character, ancestryBonuses = {}) {
   return totalSpent;
 }
 
+const SIDES_TO_DIE = { 4: 'd4', 6: 'd6', 8: 'd8', 10: 'd10', 12: 'd12' };
+
 /**
- * Raise each attribute up to its ancestry-granted floor (see getAncestryAttributeBonuses), for
- * an attribute value that was read from the actor's *source* data (i.e. excludes every Active
- * Effect, including the ancestry's own transfer effect and any unrelated temporary condition
- * like an injury) — see CharacterManager's initial character-state load. Mutates and returns
- * character.attributes in place. Safe to call on every render: it only ever raises a value,
- * never lowers one the player explicitly picked above the floor.
+ * Reconstruct each attribute's effective die from its ancestry-granted bonus (see
+ * getAncestryAttributeBonuses), for an attribute value that was read from the actor's *source*
+ * data (i.e. excludes every Active Effect, including the ancestry's own transfer effect and any
+ * unrelated temporary condition like an injury) — see CharacterManager's initial character-state
+ * load. Mutates and returns character.attributes in place.
+ *
+ * An ADD-mode bonus (e.g. an ancestry's own transfer effect adding +2 sides) is never present in
+ * source at all — CharacterManager._attributesToUpdateData deliberately subtracts it back out
+ * before saving, so the actor's own effect is the sole thing granting it and it doesn't get
+ * double-applied. So for ADD-mode bonuses this *adds* the bonus back to reconstruct the effective
+ * die the player actually sees in-game, rather than treating it as a floor.
+ *
+ * Called on every render, but adding the same bonus again on every call would ratchet the die up
+ * indefinitely (die is the effective, already-bonused value from the render that follows) — this
+ * is not idempotent the way a floor/minimum is, so each attribute's own `attrData` object tracks
+ * how many sides it was last given credit for adding (`_ancestryAddSides`), and only adjusts when
+ * that amount actually changes (first load, or the ancestry itself changed/was removed this
+ * session), leaving an unrelated later render or the player's own die-button click untouched.
+ *
+ * OVERRIDE-mode (or any other/unrecognized-mode) bonuses aren't subtracted at save, so source
+ * already reflects them if the player raised the attribute — for those this keeps the previous
+ * floor/minimum behavior: raise up to the bonus only if the current value is below it, and never
+ * lower a value the player explicitly picked above it.
  *
  * @param {Object} character - Character object with attributes
- * @param {Object} [ancestryBonuses] - Map of attrName to {die} from getAncestryAttributeBonuses
+ * @param {Object} [ancestryBonuses] - Map of attrName to {die, mode} from getAncestryAttributeBonuses
  * @returns {Object} character.attributes, for convenience
  */
 export function applyAncestryAttributeFloors(character, ancestryBonuses = {}) {
@@ -507,10 +526,23 @@ export function applyAncestryAttributeFloors(character, ancestryBonuses = {}) {
   }
 
   for (const [attrName, attrData] of Object.entries(character.attributes)) {
-    const floorDie = ancestryBonuses?.[attrName]?.die;
-    if (!floorDie) continue;
-    if ((DIE_VALUES[floorDie] ?? 0) > (DIE_VALUES[attrData.die] ?? 4)) {
-      attrData.die = floorDie;
+    const bonus = ancestryBonuses?.[attrName];
+    const prevAddedSides = attrData._ancestryAddSides || 0;
+    const isAddMode = bonus?.die && bonus.mode === CONST.ACTIVE_EFFECT_MODES.ADD;
+    const newAddedSides = isAddMode ? (DIE_VALUES[bonus.die] ?? 4) - 4 : 0;
+
+    if (newAddedSides !== prevAddedSides) {
+      // The ADD bonus just appeared, changed, or was removed (ancestry picked/swapped/cleared
+      // this session) — strip whatever was previously credited before adding the new amount, so
+      // this always starts from the true underlying (raw + manual) value.
+      const rawSides = (DIE_VALUES[attrData.die] ?? 4) - prevAddedSides;
+      const effectiveSides = Math.min(12, Math.max(4, rawSides + newAddedSides));
+      attrData.die = SIDES_TO_DIE[effectiveSides] ?? attrData.die;
+      attrData._ancestryAddSides = newAddedSides;
+    }
+
+    if (!isAddMode && bonus?.die && (DIE_VALUES[bonus.die] ?? 0) > (DIE_VALUES[attrData.die] ?? 4)) {
+      attrData.die = bonus.die;
     }
   }
 
@@ -980,7 +1012,10 @@ export function convertValueToDie(value) {
  *
  * @param {Object} ancestryItem - Ancestry item object
  * @param {Array} [childItems] - Optional array of child items (ancestral abilities) with effects
- * @returns {Object} Map of attribute names to bonus information {vigor: {die: 'd6'}, etc.}
+ * @returns {Object} Map of attribute names to bonus information {vigor: {die: 'd6', source, mode}, etc.}
+ *   `mode` is the source Active Effect's change mode (CONST.ACTIVE_EFFECT_MODES) when the bonus
+ *   came from an 'effect'/'child-item' source — needed at save time to avoid double-applying an
+ *   ADD-mode effect (see CharacterManager._attributesToUpdateData).
  */
 export function getAncestryAttributeBonuses(ancestryItem, childItems = []) {
   const bonuses = {};
@@ -1000,7 +1035,7 @@ export function getAncestryAttributeBonuses(ancestryItem, childItems = []) {
               const attrName = match[1].toLowerCase();
               const bonusDie = convertValueToDie(change.value);
               if (bonusDie) {
-                bonuses[attrName] = { die: bonusDie, source: 'effect' };
+                bonuses[attrName] = { die: bonusDie, source: 'effect', mode: change.mode };
               }
             }
           }
@@ -1035,7 +1070,7 @@ export function getAncestryAttributeBonuses(ancestryItem, childItems = []) {
 
                 // Only set bonus if not already set by ancestry effect
                 if (bonusDie && !bonuses[attrName]) {
-                  bonuses[attrName] = { die: bonusDie, source: 'child-item' };
+                  bonuses[attrName] = { die: bonusDie, source: 'child-item', mode: change.mode };
                 }
               }
             }
