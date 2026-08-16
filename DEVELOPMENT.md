@@ -299,6 +299,7 @@ This approach avoids shipping proprietary content, reduces repository risk, and 
 - Ensure World Setup Tools module is testable independently of SWADE system or content.
 - Ensure Character Creation Tools only references compendiums (never bundles content), allowing public distribution.
 - Design Character Creation Tools to work standalone or integrate cleanly with hub (no hard coupling to hub settings).
+- Support attributes/skills above d12: SWADE raises a die past d12 via a flat modifier (d12+1, d12+2, ...) rather than a new die type. Character Manager's Traits tab only models d4–d12 today (die-step buttons, no modifier), so any character advancing past d12 in play can't be represented — acceptable as a personal-use gap for now, but a real rule gap for a public tool other GMs' campaigns will hit. Must be added before this tool is split out as a standalone public module.
 
 #### Phase 1: In-Repo Organization (Before Full Module Extraction)
 
